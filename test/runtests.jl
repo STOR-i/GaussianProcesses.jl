@@ -1,5 +1,5 @@
 using gaussianprocesses
 using Base.Test
 
-# write your own tests here
-@test 1 == 1
+# Add tests here...
+include("test_GP.jl")
