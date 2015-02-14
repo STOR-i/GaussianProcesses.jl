@@ -6,9 +6,9 @@ module gaussianprocesses
 export GaussianProcess, predict, rbf
 
 # all package code should be included here
-include("gauss.jl")
+include("GaussianProcesses.jl")
 #include("expected_improvement.jl")
 #include("mean_functions.jl")
-include("cov_functions.jl")
+include("kernels.jl")
 
 end # module
