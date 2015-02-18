@@ -1,5 +1,7 @@
 # Here will go built-in covariance functions
 
+#See Chapter 4 Page 90 of Rasumussen and Williams Gaussian Processes for Machine Learning
+
 # Radial Basic Function 
 rbf(x::Vector{Float64}, y::Vector{Float64}, l::Float64=1.0) =  exp(-0.5 * norm(x-y)^2/l^2)
 
