@@ -12,6 +12,6 @@ end
 xpred = [-4.0,-3.0,-1.0, 0.0, 2.0]
 y = [-2.0, 0.0, 1.0, 2.0, -1.0]
 
-gp = GP(xpred,y,mat52)
+gp = GP(xpred,y,rbf)
 predict(gp, xpred)
 plot(gp, [-5:0.1:5])
