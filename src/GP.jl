@@ -47,7 +47,7 @@ type GP
         length(y) == nobvs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         _mean_xx = meanf(x)
         _cov_xx_inv = inv(distance(x,kernel))
-        new(x, y, dim, nobvs, kernel, _mean_xx, _cov_xx_inv)
+        new(x, y, dim, nobvs, meanf, kernel, _mean_xx, _cov_xx_inv)
     end
 end
 
@@ -68,7 +68,7 @@ GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function) = 
 #             the Gaussian process at the requested locations
 function predict(gp::GP, x::Matrix{Float64})
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consisten dimensions"))
-    mu = meanf(x) + distance(x, gp.x, gp.kernel) * gp._cov_xx_inv * (gp.y-_mean_xx)  #predictive mean y^*|y
+    mu = gp.meanf(x) + distance(x, gp.x, gp.kernel) * gp._cov_xx_inv * (gp.y-gp._mean_xx)  #predictive mean y^*|y
     Sigma = distance(x,gp.kernel) - distance(x,gp.x,gp.kernel) *gp._cov_xx_inv * distance(gp.x, x, gp.kernel)  # predictive variances
     conf = 2*sqrt(max(diag(Sigma), 0.0))
     u = mu + conf
