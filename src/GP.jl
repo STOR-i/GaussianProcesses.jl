@@ -40,13 +40,14 @@ type GP
     nobvs::Int           # Number of observations
     meanf::Function      # Mean function
     kernel::Function     # Function which takes two vectors as argument and returns the distance between them
+    _mean_xx::Matrix{Float64} 
     _cov_xx_inv::Matrix{Float64} 
     function GP(x::Matrix{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function)
         dim, nobvs = size(x)
         length(y) == nobvs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         _mean_xx = meanf(x)
         _cov_xx_inv = inv(distance(x,kernel))
-        new(x, y, dim, nobvs, kernel, _cov_xx_inv)
+        new(x, y, dim, nobvs, kernel, _mean_xx, _cov_xx_inv)
     end
 end
 
