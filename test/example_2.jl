@@ -20,6 +20,7 @@ xpred = [-5:0.1:5]
 
 gp = GP(x,y,meanZero,mat32)
 predict(gp, xpred)
-EI(gp,xpred',maximum(y))
+ei = EI(gp,xpred)
 
 plot(gp, xpred)
+plot(x=xpred, y=ei)
