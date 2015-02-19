@@ -40,7 +40,7 @@ type GP
     nobvs::Int           # Number of observations
     meanf::Function      # Mean function
     kernel::Function     # Function which takes two vectors as argument and returns the distance between them
-    _mean_xx::Matrix{Float64} 
+    _mean_xx::Vector{Float64} 
     _cov_xx_inv::Matrix{Float64} 
     function GP(x::Matrix{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function)
         dim, nobvs = size(x)
@@ -70,10 +70,7 @@ function predict(gp::GP, x::Matrix{Float64})
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consisten dimensions"))
     mu = gp.meanf(x) + distance(x, gp.x, gp.kernel) * gp._cov_xx_inv * (gp.y-gp._mean_xx)  #predictive mean y^*|y
     Sigma = distance(x,gp.kernel) - distance(x,gp.x,gp.kernel) *gp._cov_xx_inv * distance(gp.x, x, gp.kernel)  # predictive variances
-    conf = 2*sqrt(max(diag(Sigma), 0.0))
-    u = mu + conf
-    l = mu - conf
-    return (mu, l, u)
+    return (mu, Sigma)
 end
 
 # 1D Case for prediction
