@@ -38,18 +38,20 @@ type GP
     y::Vector{Float64}   # Output observations
     dim::Int             # Dimension of inputs
     nobvs::Int           # Number of observations
+    meanf::Function      # Mean function
     kernel::Function     # Function which takes two vectors as argument and returns the distance between them
     _cov_xx_inv::Matrix{Float64} 
-    function GP(x::Matrix{Float64}, y::Vector{Float64}, kernel::Function)
+    function GP(x::Matrix{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function)
         dim, nobvs = size(x)
         length(y) == nobvs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
+        _mean_xx = meanf(x)
         _cov_xx_inv = inv(distance(x,kernel))
         new(x, y, dim, nobvs, kernel, _cov_xx_inv)
     end
 end
 
 # Creates GP object for 1D case
-GP(x::Vector{Float64}, y::Vector{Float64}, kernel::Function) = GP(x', y, kernel)
+GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function) = GP(x', y, meanf, kernel)
 
 # Given a GP object, predicts
 # with confidence bounds the value of the process
@@ -65,12 +67,12 @@ GP(x::Vector{Float64}, y::Vector{Float64}, kernel::Function) = GP(x', y, kernel)
 #             the Gaussian process at the requested locations
 function predict(gp::GP, x::Matrix{Float64})
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consisten dimensions"))
-    exp = distance(x, gp.x, gp.kernel) * gp._cov_xx_inv * gp.y
-    cf = distance(x,gp.kernel) - distance(x,gp.x,gp.kernel) *gp._cov_xx_inv * distance(gp.x, x, gp.kernel)  # Covariance function
-    conf = 2*sqrt(max(diag(cf), 0.0))
-    u = exp + conf
-    l = exp - conf
-    return (exp, l, u)
+    mu = meanf(x) + distance(x, gp.x, gp.kernel) * gp._cov_xx_inv * (gp.y-_mean_xx)  #predictive mean y^*|y
+    Sigma = distance(x,gp.kernel) - distance(x,gp.x,gp.kernel) *gp._cov_xx_inv * distance(gp.x, x, gp.kernel)  # predictive variances
+    conf = 2*sqrt(max(diag(Sigma), 0.0))
+    u = mu + conf
+    l = mu - conf
+    return (mu, l, u)
 end
 
 # 1D Case for prediction
