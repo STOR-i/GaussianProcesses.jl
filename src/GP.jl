@@ -1,4 +1,5 @@
 import StatsBase.predict
+import Base.show
 
 # Returns matrix of distances D where D[i,j] = kernel(x1[i], x2[j])
 #
@@ -37,17 +38,17 @@ type GP
     x::Matrix{Float64}   # Input observations  - each column is an observation
     y::Vector{Float64}   # Output observations
     dim::Int             # Dimension of inputs
-    nobvs::Int           # Number of observations
+    nobsv::Int           # Number of observations
     meanf::Function      # Mean function
     kernel::Function     # Function which takes two vectors as argument and returns the distance between them
     _mean_xx::Vector{Float64} 
     _cov_xx_inv::Matrix{Float64} 
     function GP(x::Matrix{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function)
-        dim, nobvs = size(x)
-        length(y) == nobvs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
+        dim, nobsv = size(x)
+        length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         _mean_xx = meanf(x)
         _cov_xx_inv = inv(distance(x,kernel))
-        new(x, y, dim, nobvs, meanf, kernel, _mean_xx, _cov_xx_inv)
+        new(x, y, dim, nobsv, meanf, kernel, _mean_xx, _cov_xx_inv)
     end
 end
 
@@ -75,3 +76,14 @@ end
 
 # 1D Case for prediction
 predict(gp::GP, x::Vector{Float64}) = predict(gp, x')
+
+
+function show(io::IO, gp::GP)
+    println(io, "GP object:")
+    println(io, "  Dim = $(gp.dim)")
+    println(io, "  Number of observations = $(gp.nobsv)")
+    println(io, "  Input observations = ")
+    show(io, gp.x)
+    print(io,"\n  Output observations = ")
+    show(io, gp.y)
+end
