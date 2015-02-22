@@ -6,10 +6,11 @@ using BenchmarkLite
 
 type GP_Benchmark <: Proc
     gp::GP
-    function GP_Benchmark(d::Int, n::Int)
+    op::Function
+    function GP_Benchmark(d::Int, n::Int, op::Function)
         x = 2π * rand(d,n)                             # Training set
         y = Float64[sum(sin(x[:,i])) for i in 1:n]/d  # y = 1/d Σᵢ sin(xᵢ)
-        new(GP(x, y, meanZero, mat32))
+        new(GP(x, y, meanZero, mat32), op)
     end
 end
 
@@ -26,20 +27,25 @@ function Base.start(proc::GP_Benchmark, cfg)
 end
 
 function Base.run(proc::GP_Benchmark, cfg, s)
-    predict(proc.gp, s)
+    proc.op(proc.gp, s)
 end
 
 Base.done(proc::GP_Benchmark, cfg, s) = nothing
 
-
 # Inputs parameters
-dims = [10, 20, 30] # Dimensions
+dims = [10, 30] # Dimensions
 num_train = [20, 50]  # Num training points
 num_pred = [30, 60, 100, 200]  # Number of prediction points
 
 # Setup GP and benchmark functions
 
-procs = vec(Proc[ GP_Benchmark(d, n) for n in num_train, d in dims])
+println("Benchmarking predict function....")
+predict_procs = vec(Proc[ GP_Benchmark(d, n, predict) for n in num_train, d in dims ])
+predict_table = run(predict_procs, num_pred)
+show(predict_table)
 
-rtable = run(procs, num_pred)
-show(rtable)
+
+println("\nBenchmarking EI function...")
+ei_procs = vec(Proc[ GP_Benchmark(d,n, EI) for n in num_train, d in dims ])
+ei_table = run(ei_procs, num_pred)
+show(ei_table)
