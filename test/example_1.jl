@@ -10,7 +10,8 @@ function plot(gp::GP, x::Array{Float64})
     conf = 2*sqrt(max(diag(Sigma), 0.0))
     u = mu + conf
     l = mu - conf
-    plot(x=x, y=mu, ymin=l, ymax=u, Geom.line, Geom.ribbon)
+   plot(layer(x=x, y=mu, ymin=l, ymax=u, Geom.line, Geom.ribbon),
+        layer(x=gp.x,y=gp.y,Geom.point))
 end
 
 

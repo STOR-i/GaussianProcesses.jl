@@ -9,7 +9,7 @@ function EI(gp::GP,x::Matrix{Float64})
     #Calculate useful terms
     s = sqrt(max(diag(Sigma),0.0))
     y = mu - maxY
-    ynorm = y./s
+    ynorm = y./s 
     
     #Calculate the expected improvement
     ei = y .* cdf(Normal(),ynorm) + s .* pdf(Normal(),ynorm)

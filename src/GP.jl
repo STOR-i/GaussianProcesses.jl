@@ -42,13 +42,18 @@ type GP
     meanf::Function      # Mean function
     kernel::Function     # Function which takes two vectors as argument and returns the distance between them
     alpha::Matrix{Float64} 
-    L::Matrix{Float64} 
+    L::Matrix{Float64}  # Cholesky martrix
+    mLL::Float64        # Marginal Log-likelihood
+    
     function GP(x::Matrix{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function)
         dim, nobsv = size(x)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        L = chol(distance(x,kernel))'
-        alpha = (L'*L\(y-meanf(x)))'
-        new(x, y, dim, nobsv, meanf, kernel, alpha, L)
+
+        m = meanf(x)
+        L = chol(distance(x,kernel))'     #Cholesky factorisation
+        alpha = (L'\(L\(y-m)))'
+        mLL = dot((y-m),alpha)/2 + sum(log(diag(L))) + nobsv*log(2*pi)/2   #marginal log-likelihood
+        new(x, y, dim, nobsv, meanf, kernel, alpha, L, mLL)
     end
 end
 
@@ -71,7 +76,7 @@ GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function) = 
 function predict(gp::GP, x::Matrix{Float64})
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consisten dimensions"))
     mu = gp.meanf(x) + distance(x,gp.x,gp.kernel)*gp.alpha'
-    Sigma = distance(x,gp.kernel) - *((gp.L\distance(x,gp.x,gp.kernel)')',gp.L\distance(gp.x,x,gp.kernel))
+    Sigma = distance(x,gp.kernel) - ((gp.L\distance(x,gp.x,gp.kernel)')')*(gp.L\distance(gp.x,x,gp.kernel))
     return (mu, Sigma)
 end
 
@@ -86,4 +91,8 @@ function show(io::IO, gp::GP)
     show(io, gp.x)
     print(io,"\n  Output observations = ")
     show(io, gp.y)
+    print(io,"\n  Marginal Log-Likelihood = ")
+    show(io, round(gp.mLL,3))
 end
+
+
