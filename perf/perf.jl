@@ -16,8 +16,8 @@ end
 
 function Base.string(proc::GP_Benchmark)
     dim = proc.gp.dim
-    n = proc.gp.nobvs 
-    "Dim: $(dim), Nobvs: $(n)"
+    n = proc.gp.nobsv 
+    "Dim: $(dim), Nobsv: $(n)"
 end
 
 Base.length(proc::GP_Benchmark, cfg) = cfg
