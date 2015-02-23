@@ -40,14 +40,14 @@ type GP
     nobvs::Int           # Number of observations
     meanf::Function      # Mean function
     kernel::Function     # Function which takes two vectors as argument and returns the distance between them
-    _mean_xx::Vector{Float64} 
-    _cov_xx_inv::Matrix{Float64} 
+    alpha::Matrix{Float64} 
+    L::Matrix{Float64} 
     function GP(x::Matrix{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function)
         dim, nobvs = size(x)
         length(y) == nobvs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        _mean_xx = meanf(x)
-        _cov_xx_inv = inv(distance(x,kernel))
-        new(x, y, dim, nobvs, meanf, kernel, _mean_xx, _cov_xx_inv)
+        L = chol(distance(x,kernel))'
+        alpha = (L'*L\(y-meanf(x)))'
+        new(x, y, dim, nobvs, meanf, kernel, alpha, L)
     end
 end
 
@@ -66,12 +66,16 @@ GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function) = 
 # Returns:
 # (exp, l, u) respectively the expected values, lower and upper bounds for values
 #             the Gaussian process at the requested locations
+
 function predict(gp::GP, x::Matrix{Float64})
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consisten dimensions"))
-    mu = gp.meanf(x) + distance(x, gp.x, gp.kernel) * gp._cov_xx_inv * (gp.y-gp._mean_xx)  #predictive mean y^*|y
-    Sigma = distance(x,gp.kernel) - distance(x,gp.x,gp.kernel) *gp._cov_xx_inv * distance(gp.x, x, gp.kernel)  # predictive variances
+    mu = gp.meanf(x) + distance(x,gp.x,gp.kernel)*gp.alpha'
+    Sigma = distance(x,gp.kernel) - *((gp.L\distance(x,gp.x,gp.kernel)')',gp.L\distance(gp.x,x,gp.kernel))
     return (mu, Sigma)
 end
 
+
 # 1D Case for prediction
 predict(gp::GP, x::Vector{Float64}) = predict(gp, x')
+
+
