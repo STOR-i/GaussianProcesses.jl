@@ -15,10 +15,10 @@ function plot(gp::GP, x::Array{Float64})
 end
 
 
-x = [-4.0,-3.0,-1.0, 0.0, 2.0]
-y = [-2.0, 0.0, 1.0, 2.0, -1.0]
-xpred = [-5:0.1:5]
+x = [-4.0,-3.0,-1.0, 0.0, 2.0];
+y = [-2.0, 0.0, 1.0, 2.0, -1.0];
+xpred = [-5:0.1:5];
 
-gp = GP(x,y,meanZero,mat32)
+gp = GP(x,y,meanZero,mat32,1.0)
 predict(gp, xpred)
 plot(gp, xpred)
