@@ -1,9 +1,21 @@
+import Distributions.params
+
 # Here will go built-in covariance functions
 
 #See Chapter 4 Page 90 of Rasumussen and Williams Gaussian Processes for Machine Learning
 
-# Squared Exponential Function 
-se(x::Vector{Float64}, y::Vector{Float64}, hyp::Vector{Float64}=[1.0,0.5]) =  exp(-hyp[2]*norm(x-y)^2/hyp[1]^2)
+abstract Kernel
+
+type SE <: Kernel
+    l::Float64
+    σ::Float64
+    SE(l::Float64=1.0, σ::Float64=0.5) = new(l, σ)
+end
+
+
+kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = exp(-se.σ*norm(x-y)^2/se.l^2)
+params(se::SE) = (se.l, se.σ)
+
 
 #Exponential Function
 exf(x::Vector{Float64}, y::Vector{Float64}, hyp::Vector{Float64}) =  exp(-norm(x-y)/hyp^2)
