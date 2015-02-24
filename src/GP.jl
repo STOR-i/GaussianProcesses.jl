@@ -74,8 +74,8 @@ GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Kernel) = GP
 
 function predict(gp::GP, x::Matrix{Float64})
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consisten dimensions"))
-    mu = gp.meanf(x) + distance(x,gp.x,gp.k)*gp.alpha'
-    Sigma = distance(x,gp.k) - ((gp.L\distance(x,gp.x,gp.k)')')*(gp.L\distance(gp.x,x,gp.k))
+    mu = gp.meanf(x) + distance(x,gp.x,gp.k)*gp.alpha'        #Predictive mean 
+    Sigma = distance(x,gp.k) - ((gp.L\distance(x,gp.x,gp.k)')')*(gp.L\distance(gp.x,x,gp.k)) #Predictive covariance
     return (mu, Sigma)
 end
 

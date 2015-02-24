@@ -14,12 +14,15 @@ function plot(gp::GP, x::Array{Float64})
         layer(x=gp.x,y=gp.y,Geom.point))
 end
 
-
-x = [-4.0,-3.0,-1.0, 0.0, 2.0];
+#Training data
+x = [-4.0,-3.0,-1.0, 0.0, 2.0];       
 y = [-2.0, 0.0, 1.0, 2.0, -1.0];
+#Test data
 xpred = [-5:0.1:5];
-se = SE()
 
-gp = GP(x,y,meanZero,se)
+#Specify covariance function
+mat32 = MAT32()
+
+gp = GP(x,y,meanZero,mat32)
 predict(gp, xpred)
 plot(gp, xpred)
