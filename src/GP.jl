@@ -39,25 +39,26 @@ type GP
     y::Vector{Float64}   # Output observations
     dim::Int             # Dimension of inputs
     nobsv::Int           # Number of observations
+    obsNoise::Float64    # Variance of observation noise
     meanf::Function      # Mean function
     k::Kernel            # Kernel object
     alpha::Matrix{Float64} 
     L::Matrix{Float64}  # Cholesky martrix
     mLL::Float64        # Marginal Log-likelihood
     
-    function GP(x::Matrix{Float64}, y::Vector{Float64}, meanf::Function, k::Kernel)
+    function GP(x::Matrix{Float64}, y::Vector{Float64}, meanf::Function, k::Kernel, obsNoise::Float64=0.0)
         dim, nobsv = size(x)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         m = meanf(x)
-        L = chol(distance(x,k))'     #Cholesky factorisation
+        L = chol(distance(x,k)+obsNoise*eye(nobsv))'     #Cholesky factorisation
         alpha = (L'\(L\(y-m)))'
         mLL = sum(diag((y-m)*alpha))/2 + sum(log(diag(L))) + nobsv*log(2*pi)/2   #marginal log-likelihood
-        new(x, y, dim, nobsv, meanf, k, alpha, L, mLL)
+        new(x, y, dim, nobsv, obsNoise, meanf, k, alpha, L, mLL)
    end
 end
 
 # Creates GP object for 1D case
-GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Kernel) = GP(x', y, meanf, kernel)
+GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Kernel, obsNoise::Float64=0.0) = GP(x', y, meanf, kernel, obsNoise)
 
 # Given a GP object, predicts
 # with confidence bounds the value of the process
