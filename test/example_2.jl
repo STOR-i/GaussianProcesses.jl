@@ -1,27 +1,34 @@
 #Test expected improvement function
 
 using gaussianprocesses
+using Distributions
 using Gadfly
 import Gadfly.plot
 
-# For the 1D case plots the Gaussian process at the requested points
+# For the 1D case plots the Gaussian process at the requested points with the expected improvement
 function plot(gp::GP, x::Array{Float64})
     mu, Sigma = predict(gp, x)
     conf = 2*sqrt(max(diag(Sigma), 0.0))
     u = mu + conf
     l = mu - conf
-    plot(layer(x=x, y=mu, ymin=l, ymax=u, Geom.line, Geom.ribbon),
+    ei = EI(gp,x)   #Calculate the expected improvement
+    p1 = plot(layer(x=x, y=mu, ymin=l, ymax=u, Geom.line, Geom.ribbon),
          layer(x=gp.x,y=gp.y,Geom.point))
+    p2 = plot(x=x, y=ei,Geom.line)
+    draw(PDF("p1and2.pdf", 6inch, 6inch), vstack(p1,p2))
 end
 
 
-x = [-4.0,-3.0,-1.0, 0.0, 2.0]
-y = [-2.0, 0.0, 1.0, 2.0, -1.0]
-xpred = [-5:0.1:5]
+#Training data
+x = 2*π*rand(5);
+y = cos(x) + rand(Normal(0,0.5),5);
 
-gp = GP(x,y,meanZero,mat32,[1.0,1.0])
-predict(gp, xpred)
-ei = EI(gp,xpred)
+#Test data
+xpred = [-2*π:0.1:2*π];
 
+#Specify covariance function, not that default hyperparameters are l=1 and sigma²=1
+mat32 = MAT32()
+
+gp = GP(x,y,meanZero,mat32)
 plot(gp, xpred)
-plot(x=xpred, y=ei)
+

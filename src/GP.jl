@@ -92,6 +92,7 @@ function show(io::IO, gp::GP)
     show(io, gp.x)
     print(io,"\n  Output observations = ")
     show(io, gp.y)
+    print(io,"\n  Variance of observation noise = $(gp.obsNoise)")
     print(io,"\n  Marginal Log-Likelihood = ")
     show(io, round(gp.mLL,3))
 end
