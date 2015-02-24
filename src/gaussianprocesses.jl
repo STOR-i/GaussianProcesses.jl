@@ -4,7 +4,7 @@ using Distributions
 # Functions that should be available to package
 # users should be explicitly exported here
 
-export GP, predict, rbf, exf, gef, mat32, mat52, meanZero, meanConst, EI
+export GP, predict, se, exf, gef, mat32, mat52, meanZero, meanConst, EI
 
 # all package code should be included here
 include("GP.jl")

@@ -6,7 +6,7 @@ import Base.show
 # Arguments:
 #  x1 matrix of observations (each column is an observation)
 #  x2 matrix of observations (each column is an observation)
-function distance(x1::Matrix{Float64}, x2::Matrix{Float64}, kernel::Function, hyp::Float64)
+function distance(x1::Matrix{Float64}, x2::Matrix{Float64}, kernel::Function, hyp::Vector{Float64})
     dim, nobs1 = size(x1)
     nobs2 = size(x2,2)
     dim == size(x2,1) || throw(ArgumentError("Input observation matrices must have consistent dimensions"))
@@ -21,7 +21,7 @@ end
 #
 # Arguments:
 #  x matrix of observations (each column is an observation)
-function distance(x::Matrix{Float64}, kernel::Function, hyp::Float64)
+function distance(x::Matrix{Float64}, kernel::Function, hyp::Vector{Float64})
     dim, nobsv = size(x)
     dist = Array(Float64, nobsv, nobsv)
     for i in 1:nobsv
@@ -37,7 +37,7 @@ end
 type GP
     x::Matrix{Float64}   # Input observations  - each column is an observation
     y::Vector{Float64}   # Output observations
-    hyp::Float64         # Hypermeters
+    hyp::Vector{Float64} # Hypermeters
     dim::Int             # Dimension of inputs
     nobsv::Int           # Number of observations
     meanf::Function      # Mean function
@@ -46,20 +46,20 @@ type GP
     L::Matrix{Float64}  # Cholesky martrix
     mLL::Float64        # Marginal Log-likelihood
     
-    function GP(x::Matrix{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function, hyp::Float64)
+    function GP(x::Matrix{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function, hyp::Vector{Float64})
         dim, nobsv = size(x)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
 
         m = meanf(x)
         L = chol(distance(x,kernel,hyp))'     #Cholesky factorisation
         alpha = (L'\(L\(y-m)))'
-        mLL = dot((y-m),alpha)/2 + sum(log(diag(L))) + nobsv*log(2*pi)/2   #marginal log-likelihood
+        mLL = sum(diag((y-m)*alpha))/2 + sum(log(diag(L))) + nobsv*log(2*pi)/2   #marginal log-likelihood
         new(x, y, hyp, dim, nobsv, meanf, kernel, alpha, L, mLL)
    end
 end
 
 # Creates GP object for 1D case
-GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function, hyp::Float64) = GP(x', y, meanf, kernel, hyp)
+GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Function, hyp::Vector{Float64}) = GP(x', y, meanf, kernel, hyp)
 
 # Given a GP object, predicts
 # with confidence bounds the value of the process
@@ -86,11 +86,10 @@ predict(gp::GP, x::Vector{Float64}) = predict(gp, x')
 
 function show(io::IO, gp::GP)
     println(io, "GP object:")
-    println(io, "GP hyperparameters:")
-    show(io, gp.hyp)
-    println(io, "\n  Dim = $(gp.dim)")
-    println(io, "  Number of observations = $(gp.nobsv)")
-    println(io, "  Input observations = ")
+    println(io, " Dim = $(gp.dim)")
+    println(io, " Number of observations = $(gp.nobsv)")
+    println(io, " Hyperparameters: $(gp.hyp)")
+    println(io, " Input observations = ")
     show(io, gp.x)
     print(io,"\n  Output observations = ")
     show(io, gp.y)
