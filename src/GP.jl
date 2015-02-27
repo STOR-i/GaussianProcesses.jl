@@ -51,8 +51,9 @@ type GP
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         m = meanf(x)
         L = chol(distance(x,k)+obsNoise*eye(nobsv))'     #Cholesky factorisation
-        alpha = (L'\(L\(y-m)))'
-        mLL = sum(diag((y-m)*alpha))/2 + sum(log(diag(L))) + nobsv*log(2*pi)/2   #marginal log-likelihood
+        alpha = (L'\(L\(y-m)))
+        mLL = -(y-m)'*alpha/2 - sum(log(diag(L))) - nobsv*log(2*pi)/2   #marginal log-likelihood
+     #   dmLL = trace((alpha*alpha' - L'\(L\eye(2)))*grad_kern(k,distance(x,k)))/2 #derivative of marginal log-likelihood with respect to hyperparameters
         new(x, y, dim, nobsv, obsNoise, meanf, k, alpha, L, mLL)
    end
 end
@@ -75,7 +76,7 @@ GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Kernel, obsN
 
 function predict(gp::GP, x::Matrix{Float64})
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consisten dimensions"))
-    mu = gp.meanf(x) + distance(x,gp.x,gp.k)*gp.alpha'        #Predictive mean 
+    mu = gp.meanf(x) + distance(x,gp.x,gp.k)*gp.alpha        #Predictive mean 
     Sigma = distance(x,gp.k) - ((gp.L\distance(x,gp.x,gp.k)')')*(gp.L\distance(gp.x,x,gp.k)) #Predictive covariance
     return (mu, Sigma)
 end
@@ -96,5 +97,7 @@ function show(io::IO, gp::GP)
     print(io,"\n  Marginal Log-Likelihood = ")
     show(io, round(gp.mLL,3))
 end
+
+
 
 

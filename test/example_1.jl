@@ -1,7 +1,6 @@
 #Plot basic Gaussian Process
 
 using gaussianprocesses
-using Distributions
 using Gadfly
 import Gadfly.plot
 
@@ -16,15 +15,17 @@ function plot(gp::GP, x::Array{Float64})
 end
 
 #Training data
-x = 2*π*rand(5);
-y = cos(x) + rand(Normal(0,0.5),5);
+x = 2*π*rand(1,5);
+y = cos(x) + randn(1,5);
 
 #Test data
 xpred = [-2*π:0.1:2*π];
 
 #Specify covariance function, not that default hyperparameters are l=1 and sigma²=1
-mat32 = MAT32()
+se = SE()
 
-gp = GP(x,y,meanZero,mat32)
+gp = GP(x,y,meanZero,se)
 predict(gp, xpred)
 plot(gp, xpred)
+
+

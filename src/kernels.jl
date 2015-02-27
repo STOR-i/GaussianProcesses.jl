@@ -13,8 +13,9 @@ type SE <: Kernel
     SE(l::Float64=1.0, σ²::Float64=0.5) = new(l, σ²)
 end
 
-kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = exp(-se.σ²*norm(x-y)^2/se.l^2)
+kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = se.σ²*exp(-0.5*norm(x-y)^2/se.l^2)
 params(se::SE) = (se.l, se.σ²)
+grad_kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = [se.σ²*norm(x-y)^2/se.l^3*exp(-0.5*norm(x-y)^2/se.l^2), 2*se.σ*exp(-0.5*norm(x-y)^2/se.l^2)]
 
 #Matern 3/2 Function
 type MAT32 <: Kernel
@@ -36,6 +37,7 @@ end
 
 kern(mat52::MAT52, x::Vector{Float64}, y::Vector{Float64}) = mat52.σ²*(1+sqrt(5*norm(x-y)^2)/mat52.l+sqrt(5*norm(x-y)^2)/(3*mat52.l^2))*exp(-sqrt(5*norm(x-y)^2)/mat52.l)   
 params(mat52::MAT52) = (mat52.l, mat52.σ²)
+
 
 
 

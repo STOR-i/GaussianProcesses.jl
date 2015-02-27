@@ -1,7 +1,6 @@
 #Test expected improvement function
 
 using gaussianprocesses
-using Distributions
 using Gadfly
 import Gadfly.plot
 
@@ -20,8 +19,8 @@ end
 
 
 #Training data
-x = 2*π*rand(5);
-y = cos(x) + rand(Normal(0,0.5),5);
+x = 2*π*rand(1,5);
+y = cos(x) + randn(1,5);
 
 #Test data
 xpred = [-2*π:0.1:2*π];
