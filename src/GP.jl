@@ -51,9 +51,9 @@ type GP
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         m = meanf(x)
         L = chol(distance(x,k)+obsNoise*eye(nobsv))'     #Cholesky factorisation
-        alpha = (L'\(L\(y-m)))
-        mLL = -(y-m)'*alpha/2 - sum(log(diag(L))) - nobsv*log(2*pi)/2   #marginal log-likelihood
-     #   dmLL = trace((alpha*alpha' - L'\(L\eye(2)))*grad_kern(k,distance(x,k)))/2 #derivative of marginal log-likelihood with respect to hyperparameters
+        alpha = L'\(L\(y-m)')
+        mLL = -(y-m)*alpha/2 - sum(log(diag(L))) - nobsv*log(2*pi)/2   #marginal log-likelihood
+    # dmLL = trace((alpha*alpha' - L'\(L\eye(nobsv)))*grad_kern(?))/2 #derivative of marginal log-likelihood with respect to hyperparameters
         new(x, y, dim, nobsv, obsNoise, meanf, k, alpha, L, mLL)
    end
 end

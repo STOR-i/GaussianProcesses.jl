@@ -16,7 +16,7 @@ end
 
 #Training data
 x = 2*π*rand(1,5);
-y = cos(x) + randn(1,5);
+y = cos(x) + 0.5*randn(1,5);
 
 #Test data
 xpred = [-2*π:0.1:2*π];
