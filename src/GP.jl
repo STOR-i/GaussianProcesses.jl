@@ -43,8 +43,8 @@ type GP
     meanf::Function      # Mean function
     k::Kernel            # Kernel object
     alpha::Matrix{Float64} 
-    L::Matrix{Float64}  # Cholesky martrix
-    mLL::Float64        # Marginal Log-likelihood
+    L::Matrix{Float64}   # Cholesky matrix
+    mLL::Float64         # Marginal log-likelihood
     
     function GP(x::Matrix{Float64}, y::Vector{Float64}, meanf::Function, k::Kernel, obsNoise::Float64=0.0)
         dim, nobsv = size(x)
@@ -61,9 +61,7 @@ end
 # Creates GP object for 1D case
 GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Kernel, obsNoise::Float64=0.0) = GP(x', y, meanf, kernel, obsNoise)
 
-# Given a GP object, predicts
-# with confidence bounds the value of the process
-# requested points
+# Given a GP object, predictsthe process requested points
 #
 # Arguments:
 #  GP Gaussian Process object
@@ -71,7 +69,7 @@ GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Kernel, obsN
 #     (each column of the matrix is a point)
 #
 # Returns:
-# (exp, l, u) respectively the expected values, lower and upper bounds for values
+# (mu, Sigma) respectively the expected values, lower and upper bounds for values
 #             the Gaussian process at the requested locations
 
 function predict(gp::GP, x::Matrix{Float64})
