@@ -42,7 +42,7 @@ type GP
     obsNoise::Float64    # Variance of observation noise
     meanf::Function      # Mean function
     k::Kernel            # Kernel object
-    alpha::Matrix{Float64} 
+    alpha::Vector{Float64}
     L::Matrix{Float64}   # Cholesky matrix
     mLL::Float64         # Marginal log-likelihood
     
@@ -50,10 +50,10 @@ type GP
         dim, nobsv = size(x)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         m = meanf(x)
-        L = chol(distance(x,k)+obsNoise*eye(nobsv))'     #Cholesky factorisation
-        alpha = L'\(L\(y-m)')
-        mLL = -(y-m)*alpha/2 - sum(log(diag(L))) - nobsv*log(2*pi)/2   #marginal log-likelihood
-    # dmLL = trace((alpha*alpha' - L'\(L\eye(nobsv)))*grad_kern(?))/2 #derivative of marginal log-likelihood with respect to hyperparameters
+        L = chol(distance(x,k) + obsNoise*eye(nobsv))'     # Cholesky factorisation
+        alpha = L'\(L\(y-m))                             # pg.19
+        mLL = -dot((y-m),alpha)/2.0 - sum(log(diag(L))) - nobsv*log(2*pi)/2   # marginal log-likelihood
+        # dmLL = trace((alpha*alpha' - L'\(L\eye(nobsv)))*grad_kern(?))/2 #derivative of marginal log-likelihood with respect to hyperparameters pg.114
         new(x, y, dim, nobsv, obsNoise, meanf, k, alpha, L, mLL)
    end
 end

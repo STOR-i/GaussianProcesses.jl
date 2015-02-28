@@ -15,8 +15,8 @@ function plot(gp::GP, x::Array{Float64})
 end
 
 #Training data
-x = 2*π*rand(1,5);
-y = cos(x) + 0.5*randn(1,5);
+x = 2*π*rand(5);
+y = cos(x) + 0.5*randn(5);
 
 #Test data
 xpred = [-2*π:0.1:2*π];
@@ -27,5 +27,3 @@ se = SE()
 gp = GP(x,y,meanZero,se)
 predict(gp, xpred)
 plot(gp, xpred)
-
-

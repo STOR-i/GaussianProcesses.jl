@@ -8,8 +8,8 @@ abstract Kernel
 
 #Squared Exponential Function
 type SE <: Kernel
-    l::Float64      #Length scale 
-    σ²::Float64     #Signal variance
+    l::Float64      # Length scale 
+    σ²::Float64     # Signal variance
     SE(l::Float64=1.0, σ²::Float64=0.5) = new(l, σ²)
 end
 
