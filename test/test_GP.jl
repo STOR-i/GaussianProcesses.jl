@@ -15,3 +15,9 @@ function test_pred_matches_obs(gp::GP)
 end
 
 test_pred_matches_obs(gp)
+
+# Modify kernel and update
+gp.k.l = 2.0
+x_pred = 2π * rand(d, n)
+gaussianprocesses.update!(gp)
+y_pred, sig = predict(gp, x_pred)
