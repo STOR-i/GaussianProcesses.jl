@@ -9,13 +9,13 @@ abstract Kernel
 #Squared Exponential Function
 type SE <: Kernel
     l::Float64      # Length scale 
-    σ²::Float64     # Signal variance
-    SE(l::Float64=1.0, σ²::Float64=0.5) = new(l, σ²)
+    σ::Float64     # Signal std
+    SE(l::Float64=1.0, σ::Float64=0.5) = new(l, σ)
 end
 
-kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = se.σ²*exp(-0.5*norm(x-y)^2/se.l^2)
-params(se::SE) = (se.l, se.σ²)
-grad_kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = [se.σ²*norm(x-y)^2/se.l^3*exp(-0.5*norm(x-y)^2/se.l^2), 2*se.σ*exp(-0.5*norm(x-y)^2/se.l^2)]
+kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = se.σ^2*exp(-0.5*norm(x-y)^2/se.l^2)
+params(se::SE) = (se.l, se.σ)
+grad_kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = [se.σ^2*norm(x-y)^2/se.l^3*exp(-0.5*norm(x-y)^2/se.l^2), 2*se.σ*exp(-0.5*norm(x-y)^2/se.l^2)]
 
 #Matern 3/2 Function
 type MAT32 <: Kernel
