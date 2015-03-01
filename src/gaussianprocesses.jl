@@ -9,6 +9,7 @@ export GP, predict, SE, MAT32, MAT52, meanZero, meanConst, EI
 # all package code should be included here
 include("mean_functions.jl")
 include("kernels.jl")
+include("utils.jl")
 include("GP.jl")
 include("expected_improvement.jl")
 

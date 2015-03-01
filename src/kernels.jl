@@ -9,7 +9,7 @@ abstract Kernel
 #Squared Exponential Function
 type SE <: Kernel
     l::Float64      # Length scale 
-    σ::Float64     # Signal std
+    σ::Float64      # Signal std
     SE(l::Float64=1.0, σ::Float64=0.5) = new(l, σ)
 end
 
@@ -37,9 +37,3 @@ end
 
 kern(mat52::MAT52, x::Vector{Float64}, y::Vector{Float64}) = mat52.σ²*(1+sqrt(5*norm(x-y)^2)/mat52.l+sqrt(5*norm(x-y)^2)/(3*mat52.l^2))*exp(-sqrt(5*norm(x-y)^2)/mat52.l)   
 params(mat52::MAT52) = (mat52.l, mat52.σ²)
-
-
-
-
-
-
