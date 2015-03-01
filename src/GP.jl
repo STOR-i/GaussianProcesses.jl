@@ -10,25 +10,41 @@ type GP
     obsNoise::Float64       # Variance of observation noise
     meanf::Function         # Mean function
     k::Kernel               # Kernel object
+    # Auxiliary data
     alpha::Vector{Float64}
     L::Matrix{Float64}      # Cholesky matrix
     mLL::Float64            # Marginal log-likelihood
-    
+    dmLL::Vector{Float64}   # Gradient marginal log-likelihood
     function GP(x::Matrix{Float64}, y::Vector{Float64}, meanf::Function, k::Kernel, obsNoise::Float64=0.0)
         dim, nobsv = size(x)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         m = meanf(x)
-        L = chol(distance(x,k) + obsNoise*eye(nobsv), :L)     # Cholesky factorisation (lower)
-        alpha = L'\(L\(y-m))                             # pg.19
-        mLL = -dot((y-m),alpha)/2.0 - sum(log(diag(L))) - nobsv*log(2*pi)/2   # marginal log-likelihood
-        #dmLL = trace((alpha*alpha' - L'\(L\eye(nobsv)))*grad_kern(?))/2 #derivative of marginal log-likelihood with respect to hyperparameters pg.114
-        new(x, y, dim, nobsv, obsNoise, meanf, k, alpha, L, mLL)
+        gp = new(x, y, dim, nobsv, obsNoise, meanf, k)
+        update!(gp)
+        return gp
    end
 end
 
 # Creates GP object for 1D case
 GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Kernel, obsNoise::Float64=0.0) = GP(x', y, meanf, kernel, obsNoise)
 
+    
+# Update auxiliarly data in GP object after changes have been made
+function update!(gp::GP)
+    m = gp.meanf(gp.x)
+    gp.L = chol(distance(gp.x,gp.k) + gp.obsNoise*eye(gp.nobsv), :L)
+    gp.alpha = gp.L'\(gp.L\(gp.y-m))               
+    gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - sum(log(diag(gp.L))) - gp.nobsv*log(2π)/2.0
+    gp.dmLL = Array(Float64, num_params(gp.k))
+    Kgrads = grad_stack(gp.x, gp.k)   # [dK/dθᵢ]
+    for i in 1:num_params(gp.k)
+        #derivative of marginal log-likelihood with respect to hyperparameters pg.114
+        gp.dmLL[i] = trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv)))*Kgrads[:,:,i])/2 
+    end
+end
+
+
+    
 # Given a GP object, predictsthe process requested points
 #
 # Arguments:
@@ -49,6 +65,17 @@ end
 
 # 1D Case for prediction
 predict(gp::GP, x::Vector{Float64}) = predict(gp, x')
+
+## function optimize!(gp::GP)
+##     function mll(hyp::Vector{Float64})
+##         set_params!(gp.k, hyp)
+##         update!(gp)
+##         return gp.mLL
+##     end
+##     function dmll!(hyp::Vector{Float64}, grad::Vector{Float64})
+##         set_params(gp.k, hyp)
+##         update!(gp)
+        
 
 function show(io::IO, gp::GP)
     println(io, "GP object:")

@@ -16,7 +16,7 @@ end
 kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = se.σ^2*exp(-0.5*norm(x-y)^2/se.l^2)
 params(se::SE) = (se.l, se.σ)
 num_params(se::SE) = 2
-function set_parmas!(se::SE, hyp::Vector{Float64})
+function set_params!(se::SE, hyp::Vector{Float64})
     length(hyp) == 2 || throw(ArgumentError("Squared exponential only has two parameters"))
     se.l, se.σ = hyp
 end

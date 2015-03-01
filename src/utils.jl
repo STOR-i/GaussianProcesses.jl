@@ -53,3 +53,14 @@ function distance(x::Matrix{Float64}, k::Kernel)
     d(x,y) = kern(k, x, y)
     return distance(x, d)
 end
+
+# Calculates the stack [dk / dθᵢ] of kernel matrix gradients
+function grad_stack(x::Matrix{Float64}, k::Kernel)
+    n = num_params(k)
+    d, nobsv = size(x)
+    stack = Array(Float64, nobsv, nobsv, n)
+    for i in 1:d, j in 1:d
+        stack[i,j,:] = grad_kern(k, x[:,i], x[:,j])
+    end
+    return stack
+end
