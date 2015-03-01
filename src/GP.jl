@@ -66,17 +66,6 @@ end
 # 1D Case for prediction
 predict(gp::GP, x::Vector{Float64}) = predict(gp, x')
 
-## function optimize!(gp::GP)
-##     function mll(hyp::Vector{Float64})
-##         set_params!(gp.k, hyp)
-##         update!(gp)
-##         return gp.mLL
-##     end
-##     function dmll!(hyp::Vector{Float64}, grad::Vector{Float64})
-##         set_params(gp.k, hyp)
-##         update!(gp)
-        
-
 function show(io::IO, gp::GP)
     println(io, "GP object:")
     println(io, " Dim = $(gp.dim)")
