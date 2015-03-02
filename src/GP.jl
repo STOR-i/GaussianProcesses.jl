@@ -11,7 +11,7 @@ type GP
     meanf::Function         # Mean function
     k::Kernel               # Kernel object
     # Auxiliary data
-    alpha::Vector{Float64}
+    alpha::Vector{Float64}  # (k + obsNoise)⁻¹y
     L::Matrix{Float64}      # Cholesky matrix
     mLL::Float64            # Marginal log-likelihood
     dmLL::Vector{Float64}   # Gradient marginal log-likelihood

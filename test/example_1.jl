@@ -15,11 +15,12 @@ function plot(gp::GP, x::Array{Float64})
 end
 
 #Training data
-x = 2*π*rand(5);
-y = cos(x) + 0.5*randn(5);
+
+x=[-4.0,-3.0,-1.0,0.0,2.0];
+y=[-2.0,0.0,1.0,2.0,-1.0];
 
 #Test data
-xpred = [-2*π:0.1:2*π];
+xpred = [-5.0:0.1:5.0];
 
 #Specify covariance function, not that default hyperparameters are l=1 and sigma²=1
 se = SE()
@@ -27,3 +28,5 @@ se = SE()
 gp = GP(x,y,meanZero,se)
 predict(gp, xpred)
 plot(gp, xpred)
+
+

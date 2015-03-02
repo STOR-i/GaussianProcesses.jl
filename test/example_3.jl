@@ -3,6 +3,7 @@
 using gaussianprocesses
 
 #Training data
+
 x = 2*π*rand(5);
 y = cos(x) + 0.5*randn(5);
 
