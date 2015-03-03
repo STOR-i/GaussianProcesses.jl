@@ -59,7 +59,7 @@ function grad_stack(x::Matrix{Float64}, k::Kernel)
     n = num_params(k)
     d, nobsv = size(x)
     stack = Array(Float64, nobsv, nobsv, n)
-    for i in 1:d, j in 1:d
+    for j in 1:nobsv, i in 1:nobsv
         stack[i,j,:] = grad_kern(k, x[:,i], x[:,j])
     end
     return stack
