@@ -4,18 +4,18 @@ function optimize!(gp::GP)
     function mll(hyp::Vector{Float64})
         set_params!(gp.k, hyp)
         update!(gp)
-        return gp.mLL
+        return -gp.mLL
     end
     function dmll!(hyp::Vector{Float64}, grad::Vector{Float64})
         set_params(gp.k, hyp)
         update!(gp)
-        grad[:] = gp.dmLL
+        grad[:] = -gp.dmLL
     end
     function mll_and_dmll!(hyp::Vector{Float64}, grad::Vector{Float64})
         set_params!(gp.k, hyp)
         update!(gp)
-        grad[:] = gp.dmLL
-        return gp.mLL
+        grad[:] = -gp.dmLL
+        return -gp.mLL
     end
 
     func = DifferentiableFunction(mll, dmll!, mll_and_dmll!)

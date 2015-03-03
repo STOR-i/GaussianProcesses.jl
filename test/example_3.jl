@@ -12,3 +12,4 @@ se = SE()
 
 gp = GP(x,y,meanZero,se)
 optimize!(gp)
+

@@ -34,7 +34,7 @@ function update!(gp::GP)
     m = gp.meanf(gp.x)
     gp.L = chol(distance(gp.x,gp.k) + gp.obsNoise*eye(gp.nobsv), :L)
     gp.alpha = gp.L'\(gp.L\(gp.y-m))               
-    gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - sum(log(diag(gp.L))) - gp.nobsv*log(2π)/2.0
+    gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - sum(log(diag(gp.L))) - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
     gp.dmLL = Array(Float64, num_params(gp.k))
     Kgrads = grad_stack(gp.x, gp.k)   # [dK/dθᵢ]
     for i in 1:num_params(gp.k)
