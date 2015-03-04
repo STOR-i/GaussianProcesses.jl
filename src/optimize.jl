@@ -17,14 +17,7 @@ function optimize!(gp::GP)
         grad[:] = -gp.dmLL
         return -gp.mLL
     end
-
-    func = DifferentiableFunction(mll, dmll!, mll_and_dmll!)
-    n = num_params(gp.k)
-    # Run box minimization (assume lower bound of zero on hyperparameters - must fix this)
-    # Could apply a transformation to parameters to use an unconstrained optimization
-    l = zeros(n)
-    u = fill(Inf, n)
-    init = params(gp.k)
-    results = fminbox(func, init, l, u)
+    init = params(gp.k)              #Initial hyperparameter values
+    results=optimize(mll,dmll!,init,method=:nelder_mead) #Run optimizer
     print(results)
 end
