@@ -20,6 +20,6 @@ function optimize!(gp::GP, method::Symbol = :bfgs)
 
     func = DifferentiableFunction(mll, dmll!, mll_and_dmll!)
     init = params(gp.k)              #Initial hyperparameter values
-    results=optimize(func,init,method=method) #Run optimizer
+    results=optimize(func,init,method= method) #Run optimizer
     print(results)
 end
