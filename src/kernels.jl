@@ -10,7 +10,7 @@ abstract Kernel
 type SE <: Kernel
     ll::Float64      # Length scale 
     lσ::Float64      # Signal std
-    SE(ll::Float64=0.0, lσ::Float64=0.0) = new(ll, lσ)
+    SE(ll::Float64=0.0, lσ::Float64=0.0) = new(ll,lσ)
 end
 
 kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = exp(2*se.lσ)*exp(-0.5*norm(x-y)^2/exp(se.ll)^2)
@@ -20,7 +20,7 @@ function set_params!(se::SE, hyp::Vector{Float64})
     length(hyp) == 2 || throw(ArgumentError("Squared exponential only has two parameters"))
     se.ll, se.lσ = hyp
 end
-grad_kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = [exp(2*se.lσ)*norm(x-y)^2/exp(se.ll)^3*exp(-0.5*norm(x-y)^2/exp(se.ll)^2), 2.0*exp(se.lσ)*exp(-0.5*norm(x-y)^2/exp(se.ll)^2)]
+grad_kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = [exp(2*se.lσ)*norm(x-y)^2/exp(se.ll)^2*exp(-0.5*norm(x-y)^2/exp(se.ll)^2), 2.0*exp(2*se.lσ)*exp(-0.5*norm(x-y)^2/exp(se.ll)^2)]
 
 
 #Matern 3/2 Function
