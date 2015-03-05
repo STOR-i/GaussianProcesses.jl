@@ -1,6 +1,6 @@
 using Optim
 
-function optimize!(gp::GP, method::Symbol = :bfgs)
+function optimize!(gp::GP; kwargs...)
     function mll(hyp::Vector{Float64})
         set_params!(gp.k, hyp)
         update!(gp)
@@ -19,7 +19,7 @@ function optimize!(gp::GP, method::Symbol = :bfgs)
     end
 
     func = DifferentiableFunction(mll, dmll!, mll_and_dmll!)
-    init = params(gp.k)              #Initial hyperparameter values
-    results=optimize(func,init,method= method) #Run optimizer
+    init = log(params(gp.k))                   #Initial hyperparameter values
+    results=optimize(func,init; kwargs...) #Run optimizer
     print(results)
 end

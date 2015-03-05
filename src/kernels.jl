@@ -2,7 +2,7 @@ import Distributions.params
 
 # Here will go built-in covariance functions
 
-#See Chapter 4 Page 90 of Rasumussen and Williams Gaussian Processes for Machine Learning
+# See Chapter 4 Page 90 of Rasumussen and Williams Gaussian Processes for Machine Learning
 
 abstract Kernel
 
@@ -37,10 +37,10 @@ function grad_kern(se::SE, x::Vector{Float64}, y::Vector{Float64})
 end    
 
 
-#Matern 3/2 Function
+# Matern 3/2 Function
 type MAT32 <: Kernel
-    l::Float64      #Length scale 
-    σ::Float64      #Signal std
+    l::Float64      # Length scale 
+    σ::Float64      # Signal std
     MAT32(l::Float64=1.0, σ::Float64=1.0) = new(l, σ)
 end
 
@@ -55,10 +55,10 @@ grad_kern(mat32::MAT32, x::Vector{Float64}, y::Vector{Float64}) = [mat32.σ^2*(s
 
 
 
-#Matern 5/2 Function
+# Matern 5/2 Function
 type MAT52 <: Kernel
-    l::Float64      #Length scale 
-    σ::Float64     #Signal std
+    l::Float64      # Length scale 
+    σ::Float64      # Signal std
     MAT52(l::Float64=1.0, σ::Float64=1.0) = new(l, σ)
 end
 
