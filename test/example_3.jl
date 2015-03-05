@@ -13,7 +13,6 @@ xpred = [-5.0:0.1:5.0];
 #Specify covariance function, not that default hyperparameters are l=1 and sigma²=1
 se = SE()
 
-
 gp = GP(x,y,meanZero,se)
 optimize!(gp)
 

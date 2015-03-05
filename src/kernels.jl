@@ -10,7 +10,7 @@ abstract Kernel
 type SE <: Kernel
     ll::Float64      # Log of Length scale 
     lσ::Float64      # Log of Signal std
-    SE(ll::Float64=0.0, lσ::Float64=0.0) = new(ll,lσ)
+    SE(l::Float64=1.0, σ::Float64=1.0) = new(log(l),log(σ))
 end
 
 function kern(se::SE, x::Vector{Float64}, y::Vector{Float64})
@@ -19,7 +19,7 @@ function kern(se::SE, x::Vector{Float64}, y::Vector{Float64})
     
     sigma2*exp(-0.5*norm(x-y)^2/ell^2) 
 end    
-params(se::SE) = Float64[se.ll, se.lσ]
+params(se::SE) = exp(Float64[se.ll, se.lσ])
 num_params(se::SE) = 2
 function set_params!(se::SE, hyp::Vector{Float64})
     length(hyp) == 2 || throw(ArgumentError("Squared exponential only has two parameters"))
