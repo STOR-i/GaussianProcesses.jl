@@ -8,19 +8,33 @@ abstract Kernel
 
 #Squared Exponential Function
 type SE <: Kernel
-    ll::Float64      # Length scale 
-    lσ::Float64      # Signal std
+    ll::Float64      # Log of Length scale 
+    lσ::Float64      # Log of Signal std
     SE(ll::Float64=0.0, lσ::Float64=0.0) = new(ll,lσ)
 end
 
-kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = exp(2*se.lσ)*exp(-0.5*norm(x-y)^2/exp(se.ll)^2)
+function kern(se::SE, x::Vector{Float64}, y::Vector{Float64})
+    ell = exp(se.ll)
+    sigma2 = exp(2*se.lσ)
+    
+    sigma2*exp(-0.5*norm(x-y)^2/ell^2) 
+end    
 params(se::SE) = Float64[se.ll, se.lσ]
 num_params(se::SE) = 2
 function set_params!(se::SE, hyp::Vector{Float64})
     length(hyp) == 2 || throw(ArgumentError("Squared exponential only has two parameters"))
     se.ll, se.lσ = hyp
 end
-grad_kern(se::SE, x::Vector{Float64}, y::Vector{Float64}) = [exp(2*se.lσ)*norm(x-y)^2/exp(se.ll)^2*exp(-0.5*norm(x-y)^2/exp(se.ll)^2), 2.0*exp(2*se.lσ)*exp(-0.5*norm(x-y)^2/exp(se.ll)^2)]
+function grad_kern(se::SE, x::Vector{Float64}, y::Vector{Float64})
+     ell = exp(se.ll)
+     sigma2 = exp(2*se.lσ)
+    
+       dK_ell = sigma2*norm(x-y)^2/ell^2*exp(-0.5*norm(x-y)^2/ell^2)
+       dK_sigma = 2.0*sigma2*exp(-0.5*norm(x-y)^2/ell^2)
+    
+    dK_theta = [dK_ell,dK_sigma]
+    return(dK_theta)
+end    
 
 
 #Matern 3/2 Function
