@@ -1,4 +1,4 @@
-using gaussianprocesses
+using GaP
 
 d, n = 10, 20
 
@@ -19,5 +19,5 @@ test_pred_matches_obs(gp)
 # Modify kernel and update
 gp.k.ll = log(2.0)
 x_pred = 2π * rand(d, n)
-gaussianprocesses.update!(gp)
+GaP.update!(gp)
 y_pred, sig = predict(gp, x_pred)

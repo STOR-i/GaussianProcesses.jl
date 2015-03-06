@@ -1,6 +1,6 @@
 # Optimize a gaussianprocess
 
-using gaussianprocesses
+using GaP
 
 #Training data
 

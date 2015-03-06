@@ -1,6 +1,6 @@
 #Plot basic Gaussian Process
 
-using gaussianprocesses
+using GaP
 using Gadfly
 import Gadfly.plot
 

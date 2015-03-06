@@ -1,6 +1,6 @@
 # Contour plots
 
-using gaussianprocesses
+using GaP
 using Gadfly
 import Gadfly.plot
 
