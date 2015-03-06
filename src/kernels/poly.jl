@@ -1,4 +1,5 @@
 #Polynomial covariance function (CURRENTLY BROKEN)
+#See page 94 of Rasmussen and Williams
 
 type POLY <: Kernel
     lc::Float64      # Log of constant

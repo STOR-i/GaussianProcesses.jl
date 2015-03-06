@@ -12,9 +12,9 @@ function plot(gp::GP, x::Array{Float64})
     l = mu - conf
     ei = EI(gp,x)   #Calculate the expected improvement
     p1 = plot(layer(x=x, y=mu, ymin=l, ymax=u, Geom.line, Geom.ribbon),layer(x=gp.x,y=gp.y,Geom.point))
-    #p2 = plot(x=x, y=ei,Geom.line)
+    p2 = plot(x=x, y=ei,Geom.line)
     p1
-    #draw(PDF("p1and2.pdf", 6inch, 6inch), vstack(p1,p2))
+    draw(PDF("p1and2.pdf", 6inch, 6inch), vstack(p1,p2))
 end
 
 
