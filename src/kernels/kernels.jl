@@ -11,6 +11,9 @@ include("mat32.jl")
 include("mat52.jl")
 include("exf.jl")
 include("periodic.jl")
+include("poly.jl")
+
+
 
 
 
