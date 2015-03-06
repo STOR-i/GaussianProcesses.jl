@@ -1,6 +1,6 @@
 using Optim
 
-function optimize!(gp::GP)
+function optimize!(gp::GP; kwargs...)
     function mll(hyp::Vector{Float64})
         set_params!(gp.k, hyp)
         update!(gp)
@@ -19,12 +19,7 @@ function optimize!(gp::GP)
     end
 
     func = DifferentiableFunction(mll, dmll!, mll_and_dmll!)
-    n = num_params(gp.k)
-    # Run box minimization (assume lower bound of zero on hyperparameters - must fix this)
-    # Could apply a transformation to parameters to use an unconstrained optimization
-    l = zeros(n)
-    u = fill(Inf, n)
-    init = params(gp.k)
-    results = fminbox(func, init, l, u)
+    init = log(params(gp.k))                   #Initial hyperparameter values
+    results=optimize(func,init; kwargs...) #Run optimizer
     print(results)
 end
