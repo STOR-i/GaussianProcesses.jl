@@ -8,30 +8,29 @@ type GP
     dim::Int                # Dimension of inputs
     nobsv::Int              # Number of observations
     obsNoise::Float64       # Variance of observation noise
-    meanf::Function         # Mean function
+    m:: Mean                # Mean object
     k::Kernel               # Kernel object
     # Auxiliary data
     alpha::Vector{Float64}  # (k + obsNoise)⁻¹y
     L::Matrix{Float64}      # Cholesky matrix
     mLL::Float64            # Marginal log-likelihood
     dmLL::Vector{Float64}   # Gradient marginal log-likelihood
-    function GP(x::Matrix{Float64}, y::Vector{Float64}, meanf::Function, k::Kernel, obsNoise::Float64=0.0)
+    function GP(x::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, obsNoise::Float64=0.0)
         dim, nobsv = size(x)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        m = meanf(x)
-        gp = new(x, y, dim, nobsv, obsNoise, meanf, k)
+        gp = new(x, y, dim, nobsv, obsNoise, m, k)
         update!(gp)
         return gp
    end
 end
 
 # Creates GP object for 1D case
-GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Function, kernel::Kernel, obsNoise::Float64=0.0) = GP(x', y, meanf, kernel, obsNoise)
+GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, obsNoise::Float64=0.0) = GP(x', y, meanf, kernel, obsNoise)
 
     
 # Update auxiliarly data in GP object after changes have been made
 function update!(gp::GP)
-    m = gp.meanf(gp.x)
+    m = meanf(gp.m,gp.x)
     gp.L = chol(distance(gp.x,gp.k) + gp.obsNoise*eye(gp.nobsv), :L)
     gp.alpha = gp.L'\(gp.L\(gp.y-m))               
     gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - sum(log(diag(gp.L))) - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
@@ -58,7 +57,7 @@ end
 
 function predict(gp::GP, x::Matrix{Float64})
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consisten dimensions"))
-    mu = gp.meanf(x) + distance(x,gp.x,gp.k)*gp.alpha        #Predictive mean 
+    mu = meanf(gp.m,x) + distance(x,gp.x,gp.k)*gp.alpha        #Predictive mean 
     Sigma = distance(x,gp.k) - ((gp.L\distance(x,gp.x,gp.k)')')*(gp.L\distance(gp.x,x,gp.k)) #Predictive covariance
     return (mu, Sigma)
 end
@@ -70,6 +69,7 @@ function show(io::IO, gp::GP)
     println(io, "GP object:")
     println(io, " Dim = $(gp.dim)")
     println(io, " Number of observations = $(gp.nobsv)")
+    println(io, " Mean function: $(typeof(gp.m))")
     println(io, " Kernel: $(typeof(gp.k))")
     println(io, " Hyperparameters: $(params(gp.k))")
     println(io, " Input observations = ")

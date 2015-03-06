@@ -23,9 +23,10 @@ y=[-2.0,0.0,1.0,2.0,-1.0];
 xpred = [-5.0:0.1:5.0];
 
 #Specify covariance function, not that default hyperparameters are l=1 and sigma²=1
+mZero = mZERO()
 se = SE()
 
-gp = GP(x,y,meanZero,se)
+gp = GP(x,y,mZero,se)
 predict(gp, xpred)
 plot(gp, xpred)
 

@@ -1,3 +1,5 @@
+#This file contains a list of the currently available covariance functions
+
 import Distributions.params
 
 # See Chapter 4 Page 90 of Rasumussen and Williams Gaussian Processes for Machine Learning
