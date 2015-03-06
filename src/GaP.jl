@@ -1,4 +1,4 @@
-module gaussianprocesses
+module GaP
 using Distributions
 
 # Functions that should be available to package
