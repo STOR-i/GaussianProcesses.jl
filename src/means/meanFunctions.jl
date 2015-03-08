@@ -5,3 +5,6 @@ import Distributions.params
 abstract Mean
 
 include("mZero.jl")
+include("mConst.jl")
+## include("mLin.jl")
+## include("mPoly.jl")

@@ -4,7 +4,7 @@ using Distributions
 # Functions that should be available to package
 # users should be explicitly exported here
 
-export GP, predict, SE, MAT32, MAT52, EXF, PERI, POLY, mZERO, EI, optimize!
+export GP, predict, SE, MAT32, MAT52, EXF, PERI, POLY, mZERO, mCONST, EI, optimize!
 
 # all package code should be included here
 include("means/meanFunctions.jl")
