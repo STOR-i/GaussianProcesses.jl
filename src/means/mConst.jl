@@ -2,10 +2,12 @@
 
 type mCONST <: Mean
     β::Float64
-    mCONST(β::Float64=0.0) = new(β)
-end    
-    
-meanf(mConst::mCONST,x::Matrix{Float64}) =  mConst.β*ones(size(x, 2))
+    mCONST(β::Float64) = new(β)
+end
+
+mZERO() = mCONST(0.0)
+
+meanf(mConst::mCONST,x::Matrix{Float64}) =  fill(mConst.β, size(x,2))
 
 params(mConst::mCONST) = Float64[mConst.β]
 num_params(mConst::mCONST) = gp.dim
