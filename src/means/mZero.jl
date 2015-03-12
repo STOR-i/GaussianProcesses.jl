@@ -1,8 +1,7 @@
 #Zero mean function
 
 type mZERO <: Mean
-    x::Float64
-    mZERO(x::Float64=0.0) = new(x)
+    mZERO() = new()
 end    
     
 meanf(mZero::mZERO,x::Matrix{Float64}) =  zeros(size(x, 2))
