@@ -5,7 +5,7 @@ using Gadfly
 import Gadfly.plot
 
 # For the 1D case plots the Gaussian process at the requested points
-function plot(gp::GP, x::Array{Float64})
+function plotGP(gp::GP, x::Array{Float64})
     mu, Sigma = predict(gp, x)
     conf = 2*sqrt(max(diag(Sigma), 0.0))
     u = mu + conf
@@ -17,16 +17,26 @@ end
 #Training data
 
 x=[-4.0,-3.0,-1.0,0.0,2.0];
-y=[-2.0,0.0,1.0,2.0,-1.0];
+
+#Create linear data
+y = 2.0*x + 0.5*rand(5)
 
 #Test data
 xpred = [-5.0:0.1:5.0];
 
-#Specify covariance function, not that default hyperparameters are l=1 and sigma²=1
-mZero = mZERO()
+#Specify mean and covariance function 
+beta = [2.0]
+mLin = mLIN(beta)
+
 se = SE()
+mZero = mZERO()
+
+gp = GP(x,y,mLin,se)
+predict(gp, xpred)
+plotGP(gp, xpred)
+
+
 gp = GP(x,y,mZero,se)
 predict(gp, xpred)
-plot(gp, xpred)
-
+plotGP(gp, xpred)
 
