@@ -13,7 +13,7 @@ function meanf(mPoly::mPOLY,x::Matrix{Float64})
     z = zeros(nobsv)
     for i in 1:nobsv
         for j in 1:mPoly.deg
-            z[i] += dot(x[:, i].^j, mPoly.β[:j])
+            z[i] += dot(x[:, i].^j, mPoly.β[:,j])
         end    
     end
     return z

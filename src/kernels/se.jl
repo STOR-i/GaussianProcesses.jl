@@ -1,6 +1,6 @@
 #Squared Exponential Function
 type SE <: Kernel
-    ll::Float64      # Log of Length scale 
+    ll::Float64      # Log of Length scale
     lσ::Float64      # Log of Signal std
     SE(l::Float64=1.0, σ::Float64=1.0) = new(log(l),log(σ))
 end

@@ -13,9 +13,8 @@ y = 0.5*x.^2 + 2.0*x + 0.5*rand(5)
 xpred = [-5.0:0.1:5.0];
 
 #Specify mean and covariance function 
-beta = [0.5,2.0]
-mPoly = mPOLY(beta')
+beta = [0.5 2.0]
+mPoly = mPOLY(beta)
 se = SE()
 gp = GP(x,y,mPoly,se)
 plotGP(gp, xpred)
-

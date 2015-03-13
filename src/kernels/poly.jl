@@ -5,7 +5,7 @@ type POLY <: Kernel
     lc::Float64      # Log of constant
     lσ::Float64      # Log of signal std
     deg::Int64       # degree of polynomial
-    POLY(c::Float64=0.0, σ::Float64=1.0, deg::Int64) = new(log(c), log(σ), deg)
+    POLY(c::Float64, σ::Float64, deg::Int64) = new(log(c), log(σ), deg)
 end
 
 function kern(poly::POLY, x::Vector{Float64}, y::Vector{Float64})
