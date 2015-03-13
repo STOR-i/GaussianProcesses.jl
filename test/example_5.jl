@@ -1,4 +1,4 @@
-#Plot basic Gaussian Process
+#Playing around with the mean polynomial function
 
 using GaP
 
@@ -7,24 +7,15 @@ using GaP
 x=[-4.0,-3.0,-1.0,0.0,2.0];
 
 #Create linear data
-y = 2.0*x + 0.5*rand(5)
+y = 0.5*x.^2 + 2.0*x + 0.5*rand(5)
 
 #Test data
 xpred = [-5.0:0.1:5.0];
 
 #Specify mean and covariance function 
-beta = [2.0]
-mLin = mLIN(beta)
-
+beta = [0.5,2.0]
+mPoly = mPOLY(beta')
 se = SE()
-mZero = mZERO()
-
-gp = GP(x,y,mLin,se)
-predict(gp, xpred)
-plotGP(gp, xpred)
-
-
-gp = GP(x,y,mZero,se)
-predict(gp, xpred)
+gp = GP(x,y,mPoly,se)
 plotGP(gp, xpred)
 

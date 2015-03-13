@@ -3,7 +3,7 @@
 type mLIN <: Mean
     β::Vector{Float64}
     dim::Int
-    mLIN(β::Vector{Float64}) = new(β, length(β)
+    mLIN(β::Vector{Float64}) = new(β, length(β))
 end
     
 meanf(mLin::mLIN,x::Matrix{Float64}) =  x'*mLin.β

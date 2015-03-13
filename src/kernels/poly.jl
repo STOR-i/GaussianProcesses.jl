@@ -4,14 +4,15 @@
 type POLY <: Kernel
     lc::Float64      # Log of constant
     lσ::Float64      # Log of signal std
-    POLY(c::Float64=0.0, σ::Float64=1.0) = new(log(c), log(σ))
+    deg::Int64       # degree of polynomial
+    POLY(c::Float64=0.0, σ::Float64=1.0, deg::Int64) = new(log(c), log(σ), deg)
 end
 
 function kern(poly::POLY, x::Vector{Float64}, y::Vector{Float64})
     c = exp(poly.lc)
     sigma2 = exp(2*poly.lσ)
-    d = 1
-    K = sigma2*(c+x*y)^d
+
+    K = sigma2*(c+dot(x,y)).^poly.deg
     return K
 end
 
@@ -27,10 +28,9 @@ end
 function grad_kern(poly::POLY, x::Vector{Float64}, y::Vector{Float64})
     c = exp(poly.lc)
     sigma2 = exp(2*poly.lσ)
-    d = 1
     
-    dK_c   = c*d*sigma2*(c+x*y)^(d-1)
-    dK_sigma = 2.0*sigma2*(c+x*y)^d
+    dK_c   = c*poly.deg*sigma2*(c+dot(x,y)).^(poly.deg-1)
+    dK_sigma = 2.0*sigma2*(c+dot(x,y)).^poly.deg
     dK_theta = [dK_c,dK_sigma]
     return dK_theta
 end

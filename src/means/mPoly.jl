@@ -2,9 +2,9 @@
 
 type mPOLY <: Mean
     β::Matrix{Float64}    # Polynomial coefficients
-    dim::Int              # Polynomial degree
-    deg::Int              # Dimension
-    mPOLY(β::Vector{Float64}) = new(β,size(β, 1), size(β, 2))
+    dim::Int              # Dimension
+    deg::Int              # Polynomial degree
+    mPOLY(β::Matrix{Float64}) = new(β,size(β, 1), size(β, 2))
 end
 
 function meanf(mPoly::mPOLY,x::Matrix{Float64})
@@ -14,6 +14,7 @@ function meanf(mPoly::mPOLY,x::Matrix{Float64})
     for i in 1:nobsv
         for j in 1:mPoly.deg
             z[i] += dot(x[:, i].^j, mPoly.β[:j])
+        end    
     end
     return z
 end
