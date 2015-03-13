@@ -2,7 +2,7 @@
 type MAT52 <: Kernel
     ll::Float64      # Log of Length scale 
     lσ::Float64      # Log of signal std
-    MAT52(l::Float64=1.0, σ::Float64=1.0) = new(log(l), log(σ))
+    MAT52(ll::Float64=1.0, lσ::Float64=1.0) = new(ll, lσ)
 end
 
 function kern(mat52::MAT52, x::Vector{Float64}, y::Vector{Float64})
@@ -13,12 +13,14 @@ function kern(mat52::MAT52, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-params(mat52::MAT52) = exp(Float64[mat52.ll, mat52.lσ])
+params(mat52::MAT52) = Float64[mat52.ll, mat52.lσ]
 num_params(mat52::MAT52) = 2
+
 function set_params!(mat52::MAT52, hyp::Vector{Float64})
     length(hyp) == 2 || throw(ArgumentError("Matern 5/2 only has two parameters"))
     mat52.ll, mat52.lσ = hyp
 end
+
 function grad_kern(mat52::MAT52, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(mat52.ll)
     sigma2 = exp(2*mat52.lσ)

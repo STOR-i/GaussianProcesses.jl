@@ -4,7 +4,7 @@ type PERI <: Kernel
     ll::Float64      # Log of Length scale 
     lσ::Float64      # Log of signal std
     lp::Float64      # Log of period
-    PERI(l::Float64=1.0, σ::Float64=1.0, p::Float64=1.0) = new(log(l), log(σ), log(p))
+    PERI(ll::Float64=1.0, lσ::Float64=1.0, lp::Float64=1.0) = new(ll, lσ, lp)
 end
 
 function kern(peri::PERI, x::Vector{Float64}, y::Vector{Float64})
@@ -16,8 +16,7 @@ function kern(peri::PERI, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-params(peri::PERI) = exp(Float64[peri.ll, peri.lσ, peri.lp])
-
+params(peri::PERI) = Float64[peri.ll, peri.lσ, peri.lp]
 num_params(peri::PERI) = 3
 
 function set_params!(peri::PERI, hyp::Vector{Float64})
