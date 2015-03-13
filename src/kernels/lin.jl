@@ -2,7 +2,7 @@
 
 type LIN <: Kernel
     ll::Float64      # Log of Length scale 
-    LIN(l::Float64=1.0) = new(ll)
+    LIN(ll::Float64=1.0) = new(ll)
 end
 
 function kern(lin::LIN, x::Vector{Float64}, y::Vector{Float64})
