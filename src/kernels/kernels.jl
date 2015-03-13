@@ -14,3 +14,4 @@ include("peri.jl")              # Periodic covariance function
 include("poly.jl")              # Polnomial covariance function
 include("rq.jl")                # Rational quadratic covariance function
 include("lin.jl")               # Linear covariance function
+include("sum_kernel.jl")        # Sum composite

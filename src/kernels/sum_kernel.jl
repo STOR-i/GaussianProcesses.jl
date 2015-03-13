@@ -2,7 +2,7 @@ type SumKernel <: Kernel
     kerns::Vector{Kernel}
     function SumKernel(args...)
         kerns = Array(Kernel, length(args))
-        for (i,k) in enumerate(args):
+        for (i,k) in enumerate(args)
             isa(k, Kernel) || throw(ArgumentError("All arguments of SumKernel must be Kernel objects"))
             kerns[i] = k
         end
@@ -12,7 +12,7 @@ end
 
 function kern(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
     s = 0.0
-    for k in sumkern.kerns:
+    for k in sumkern.kerns
         s += kern(k, x, y)
     end
     return s
