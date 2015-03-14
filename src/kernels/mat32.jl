@@ -2,7 +2,7 @@
 type MAT32 <: Kernel
     ll::Float64      # Log of Length scale 
     lσ::Float64      # Log of Signal std
-    MAT32(ll::Float64=1.0, lσ::Float64=1.0) = new(ll,lσ)
+    MAT32(ll::Float64=0.0, lσ::Float64=0.0) = new(ll,lσ)
 end
 
 function kern(mat32::MAT32, x::Vector{Float64}, y::Vector{Float64})

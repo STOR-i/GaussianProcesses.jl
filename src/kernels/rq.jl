@@ -4,7 +4,7 @@ type RQ <: Kernel
     ll::Float64      # Log of length scale 
     lσ::Float64      # Log of signal std
     lα::Float64      # Log of shape parameter
-    RQ(ll::Float64=1.0, lσ::Float64=1.0, lα::Float64=1.0) = new(ll, lσ, lα)
+    RQ(ll::Float64=0.0, lσ::Float64=0.0, lα::Float64=0.0) = new(ll, lσ, lα)
 end
 
 function kern(rq::RQ, x::Vector{Float64}, y::Vector{Float64})

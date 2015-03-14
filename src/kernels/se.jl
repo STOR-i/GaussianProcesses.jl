@@ -2,7 +2,7 @@
 type SE <: Kernel
     ll::Float64      # Log of Length scale
     lσ::Float64      # Log of Signal std
-    SE(ll::Float64=1.0, lσ::Float64=1.0) = new(ll,lσ)
+    SE(ll::Float64=0.0, lσ::Float64=0.0) = new(ll,lσ)
 end
 
 function kern(se::SE, x::Vector{Float64}, y::Vector{Float64})
