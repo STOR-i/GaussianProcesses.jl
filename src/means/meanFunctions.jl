@@ -4,6 +4,7 @@ import Distributions.params
 
 abstract Mean
 
-include("mConst.jl")
-include("mLin.jl")
-include("mPoly.jl")
+include("mConst.jl")         #Constant mean function, which also contains the zero mean function
+include("mLin.jl")           #Linear mean function
+include("mPoly.jl")          #Polynomial mean function
+include("sum_mean.jl")

@@ -15,7 +15,7 @@ function set_params!(mConst::mCONST, hyp::Vector{Float64})
     length(hyp) == 1 || throw(ArgumentError("Constant mean function only has 1 parameter"))
     mConst.β = hyp
 end
-function grad_meanf(mConst::mCONST, x::Vector{Float64})
+function grad_meanf(mConst::mCONST, x::Matrix{Float64})
     dM_theta = ones(size(x,2))
     return dM_theta
 end
