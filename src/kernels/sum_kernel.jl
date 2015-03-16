@@ -45,9 +45,9 @@ function set_params!(sumkern::SumKernel, hyp::Vector{Float64})
 end
 
 function grad_kern(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
-    dk = Array(Float64, num_params(sumkern))
-    for (i,k) in enumerate(sumkern.kerns)
-        dk[i] = grad_kern(k, x, y)
-    end
+     dk = Array(Float64, 0)
+      for k in sumkern.kerns
+        append!(dk,grad_kern(k, x, y))
+      end
     dk
 end

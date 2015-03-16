@@ -15,7 +15,7 @@ params(lin::LIN) = Float64[lin.ll]
 num_params(lin::LIN) = 1
 
 function set_params!(lin::LIN, hyp::Vector{Float64})
-    length(hyp) == 1 || throw(ArgumentError("Squared exponential only has one parameter"))
+    length(hyp) == 1 || throw(ArgumentError("Linear kernel only has one parameter"))
     lin.ll = hyp
 end
 
