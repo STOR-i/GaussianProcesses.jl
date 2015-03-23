@@ -19,7 +19,7 @@ function optimize!(gp::GP; kwargs...)
     end
 
     func = DifferentiableFunction(mll, dmll!, mll_and_dmll!)
-    init = log(params(gp.k))                   #Initial hyperparameter values
+    init = params(gp.k)                   #Initial hyperparameter values
     results=optimize(func,init; kwargs...) #Run optimizer
     print(results)
 end
