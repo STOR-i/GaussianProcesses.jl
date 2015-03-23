@@ -1,10 +1,10 @@
-# Returns matrix of distances k where D[i,j] = d(x1[i], x2[j])
+# Creates a kernel matrix from vector inputs according to a function d, where D[i,j] = d(x1[i], x2[j]). For example, where d is function of distance between x1 and x2.
 #
 # Arguments:
 #  x1 matrix of observations (each column is an observation)
 #  x2 matrix of observations (each column is an observation)
-#  d distance function between two vectors
-function distance(x1::Matrix{Float64}, x2::Matrix{Float64}, d::Function)
+#  d fucntion
+function crossKern(x1::Matrix{Float64}, x2::Matrix{Float64}, d::Function)
     dim, nobs1 = size(x1)
     nobs2 = size(x2,2)
     dim == size(x2,1) || throw(ArgumentError("Input observation matrices must have consistent dimensions"))
@@ -15,12 +15,12 @@ function distance(x1::Matrix{Float64}, x2::Matrix{Float64}, d::Function)
     return dist
 end
 
-# Returns PD matrix of distances D where D[i,j] = kernel(x1[i], x1[j])
+# Returns PD matrix D where D[i,j] = kernel(x1[i], x1[j])
 #
 # Arguments:
 #  x matrix of observations (each column is an observation)
-#  d distance function between two vectors
-function distance(x::Matrix{Float64}, d::Function)
+#  d is a function between two vectors
+function crossKern(x::Matrix{Float64}, d::Function)
     dim, nobsv = size(x)
     dist = Array(Float64, nobsv, nobsv)
     for i in 1:nobsv
@@ -33,15 +33,15 @@ function distance(x::Matrix{Float64}, d::Function)
 end
 
 
-# Returns matrix of distances k where D[i,j] = kernel(x1[i], x2[j])
+# Returns matrix where D[i,j] = kernel(x1[i], x2[j])
 #
 # Arguments:
 #  x1 matrix of observations (each column is an observation)
 #  x2 matrix of observations (each column is an observation)
 #  k kernel object
-function distance(x1::Matrix{Float64}, x2::Matrix{Float64}, k::Kernel)
+function crossKern(x1::Matrix{Float64}, x2::Matrix{Float64}, k::Kernel)
     d(x,y) = kern(k, x, y)
-    return distance(x1, x2, d)
+    return crossKern(x1, x2, d)
 end
 
 # Returns PD matrix of distances D where D[i,j] = kernel(x1[i], x1[j])
@@ -49,9 +49,9 @@ end
 # Arguments:
 #  x matrix of observations (each column is an observation)
 #  k kernel object
-function distance(x::Matrix{Float64}, k::Kernel)
+function crossKern(x::Matrix{Float64}, k::Kernel)
     d(x,y) = kern(k, x, y)
-    return distance(x, d)
+    return crossKern(x, d)
 end
 
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients
