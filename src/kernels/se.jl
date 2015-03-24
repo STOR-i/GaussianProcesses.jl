@@ -1,4 +1,5 @@
-# Squared Exponential Function
+# Squared Exponential Function with istropic distance
+
 type SE <: Kernel
     ll::Float64      # Log of Length scale
     lσ::Float64      # Log of Signal std
