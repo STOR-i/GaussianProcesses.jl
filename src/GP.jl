@@ -18,6 +18,7 @@ type GP
     function GP(x::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, obsNoise::Float64=0.0)
         dim, nobsv = size(x)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
+        obsNoise >= 0.0 || throw(ArgumentError("Variance of observation noise must be positive."))
         gp = new(x, y, dim, nobsv, obsNoise, m, k)
         update!(gp)
         return gp
@@ -37,14 +38,17 @@ function update!(gp::GP)
     gp.dmLL = Array(Float64, num_params(gp.k))
     Kgrads = grad_stack(gp.x, gp.k)   # [dK/dθᵢ]
     for i in 1:num_params(gp.k)
-        #derivative of marginal log-likelihood with respect to hyperparameters pg.114
-        gp.dmLL[i] = trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv)))*Kgrads[:,:,i])/2 
+        #derivative of marginal log-likelihood with respect to kernel hyperparameters 
+        gp.dmLL[i] = trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv)))*Kgrads[:,:,i])/2
     end
+           ## Mgrads = #Need a function like grad_stack but for the means
+           ##  gp.dmLL.mean[i] = -Mgrads[:,i]'*gp.alpha #Derivative wrt to mean hyperparameters, need to loop over as same with kernel hyperparameters
+           ##  gp.dmLL.noise =   gp.obsNoise*trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv))))  #Derivative wrt the observation noise
 end
 
 
     
-# Given a GP object, predictsthe process requested points
+# Given a GP object, predicts the process at requested the points
 #
 # Arguments:
 #  GP Gaussian Process object
