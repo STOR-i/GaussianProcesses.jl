@@ -1,6 +1,6 @@
-#Test expected improvement function
+# Test expected improvement function
 
-using GaP
+using Gadfly, GaP
 
 #Training data
 x = 2*π*rand(5);
@@ -15,4 +15,3 @@ mat32 = MAT32()
 
 gp = GP(x,y,mZero,mat32)
 plotEI(gp, xpred)
-
