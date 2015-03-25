@@ -10,6 +10,14 @@ type ProdKernel <: Kernel
     end
 end
 
+function show(io::IO, prodkern::ProdKernel, depth::Int = 0)
+    pad = repeat(" ", 2 * depth)
+    println(io, "$(pad)Type: $(typeof(prodkern))")
+    for k in prodkern.kerns
+        show(io, k, depth+1)
+    end
+end
+
 function kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
     s = 0.0
     for k in prodkern.kerns
