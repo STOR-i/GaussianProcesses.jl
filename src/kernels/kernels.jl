@@ -18,6 +18,8 @@ include("lin.jl")               # Linear covariance function
 
 #ARD kernels
 include("se_ard.jl")            # Squared exponential
+include("rq_ard.jl")            # Rational quadratic
+include("lin_ard.jl")           # Linear covariance
 
 #Composite kernels
 include("sum_kernel.jl")        # Sum of kernels

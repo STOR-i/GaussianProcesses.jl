@@ -1,4 +1,4 @@
-# Rational Quadratic Covariance Function 
+# Rational Quadratic Isotropic Covariance Function 
 
 type RQ <: Kernel
     ll::Float64      # Log of length scale 
@@ -12,7 +12,7 @@ function kern(rq::RQ, x::Vector{Float64}, y::Vector{Float64})
     sigma2 = exp(2*rq.lσ)
     alpha      = exp(rq.lα)
 
-    K =  sigma2*(1+(norm(x-y)^2)/(2*alpha*ell^2))^(-alpha)
+    K =  sigma2*(1+(norm(x-y)^2)/(2*alpha*ell^2)).^(-alpha)
     return K
 end
 

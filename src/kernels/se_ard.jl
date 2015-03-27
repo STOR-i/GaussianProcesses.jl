@@ -3,14 +3,14 @@
 type SEard <: Kernel
     ll::Vector{Float64}      # Log of Length scale
     lσ::Float64              # Log of Signal std
-    dim::Int                 # Length of ll
-    SEard(ll::Vector{Float64}, lσ::Float64) = new(ll,lσ, size(ll,1)+1)
+    dim::Int                 # Number of hyperparameters
+    SEard(ll::Vector{Float64}, lσ::Float64=0.0) = new(ll,lσ, size(ll,1)+1)
 end
 
 function kern(seArd::SEard, x::Vector{Float64}, y::Vector{Float64})
-    ell = exp(seArd.ll)
+    ell    = exp(seArd.ll)
     sigma2 = exp(2*seArd.lσ)
-    K = sigma2*exp(-0.5*norm((x-y)./ell)^2)
+    K      = sigma2*exp(-0.5*norm((x-y)./ell)^2)
     return K
 end
 
