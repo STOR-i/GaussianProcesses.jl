@@ -10,6 +10,14 @@ type SumKernel <: Kernel
     end
 end
 
+function show(io::IO, sumkern::SumKernel, depth::Int = 0)
+    pad = repeat(" ", 2 * depth)
+    println(io, "$(pad)Type: $(typeof(sumkern))")
+    for k in sumkern.kerns
+        show(io, k, depth+1)
+    end
+end
+
 function kern(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
     s = 0.0
     for k in sumkern.kerns

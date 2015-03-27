@@ -17,4 +17,9 @@ beta = [0.5 2.0]
 mPoly = mPOLY(beta)
 se = SE()
 gp = GP(x,y,mPoly,se)
-plotGP(gp, xpred)
+
+# Load Gadfly and plot
+using Gadfly
+GaP.Gadfly_init()
+
+plot(gp, xpred)

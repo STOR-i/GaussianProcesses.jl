@@ -1,6 +1,6 @@
 #Test out different covariance functions
 
-using GaP
+using Gadfly, GaP
 
 #Training data
 
@@ -19,6 +19,6 @@ lin = LIN(log(0.5))
 se = SE()
 gp = GP(x,y,mZero,lin)
 
-plotGP(gp, xpred)
+plot(gp, xpred)
 
 

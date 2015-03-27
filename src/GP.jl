@@ -47,18 +47,17 @@ function update!(gp::GP)
 end
 
 
-    
-# Given a GP object, predicts the process at requested the points
-#
+@doc """
+# Description
+Given a GP object, predicts the process at requested the points
 # Arguments:
-#  GP Gaussian Process object
-#  x  matrix of points for which one would would like to predict the value of the process.
-#     (each column of the matrix is a point)
-#
+ `gp::GP`: Gaussian Process object
+ `x::Matrix{Float64}`:  matrix of points for which one would would like to predict the value of the process.
+                       (each column of the matrix is a point)
 # Returns:
-# (mu, Sigma) respectively the expected values, lower and upper bounds for values
-#             the Gaussian process at the requested locations
-
+ `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
+                                                    process at the specified points
+""" ->
 function predict(gp::GP, x::Matrix{Float64})
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consisten dimensions"))
     mu = meanf(gp.m,x) + crossKern(x,gp.x,gp.k)*gp.alpha        #Predictive mean 
@@ -71,12 +70,12 @@ predict(gp::GP, x::Vector{Float64}) = predict(gp, x')
 
 function show(io::IO, gp::GP)
     println(io, "GP object:")
-    println(io, " Dim = $(gp.dim)")
-    println(io, " Number of observations = $(gp.nobsv)")
-    println(io, " Mean function: $(typeof(gp.m))")
-    println(io, " Kernel: $(typeof(gp.k))")
-    println(io, " Hyperparameters: $(params(gp.k))")
-    println(io, " Input observations = ")
+    println(io, "  Dim = $(gp.dim)")
+    println(io, "  Number of observations = $(gp.nobsv)")
+    println(io, "  Mean function: $(typeof(gp.m))")
+    println(io, "  Kernel:")
+    show(io, gp.k, 2)
+    println(io, "  Input observations = ")
     show(io, gp.x)
     print(io,"\n  Output observations = ")
     show(io, gp.y)
