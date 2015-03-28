@@ -7,7 +7,7 @@ type GP
     y::Vector{Float64}      # Output observations
     dim::Int                # Dimension of inputs
     nobsv::Int              # Number of observations
-    obsNoise::Float64       # Variance of observation noise
+    logNoise::Float64       # log variance of observation noise
     m:: Mean                # Mean object
     k::Kernel               # Kernel object
     # Auxiliary data
@@ -15,11 +15,10 @@ type GP
     L::Matrix{Float64}      # Cholesky matrix
     mLL::Float64            # Marginal log-likelihood
     dmLL::Vector{Float64}   # Gradient marginal log-likelihood
-    function GP(x::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, obsNoise::Float64=0.0)
+    function GP(x::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=0.0)
         dim, nobsv = size(x)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        obsNoise >= 0.0 || throw(ArgumentError("Variance of observation noise must be positive."))
-        gp = new(x, y, dim, nobsv, obsNoise, m, k)
+        gp = new(x, y, dim, nobsv, logNoise, m, k)
         update!(gp)
         return gp
    end
@@ -32,18 +31,20 @@ GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, obsNoise
 # Update auxiliarly data in GP object after changes have been made
 function update!(gp::GP)
     m = meanf(gp.m,gp.x)
-    gp.L = chol(crossKern(gp.x,gp.k) + gp.obsNoise*eye(gp.nobsv), :L)
+    gp.L = chol(crossKern(gp.x,gp.k) + exp(gp.logNoise)*eye(gp.nobsv), :L)
     gp.alpha = gp.L'\(gp.L\(gp.y-m))               
     gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - sum(log(diag(gp.L))) - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
-    gp.dmLL = Array(Float64, num_params(gp.k))
+    gp.dmLL = Array(Float64, 1+num_params(gp.k))
+
+    # Calculate Gradient with respect to hyperparameters
+    gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv))))  #Derivative wrt the observation noise
+    # Derivative of marginal log-likelihood with respect to kernel hyperparameters
     Kgrads = grad_stack(gp.x, gp.k)   # [dK/dθᵢ]
     for i in 1:num_params(gp.k)
-        #derivative of marginal log-likelihood with respect to kernel hyperparameters 
-        gp.dmLL[i] = trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv)))*Kgrads[:,:,i])/2
+        gp.dmLL[i+1] = trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv)))*Kgrads[:,:,i])/2
     end
-           ## Mgrads = #Need a function like grad_stack but for the means
-           ##  gp.dmLL.mean[i] = -Mgrads[:,i]'*gp.alpha #Derivative wrt to mean hyperparameters, need to loop over as same with kernel hyperparameters
-           ##  gp.dmLL.noise =   gp.obsNoise*trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv))))  #Derivative wrt the observation noise
+    ## Mgrads = #Need a function like grad_stack but for the means
+    ## gp.dmLL.mean[i] = -Mgrads[:,i]'*gp.alpha #Derivative wrt to mean hyperparameters, need to loop over as same with kernel hyperparameters
 end
 
 
@@ -68,6 +69,13 @@ end
 # 1D Case for prediction
 predict(gp::GP, x::Vector{Float64}) = predict(gp, x')
 
+
+params(gp::GP) = [gp.logNoise, params(gp.k)]
+function set_params!(gp::GP, hyp::Vector{Float64})
+    gp.logNoise = hyp[1]
+    set_params!(gp.k, hyp[2:end])
+end
+
 function show(io::IO, gp::GP)
     println(io, "GP object:")
     println(io, "  Dim = $(gp.dim)")
@@ -79,7 +87,7 @@ function show(io::IO, gp::GP)
     show(io, gp.x)
     print(io,"\n  Output observations = ")
     show(io, gp.y)
-    print(io,"\n  Variance of observation noise = $(gp.obsNoise)")
+    print(io,"\n  Variance of observation noise = $(exp(gp.logNoise))")
     print(io,"\n  Marginal Log-Likelihood = ")
     show(io, round(gp.mLL,3))
 end
