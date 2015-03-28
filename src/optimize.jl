@@ -1,5 +1,3 @@
-using Optim
-
 function optimize!(gp::GP; kwargs...)
     function mll(hyp::Vector{Float64})
         set_params!(gp.k, hyp)
