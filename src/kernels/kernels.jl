@@ -20,11 +20,11 @@ include("poly.jl")              # Polnomial covariance function
 include("rq.jl")                # Rational quadratic covariance function
 include("lin.jl")               # Linear covariance function
 
-#ARD kernels
+# ARD kernels
 include("se_ard.jl")            # Squared exponential
 include("rq_ard.jl")            # Rational quadratic
 include("lin_ard.jl")           # Linear covariance
-
+include("mat_ard.jl")           # Matern covariance
 
 # Composite kernels
 include("sum_kernel.jl")        # Sum of kernels
