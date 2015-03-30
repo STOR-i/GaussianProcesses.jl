@@ -44,7 +44,7 @@ function set_params!(summean::SumMean, hyp::Vector{Float64})
     end
 end
 
-function grad_meanf(summean::SumMean, x::Matrix{Float64})
+function grad_meanf(summean::SumMean, x::Vector{Float64})
      dm = Array(Float64, 0)
       for m in summean.means
         append!(dm,grad_meanf(m, x))

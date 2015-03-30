@@ -64,3 +64,13 @@ function grad_stack(x::Matrix{Float64}, k::Kernel)
     end
     return stack
 end
+
+function grad_stack(x::Matrix{Float64}, m::Mean)
+    n = num_params(m)
+    d, nobsv = size(x)
+    mat = Array(Float64, nobsv, n)
+    for i in 1:nobsv
+        mat[i,:] = grad_meanf(m, x[:,i])
+    end
+    return mat
+end

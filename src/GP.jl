@@ -15,7 +15,7 @@ type GP
     L::Matrix{Float64}      # Cholesky matrix
     mLL::Float64            # Marginal log-likelihood
     dmLL::Vector{Float64}   # Gradient marginal log-likelihood
-    function GP(x::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=0.0)
+    function GP(x::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-1e8)
         dim, nobsv = size(x)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         gp = new(x, y, dim, nobsv, logNoise, m, k)
@@ -25,26 +25,30 @@ type GP
 end
 
 # Creates GP object for 1D case
-GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, obsNoise::Float64=0.0) = GP(x', y, meanf, kernel, obsNoise)
+GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Float64=-1e8) = GP(x', y, meanf, kernel, logNoise)
 
-    
 # Update auxiliarly data in GP object after changes have been made
 function update!(gp::GP)
     m = meanf(gp.m,gp.x)
     gp.L = chol(crossKern(gp.x,gp.k) + exp(gp.logNoise)*eye(gp.nobsv), :L)
     gp.alpha = gp.L'\(gp.L\(gp.y-m))               
     gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - sum(log(diag(gp.L))) - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
-    gp.dmLL = Array(Float64, 1+num_params(gp.k))
+    gp.dmLL = Array(Float64, 1+ num_params(gp.m) + num_params(gp.k))
 
     # Calculate Gradient with respect to hyperparameters
     gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv))))  #Derivative wrt the observation noise
+
+    Mgrads = grad_stack(gp.x, gp.m)
+    for i in 1:num_params(gp.m)
+        gp.dmLL[i+1] = -dot(Mgrads[:,i],gp.alpha) #Derivative wrt to mean hyperparameters, need to loop over as same with kernel hyperparameters
+    end
+    
     # Derivative of marginal log-likelihood with respect to kernel hyperparameters
     Kgrads = grad_stack(gp.x, gp.k)   # [dK/dθᵢ]
     for i in 1:num_params(gp.k)
-        gp.dmLL[i+1] = trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv)))*Kgrads[:,:,i])/2
+        gp.dmLL[i+num_params(gp.m)+1] = trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv)))*Kgrads[:,:,i])/2
     end
-    ## Mgrads = #Need a function like grad_stack but for the means
-    ## gp.dmLL.mean[i] = -Mgrads[:,i]'*gp.alpha #Derivative wrt to mean hyperparameters, need to loop over as same with kernel hyperparameters
+
 end
 
 
@@ -70,10 +74,11 @@ end
 predict(gp::GP, x::Vector{Float64}) = predict(gp, x')
 
 
-params(gp::GP) = [gp.logNoise, params(gp.k)]
+params(gp::GP) = [gp.logNoise, params(gp.m), params(gp.k)]
 function set_params!(gp::GP, hyp::Vector{Float64})
     gp.logNoise = hyp[1]
-    set_params!(gp.k, hyp[2:end])
+    set_params!(gp.m, hyp[2:1+num_params(gp.m)])
+    set_params!(gp.k, hyp[end-num_params(gp.k)+1:end])
 end
 
 function show(io::IO, gp::GP)

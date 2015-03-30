@@ -12,6 +12,5 @@ y=[-2.0,0.0,1.0,2.0,-1.0];
 
 mZero = mZERO()
 se = SE()
-gp = GP(x,y,mZero,se, 0.5)
-optimize!(gp, method=:l_bfgs, show_trace=true)
-
+gp = GP(x,y,mZero,se)
+optimize!(gp, method=:bfgs, show_trace=true)

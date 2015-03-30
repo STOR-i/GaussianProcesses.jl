@@ -28,7 +28,7 @@ function set_params!(mPoly::mPOLY, hyp::Vector{Float64})
 end
 
 # Needs fixing...
-function grad_meanf(mPoly::mPOLY, x::Matrix{Float64})
+function grad_meanf(mPoly::mPOLY, x::Vector{Float64})
     nobsv = size(x,2)
     z = zeros(nobsv,1)
     for i in 1:mPoly.d
