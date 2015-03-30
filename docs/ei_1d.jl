@@ -11,7 +11,7 @@ xpred = [0.0:0.1:2*π];
 
 #Specify covariance function, not that default hyperparameters are l=1 and sigma²=1
 mZero = mZERO()
-mat32 = MAT32()
+mat = MAT(3)
 
-gp = GP(x,y,mZero,mat32)
+gp = GP(x,y,mZero,mat)
 plotEI(gp, xpred)
