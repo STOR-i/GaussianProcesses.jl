@@ -19,11 +19,11 @@ function show(io::IO, prodkern::ProdKernel, depth::Int = 0)
 end
 
 function kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
-    s = 0.0
+    p = 1.0
     for k in prodkern.kerns
-        s = s.*kern(k, x, y)
+        p = p.*kern(k, x, y)
     end
-    return s
+    return p
 end
 
 function params(prodkern::ProdKernel)
@@ -52,11 +52,14 @@ function set_params!(prodkern::ProdKernel, hyp::Vector{Float64})
     end
 end
 
-#Needs fixing
 function grad_kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
      dk = Array(Float64, 0)
       for k in prodkern.kerns
-        append!(dk,grad_kern(k, x, y).*kern(k,x,y)) #Need dKⱼ,*K_{-j}
+          p = 1.0
+          for j in prodkern.kerns[find(k.!=prodkern.kerns)]
+              p = p.*kern(j, x, y)
+          end
+        append!(dk,grad_kern(k, x, y).*p) 
       end
     dk
 end
