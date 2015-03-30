@@ -5,7 +5,7 @@ x = 2π * rand(d, n)
 y = Float64[sum(sin(x[:,i])) for i in 1:n]/d
 mZero = mZERO()
 se=SE()
-gp = GP(x, y, mZero, se)
+gp = GP(x, y, mZero, se, -1e10)
 
 # Function verifies that predictive mean at input observations
 # are the same as the output observations
