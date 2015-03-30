@@ -1,4 +1,4 @@
-#Linear Covariance Function
+#Linear Isotropic Covariance Function
 
 type LIN <: Kernel
     ll::Float64      # Log of Length scale 
@@ -15,8 +15,8 @@ params(lin::LIN) = Float64[lin.ll]
 num_params(lin::LIN) = 1
 
 function set_params!(lin::LIN, hyp::Vector{Float64})
-    length(hyp) == 1 || throw(ArgumentError("Linear kernel only has one parameter"))
-    lin.ll = hyp
+    length(hyp) == 1 || throw(ArgumentError("Linear isotropic kernel only has one parameter"))
+    lin.ll = hyp[1]
 end
 
 function grad_kern(lin::LIN, x::Vector{Float64}, y::Vector{Float64})

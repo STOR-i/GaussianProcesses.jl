@@ -9,7 +9,7 @@ VERSION < v"0.4-" && using Docile
 # Functions that should be available to package
 # users should be explicitly exported here
 
-export GP, predict, SumKernel, ProdKernel, SE, MAT32, MAT52, EXF, PERI, POLY, RQ, LIN, mZERO, mCONST, mLIN, mPOLY, SumMean, ProdMean, EI, optimize!, plotEI
+export GP, predict, SumKernel, ProdKernel, SE, MAT, PERI, POLY, RQ, LIN, SEard, RQard, LINard, MATard, mZERO, mCONST, mLIN, mPOLY, SumMean, ProdMean, EI, optimize!, plotEI
 
 # all package code should be included here
 include("means/meanFunctions.jl")
