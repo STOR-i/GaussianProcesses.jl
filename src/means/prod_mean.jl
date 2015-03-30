@@ -11,11 +11,11 @@ type ProdMean <: Mean
 end
 
 function meanf(prodmean::ProdMean, x::Matrix{Float64})
-    s = 0.0
+    p = 1.0
     for m in prodmean.means
-        s = s.*meanf(m, x)
+        p = p.*meanf(m, x)
     end
-    return s
+    return p
 end
 
 function params(prodmean::ProdMean)
@@ -44,11 +44,15 @@ function set_params!(prodmean::ProdMean, hyp::Vector{Float64})
     end
 end
 
-#Needs fixing
+
 function grad_meanf(prodmean::ProdMean, x::Matrix{Float64})
      dm = Array(Float64, 0)
       for m in prodmean.means
-        append!(dm,grad_meanf(m, x).*meanf(m,x)) #Need dmⱼ*m_{-j}
+          p = 1.0
+          for j in prodkern.means[find(k.!=prodkern.means)]
+              p = p.*meanf(j, x)
+          end
+        append!(dm,grad_meanf(m, x).*p)
       end
     dm
 end
