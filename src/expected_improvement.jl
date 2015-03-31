@@ -19,3 +19,6 @@ end
 
 # 1-D case
 EI(gp::GP, x::Vector{Float64}) = EI(gp, x')
+
+
+

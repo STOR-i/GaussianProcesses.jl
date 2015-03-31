@@ -13,5 +13,5 @@ xpred = [0.0:0.1:2*π];
 mZero = mZERO()
 mat = MAT(3)
 
-gp = GP(x,y,mZero,mat)
+gp = GP(x,y,mZero,mat,-1e10)
 plotEI(gp, xpred)
