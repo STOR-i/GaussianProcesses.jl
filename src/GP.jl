@@ -64,7 +64,7 @@ Given a GP object, predicts the process at requested the points
                                                     process at the specified points
 """ ->
 function predict(gp::GP, x::Matrix{Float64})
-    size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consisten dimensions"))
+    size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
     mu = meanf(gp.m,x) + crossKern(x,gp.x,gp.k)*gp.alpha        #Predictive mean 
     Sigma = crossKern(x,gp.k) - ((gp.L\crossKern(x,gp.x,gp.k)')')*(gp.L\crossKern(gp.x,x,gp.k)) #Predictive covariance
     return (mu, Sigma)
