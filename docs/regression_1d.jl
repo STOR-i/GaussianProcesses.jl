@@ -1,6 +1,6 @@
 # Plot basic Gaussian Process
 
-using GaP
+using Gadfly, GaP
 
 # Training data
 
@@ -16,5 +16,4 @@ se = SE()
 gp = GP(x,y,mZero,se)
 
 # For plotting must have loading Gadfly before GaP or use initialisation function
-GaP.Gadfly_init()
 Gadfly.plot(gp, xpred)
