@@ -17,7 +17,7 @@ function kern(rqArd::RQard, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-params(rqArd::RQard) = [rqArd.ll, rqArd.lσ, rqArd.lα]
+get_params(rqArd::RQard) = [rqArd.ll, rqArd.lσ, rqArd.lα]
 num_params(rqArd::RQard) = rqArd.dim
 
 function set_params!(rqArd::RQard, hyp::Vector{Float64})

@@ -12,7 +12,7 @@ function kern(linArd::LINard, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-params(linArd::LINard) = [linArd.ll]
+get_params(linArd::LINard) = [linArd.ll]
 num_params(linArd::LINard) = linArd.dim
 
 function set_params!(linArd::LINard, hyp::Vector{Float64})

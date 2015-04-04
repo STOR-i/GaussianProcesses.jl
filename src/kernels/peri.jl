@@ -16,7 +16,7 @@ function kern(peri::PERI, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-params(peri::PERI) = Float64[peri.ll, peri.lσ, peri.lp]
+get_params(peri::PERI) = Float64[peri.ll, peri.lσ, peri.lp]
 num_params(peri::PERI) = 3
 
 function set_params!(peri::PERI, hyp::Vector{Float64})

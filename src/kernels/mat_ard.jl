@@ -23,7 +23,7 @@ function kern(matArd::MATard, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-params(matArd::MATard) = [matArd.ll, matArd.lσ]
+get_params(matArd::MATard) = [matArd.ll, matArd.lσ]
 num_params(matArd::MATard) = matArd.dim
 
 function set_params!(matArd::MATard, hyp::Vector{Float64})

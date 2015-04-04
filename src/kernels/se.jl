@@ -13,7 +13,7 @@ function kern(se::SE, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-params(se::SE) = Float64[se.ll, se.lσ]
+get_params(se::SE) = Float64[se.ll, se.lσ]
 num_params(se::SE) = 2
 
 function set_params!(se::SE, hyp::Vector{Float64})

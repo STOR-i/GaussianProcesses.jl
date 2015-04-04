@@ -1,7 +1,5 @@
 #This file contains a list of the currently available mean functions
 
-import Distributions.params
-
 abstract Mean
 
 include("mConst.jl")         #Constant mean function, which also contains the zero mean function

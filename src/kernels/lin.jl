@@ -11,7 +11,7 @@ function kern(lin::LIN, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-params(lin::LIN) = Float64[lin.ll]
+get_params(lin::LIN) = Float64[lin.ll]
 num_params(lin::LIN) = 1
 
 function set_params!(lin::LIN, hyp::Vector{Float64})

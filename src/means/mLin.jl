@@ -8,7 +8,7 @@ end
     
 meanf(mLin::mLIN,x::Matrix{Float64}) =  x'mLin.β
 
-params(mLin::mLIN) = mLin.β
+get_params(mLin::mLIN) = mLin.β
 num_params(mLin::mLIN) = mLin.dim
 
 function set_params!(mLin::mLIN, hyp::Vector{Float64})

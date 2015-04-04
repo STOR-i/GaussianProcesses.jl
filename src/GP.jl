@@ -74,7 +74,7 @@ end
 predict(gp::GP, x::Vector{Float64}) = predict(gp, x')
 
 
-params(gp::GP) = [gp.logNoise, params(gp.m), params(gp.k)]
+get_params(gp::GP) = [gp.logNoise, get_params(gp.m), get_params(gp.k)]
 function set_params!(gp::GP, hyp::Vector{Float64})
     gp.logNoise = hyp[1]
     set_params!(gp.m, hyp[2:1+num_params(gp.m)])

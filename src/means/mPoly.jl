@@ -19,7 +19,7 @@ function meanf(mPoly::mPOLY,x::Matrix{Float64})
     return z
 end
 
-params(mPoly::mPOLY) = vec(mPoly.β)
+get_params(mPoly::mPOLY) = vec(mPoly.β)
 num_params(mPoly::mPOLY) = mPoly.dim * mPoly.deg
 function set_params!(mPoly::mPOLY, hyp::Vector{Float64})
     num_param = mPoly.dim * mPoly.deg

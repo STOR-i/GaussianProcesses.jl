@@ -9,7 +9,7 @@ mZERO() = mCONST(0.0)
 
 meanf(mConst::mCONST,x::Matrix{Float64}) =  fill(mConst.β, size(x,2))
 
-params(mConst::mCONST) = Float64[mConst.β]
+get_params(mConst::mCONST) = Float64[mConst.β]
 num_params(mConst::mCONST) = 1
 function set_params!(mConst::mCONST, hyp::Vector{Float64})
     length(hyp) == 1 || throw(ArgumentError("Constant mean function only has 1 parameter"))

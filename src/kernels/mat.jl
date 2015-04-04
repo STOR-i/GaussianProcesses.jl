@@ -22,7 +22,7 @@ function kern(mat::MAT, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-params(mat::MAT) = Float64[mat.ll, mat.lσ]
+get_params(mat::MAT) = Float64[mat.ll, mat.lσ]
 num_params(mat::MAT) = 2
 function set_params!(mat::MAT, hyp::Vector{Float64})
     length(hyp) == 2 || throw(ArgumentError("Matern $(mat.d)/2 only has two parameters"))

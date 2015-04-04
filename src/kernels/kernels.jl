@@ -1,6 +1,5 @@
 #This file contains a list of the currently available covariance functions
 
-import Distributions.params
 import Base.show
 
 abstract Kernel
@@ -8,7 +7,7 @@ abstract Kernel
 function show(io::IO, k::Kernel, depth::Int = 0)
     pad = repeat(" ", 2*depth)
     print(io, "$(pad)Type: $(typeof(k)), Params: ")
-    show(io, params(k))
+    show(io, get_params(k))
     print(io, "\n")
 end
     

@@ -18,10 +18,10 @@ function meanf(prodmean::ProdMean, x::Matrix{Float64})
     return p
 end
 
-function params(prodmean::ProdMean)
+function get_params(prodmean::ProdMean)
     p = Array(Float64, 0)
     for m in prodmean.means
-        append!(p, params(m))
+        append!(p, get_params(m))
     end
     p
 end

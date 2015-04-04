@@ -26,10 +26,10 @@ function kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
     return p
 end
 
-function params(prodkern::ProdKernel)
+function get_params(prodkern::ProdKernel)
     p = Array(Float64, 0)
     for k in prodkern.kerns
-        append!(p, params(k))
+        append!(p, get_params(k))
     end
     p
 end

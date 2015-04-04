@@ -18,10 +18,10 @@ function meanf(summean::SumMean, x::Matrix{Float64})
     return s
 end
 
-function params(summean::SumMean)
+function get_params(summean::SumMean)
     p = Array(Float64, 0)
     for m in summean.means
-        append!(p, params(m))
+        append!(p, get_params(m))
     end
     p
 end

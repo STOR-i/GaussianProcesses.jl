@@ -14,7 +14,7 @@ function kern(seArd::SEard, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-params(seArd::SEard) = [seArd.ll, seArd.lσ]
+get_params(seArd::SEard) = [seArd.ll, seArd.lσ]
 num_params(seArd::SEard) = seArd.dim
 
 function set_params!(seArd::SEard, hyp::Vector{Float64})

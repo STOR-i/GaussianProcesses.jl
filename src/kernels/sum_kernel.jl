@@ -26,10 +26,10 @@ function kern(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
     return s
 end
 
-function params(sumkern::SumKernel)
+function get_params(sumkern::SumKernel)
     p = Array(Float64, 0)
     for k in sumkern.kerns
-        append!(p, params(k))
+        append!(p, get_params(k))
     end
     p
 end

@@ -16,7 +16,7 @@ function kern(rq::RQ, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-params(rq::RQ) = Float64[rq.ll, rq.lσ, rq.lα]
+get_params(rq::RQ) = Float64[rq.ll, rq.lσ, rq.lα]
 num_params(rq::RQ) = 3
 
 function set_params!(rq::RQ, hyp::Vector{Float64})
