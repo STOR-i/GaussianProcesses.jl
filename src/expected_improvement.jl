@@ -12,7 +12,7 @@ function EI(gp::GP,x::Matrix{Float64})
     ynorm = y./s 
     
     #Calculate the expected improvement
-    ei = y .* cdf(Normal(),ynorm) + s .* pdf(Normal(),ynorm)
+    ei = y .* Φ(ynorm) + s .* φ(ynorm)
     ei = max(0,ei)
     return(ei)    
 end

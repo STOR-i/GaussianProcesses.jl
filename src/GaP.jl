@@ -1,5 +1,4 @@
 module GaP
-using Distributions
 using Optim
 
 VERSION < v"0.4-" && using Docile
