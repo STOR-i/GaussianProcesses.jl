@@ -49,7 +49,7 @@ function set_params!(sumkern::SumKernel, hyp::Vector{Float64})
         np = num_params(k)
         set_params!(k, hyp[i:(i+np-1)])
         i += np
-    end
+   p end
 end
 
 function grad_kern(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
@@ -59,3 +59,15 @@ function grad_kern(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
       end
     dk
 end
+
+# Addition operators
+function +(k1::SumKernel, k2::Kernel)
+    kerns = [k1.kerns, k2]
+    SumKernel(kerns...)
+end
+function +(k1::SumKernel, k2::SumKernel)
+    kerns = [k1.kerns, k2.kerns]
+    SumKernel(kerns...)
+end
++(k1::Kernel, k2::Kernel) = SumKernel(k1,k2)
++(k1::Kernel, k2::SumKernel) = +(k2,k1)
