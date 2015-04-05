@@ -11,9 +11,9 @@ function show(io::IO, m::Mean, depth::Int = 0)
     print(io, "\n")
 end
 
-include("mConst.jl")         #Constant mean function, which also contains the zero mean function
-include("mLin.jl")           #Linear mean function
-include("mPoly.jl")          #Polynomial mean function
-include("sum_mean.jl")       #Sum mean functions
-include("prod_mean.jl")      #Product of mean functions
+include("mConst.jl")         # Constant mean function, which also contains the zero mean function
+include("mLin.jl")           # Linear mean function
+include("mPoly.jl")          # Polynomial mean function
+include("sum_mean.jl")       # Sum mean functions
+include("prod_mean.jl")      # Product of mean functions
 

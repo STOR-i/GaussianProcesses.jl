@@ -64,3 +64,15 @@ function grad_meanf(prodmean::ProdMean, x::Vector{Float64})
       end
     dm
 end
+
+# Multiplication operators
+function *(m1::ProdMean, m2::Mean)
+    means = [m1.means, m2]
+    ProdMean(means...)
+end
+function *(m1::ProdMean, m2::ProdMean)
+    means = [m1.means, m2.means]
+    ProdMean(means...)
+end
+*(m1::Mean, m2::Mean) = ProdMean(m1,m2)
+*(m1::Mean, m2::ProdMean) = *(m2,m1)

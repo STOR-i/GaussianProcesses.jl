@@ -59,3 +59,14 @@ function grad_meanf(summean::SumMean, x::Vector{Float64})
       end
     dm
 end
+
+function +(m1::SumMean, m2::Mean)
+    means = [m1.means, m2]
+    SumMean(means...)
+end
+function +(m1::SumMean, m2::SumMean)
+    means = [m1.means, m2.means]
+    SumMean(means...)
+end
++(m1::Mean, m2::Mean) = SumMean(m1,m2)
++(m1::Mean, m2::SumMean) = +(m2,m1)
