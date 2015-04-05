@@ -63,3 +63,15 @@ function grad_kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
       end
     dk
 end
+
+# Multiplication operators
+function *(k1::ProdKernel, k2::Kernel)
+    kerns = [k1.kerns, k2]
+    ProdKernel(kerns...)
+end
+function *(k1::ProdKernel, k2::ProdKernel)
+    kerns = [k1.kerns, k2.kerns]
+    ProdKernel(kerns...)
+end
+*(k1::Kernel, k2::Kernel) = ProdKernel(k1,k2)
+*(k1::Kernel, k2::ProdKernel) = +(k2,k1)
