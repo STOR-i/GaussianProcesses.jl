@@ -74,4 +74,4 @@ function *(k1::ProdKernel, k2::ProdKernel)
     ProdKernel(kerns...)
 end
 *(k1::Kernel, k2::Kernel) = ProdKernel(k1,k2)
-*(k1::Kernel, k2::ProdKernel) = +(k2,k1)
+*(k1::Kernel, k2::ProdKernel) = *(k2,k1)
