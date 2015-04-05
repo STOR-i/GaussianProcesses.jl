@@ -10,6 +10,14 @@ type SumMean <: Mean
     end
 end
 
+function show(io::IO, sm::SumMean, depth::Int = 0)
+    pad = repeat(" ", 2 * depth)
+    println(io, "$(pad)Type: $(typeof(sm))")
+    for m in sm.means
+        show(io, m, depth+1)
+    end
+end
+
 function meanf(summean::SumMean, x::Matrix{Float64})
     s = 0.0
     for m in summean.means

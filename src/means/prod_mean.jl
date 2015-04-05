@@ -10,6 +10,14 @@ type ProdMean <: Mean
     end
 end
 
+function show(io::IO, pm::ProdMean, depth::Int = 0)
+    pad = repeat(" ", 2 * depth)
+    println(io, "$(pad)Type: $(typeof(pm))")
+    for m in pm.means
+        show(io, m, depth+1)
+    end
+end
+
 function meanf(prodmean::ProdMean, x::Matrix{Float64})
     p = 1.0
     for m in prodmean.means
