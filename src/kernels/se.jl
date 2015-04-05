@@ -1,5 +1,15 @@
 # Squared Exponential Function with istropic distance
 
+@doc """
+# Description
+This type defines the isotropic squared exponential kernel (covariance), which is a positive definite function of two points in the input space
+# Arguments:
+ `ll::Float64`: Log of the length scale
+ `lσ::Float64`: Log of the signal standard deviation
+
+# Returns:
+ `(ll, lσ)::(Float64, Float64)`: returns the kernel hyperparameters
+""" ->
 type SE <: Kernel
     ll::Float64      # Log of Length scale
     lσ::Float64      # Log of Signal std
