@@ -1,5 +1,13 @@
 #Linear Isotropic Covariance Function
 
+@doc """
+# Description
+Constructor for the isotropic linear kernel (covariance)
+
+k(x,x') = xᵀx'/l²
+# Arguments:
+* `ll::Float64`: Log of the length scale l
+""" ->
 type LIN <: Kernel
     ll::Float64      # Log of Length scale 
     LIN(ll::Float64=0.0) = new(ll)

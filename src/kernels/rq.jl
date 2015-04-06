@@ -1,5 +1,15 @@
 # Rational Quadratic Isotropic Covariance Function 
 
+@doc """
+# Description
+Constructor for the isotropic Rational Quadratic kernel (covariance)
+
+k(x,x') = σ²(1+(x-x')ᵀ(x-x')/2αl²)^{-α}
+# Arguments:
+* `ll::Float64`: Log of length scale l
+* `lσ::Float64`: Log of the signal standard deviation σ
+* `lα::Float64`: Log of shape parameter α
+""" ->
 type RQ <: Kernel
     ll::Float64      # Log of length scale 
     lσ::Float64      # Log of signal std

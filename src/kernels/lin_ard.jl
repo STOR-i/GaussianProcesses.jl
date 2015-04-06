@@ -1,5 +1,14 @@
 #Linear ARD Covariance Function
 
+
+@doc """
+# Description
+Constructor for the ARD linear kernel (covariance)
+
+k(x,x') = xᵀL⁻²x', where L = diag(l₁,l₂,...)
+# Arguments:
+* `ll::Vector{Float64}`: Log of the length scale l
+""" ->
 type LINard <: Kernel
     ll::Vector{Float64}      # Log of Length scale
     dim::Int                 # Number of hyperparameters

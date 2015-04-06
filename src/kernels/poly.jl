@@ -1,6 +1,15 @@
-# Polynomial covariance function (CURRENTLY BROKEN)
-# See page 94 of Rasmussen and Williams
+# Polynomial covariance function 
 
+@doc """
+# Description
+Constructor for the Polynomial kernel (covariance)
+
+k(x,x') = σ²(xᵀx'+c)ᵈ
+# Arguments:
+* `lc::Float64`: Log of the constant c
+* `lσ::Float64`: Log of the signal standard deviation σ
+* `d::Int64`   : Degree of the Polynomial
+""" ->
 type POLY <: Kernel
     lc::Float64      # Log of constant
     lσ::Float64      # Log of signal std

@@ -1,5 +1,15 @@
 # A class of Matern ARD functions including the Matrern 3/2 and 5/2, where d= 3 or 5. Also the exponential function, where d=1
 
+@doc """
+# Description
+Constructor for the ARD Matern d/2 kernel (covariance), where d = 1, 3, or 5
+
+k(x,x') = 2¹⁻ᵈσ²/Γ(d)(sqrt{2d}|x-x'|/l)ᵈK_d(sqrt{2d}|x-x'|/l), where K_d is Bessel function
+# Arguments:
+* `d::Int`             : Type of Matern function 
+* `ll::Vector{Float64}`: Log of length scale l
+* `lσ::Float64`        : Log of the signal standard deviation σ
+""" ->
 type MATard <: Kernel
     d::Int                 # Type of Matern function
     ll::Vector{Float64}    # Log of Length scale 

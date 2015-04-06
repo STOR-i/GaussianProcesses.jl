@@ -1,5 +1,15 @@
 # Periodic Function 
 
+@doc """
+# Description
+Constructor for the Periodic kernel (covariance)
+
+k(x,x') = σ²exp(-2sin²(π|x-x'|/p)/l²)
+# Arguments:
+* `ll::Vector{Float64}`: Log of length scale l
+* `lσ::Float64`        : Log of the signal standard deviation σ
+* `lp::Float64`        : Log of the period
+""" ->
 type PERI <: Kernel
     ll::Float64      # Log of Length scale 
     lσ::Float64      # Log of signal std

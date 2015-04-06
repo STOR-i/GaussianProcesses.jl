@@ -2,10 +2,12 @@
 
 @doc """
 # Description
-Constructor for the isotropic squared exponential kernel (covariance)
+Constructor for the isotropic Squared Exponential kernel (covariance)
+
+k(x,x') = σ²exp(-(x-x')ᵀ(x-x')/2l²)
 # Arguments:
-* `ll::Float64`: Log of the length scale
-* `lσ::Float64`: Log of the signal standard deviation
+* `ll::Float64`: Log of the length scale l
+* `lσ::Float64`: Log of the signal standard deviation σ
 """ ->
 type SE <: Kernel
     ll::Float64      # Log of Length scale
