@@ -54,13 +54,13 @@ end
 
 @doc """
 # Description
-Given a GP object, predicts the process at requested the points
+Calculates the posterior mean and variance of Gaussian Process at specified points
 # Arguments:
- `gp::GP`: Gaussian Process object
- `x::Matrix{Float64}`:  matrix of points for which one would would like to predict the value of the process.
+* `gp::GP`: Gaussian Process object
+* `x::Matrix{Float64}`:  matrix of points for which one would would like to predict the value of the process.
                        (each column of the matrix is a point)
 # Returns:
- `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
+* `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
                                                     process at the specified points
 """ ->
 function predict(gp::GP, x::Matrix{Float64})
