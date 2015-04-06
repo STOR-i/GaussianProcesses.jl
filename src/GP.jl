@@ -1,4 +1,3 @@
-import StatsBase.predict
 import Base.show
 
 # Main GaussianProcess type
