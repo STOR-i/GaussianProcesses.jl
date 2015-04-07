@@ -3,6 +3,8 @@ using Optim
 
 VERSION < v"0.4-" && using Docile
 
+@document
+
 # Functions that should be available to package
 # users should be explicitly exported here
 
@@ -21,7 +23,7 @@ macro glue(pkg)
     path = joinpath(dirname(@__FILE__),"glue",string(pkg,".jl"))
     init = symbol(string(pkg,"_init"))
     quote
-        $(esc(init))() = include($path)
+        $(esc(init))() = Base.include($path)
         isdefined(Main,$(QuoteNode(pkg))) && $(esc(init))()
     end
 end
