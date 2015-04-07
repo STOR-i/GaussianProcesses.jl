@@ -3,8 +3,6 @@ using Optim
 
 VERSION < v"0.4-" && using Docile
 
-@document
-
 # Functions that should be available to package
 # users should be explicitly exported here
 
@@ -20,7 +18,7 @@ include("optimize.jl")
 
 # This approach to loading supported plotting packages is taken directly from the "KernelDensity" package
 macro glue(pkg)
-    path = joinpath(dirname(Base.source_path(nothing)),"glue",string(pkg,".jl"))
+    path = joinpath(dirname(@__FILE__),"glue",string(pkg,".jl"))
     init = symbol(string(pkg,"_init"))
     quote
         $(esc(init))() = include($path)
