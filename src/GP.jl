@@ -2,6 +2,19 @@ import StatsBase.predict
 import Base.show
 
 # Main GaussianProcess type
+
+@doc """
+# Description
+Fits a Gaussian process to a set of training points. The Gaussian process is defined in terms of its mean and covaiance (kernel) functions, which are user defined. As a default it is assumed that the observations are noise free.
+# Arguments:
+* `x::Matrix{Float64}`: Training inputs
+* `y::Vector{Float64}`: Observations
+* `m::Mean`           : Mean function
+* `k::kernel`         : Covariance function
+* `logNoise::Float64` : Log of the observation noise. The default is -1e8, which is equivalent to assuming no observation noise.
+# Returns:
+* `gp::GP`            : A Gaussian process fitted to the training data
+""" ->
 type GP
     x::Matrix{Float64}      # Input observations  - each column is an observation
     y::Vector{Float64}      # Output observations
