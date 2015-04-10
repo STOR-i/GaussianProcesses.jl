@@ -2,13 +2,12 @@
 
 @doc """
 # Description
-This type defines the isotropic squared exponential kernel (covariance), which is a positive definite function of two points in the input space
-# Arguments:
- `ll::Float64`: Log of the length scale
- `lσ::Float64`: Log of the signal standard deviation
+Constructor for the isotropic Squared Exponential kernel (covariance)
 
-# Returns:
- `(ll, lσ)::(Float64, Float64)`: returns the kernel hyperparameters
+k(x,x') = σ²exp(-(x-x')ᵀ(x-x')/2l²)
+# Arguments:
+* `ll::Float64`: Log of the length scale l
+* `lσ::Float64`: Log of the signal standard deviation σ
 """ ->
 type SE <: Kernel
     ll::Float64      # Log of Length scale

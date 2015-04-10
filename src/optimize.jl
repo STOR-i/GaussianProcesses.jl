@@ -1,3 +1,11 @@
+@doc """
+# Description
+A function for optimising the GP hyperparameters based on type II maximum likelihood estimation. This function performs gradient based optimisation using the Optim pacakge to which the user is referred to for further details.
+
+# Arguments:
+* `gp::GP`: Predefined Gaussian process type
+* `kwargs`: Keyword arguments for the optimize function from the Optim package
+""" ->
 function optimize!(gp::GP; kwargs...)
     function mll(hyp::Vector{Float64})
         set_params!(gp, hyp)

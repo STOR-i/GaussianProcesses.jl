@@ -1,5 +1,15 @@
 # Rational Quadratic ARD Covariance Function 
 
+@doc """
+# Description
+Constructor for the ARD Rational Quadratic kernel (covariance)
+
+k(x,x') = σ²(1+(x-x')ᵀL⁻²(x-x')/2α)^{-α}, where L = diag(l₁,l₂,...)
+# Arguments:
+* `ll::Vector{Float64}`: Log of length scale l
+* `lσ::Float64`        : Log of the signal standard deviation σ
+* `lα::Float64`        : Log of shape parameter α
+""" ->
 type RQard <: Kernel
     ll::Vector{Float64}      # Log of length scale 
     lσ::Float64              # Log of signal std

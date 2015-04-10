@@ -1,5 +1,13 @@
 # Polynomial mean function
 
+@doc """
+# Description
+Constructor for the Polynomial mean function
+
+m(x) = Σ_d xᵈβᵀ_d
+# Arguments:
+* `β::Matrix{Float64}`: A Dxd matrix of coefficients where D is the dimension of xᵈ and d is the degree of the polynomial
+""" ->
 type mPOLY <: Mean
     β::Matrix{Float64}    # Polynomial coefficients
     dim::Int              # Dimension

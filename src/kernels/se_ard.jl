@@ -2,16 +2,13 @@
 
 @doc """
 # Description
-This type defines the ARD squared exponential kernel (covariance), which is a positive definite function of two points in the input space
+Constructor for the ARD Squared Exponential kernel (covariance)
+
+k(x,x') = σ²exp(-(x-x')ᵀL⁻²(x-x')/2), where L = diag(l₁,l₂,...)
 # Arguments:
- `ll::Vector{Float64}`: Log of the length scale
- `lσ::Float64`: Log of the signal standard deviation
- `dim::Int`: Number of hyperparameters
-
-# Returns:
- `(ll, lσ)::(Vector{Float64}, Float64)`: returns the kernel hyperparameters
+* `ll::Vector{Float64}`: Log of the length scale l
+* `lσ::Float64`: Log of the signal standard deviation σ
 """ ->
-
 type SEard <: Kernel
     ll::Vector{Float64}      # Log of Length scale
     lσ::Float64              # Log of Signal std

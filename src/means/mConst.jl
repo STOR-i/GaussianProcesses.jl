@@ -1,10 +1,24 @@
 #Constant mean function
 
+@doc """
+# Description
+Constructor for the constant mean function
+
+m(x) = β
+# Arguments:
+* `β::Float64`: Constant
+""" ->
 type mCONST <: Mean
     β::Float64
     mCONST(β::Float64) = new(β)
 end
 
+@doc """
+# Description
+Constructor for the zero mean function
+
+m(x) = 0
+""" ->
 mZERO() = mCONST(0.0)
 
 meanf(mConst::mCONST,x::Matrix{Float64}) =  fill(mConst.β, size(x,2))

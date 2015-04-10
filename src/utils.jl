@@ -1,18 +1,22 @@
-# Creates a kernel matrix from vector inputs according to a function d, where D[i,j] = d(x1[i], x2[j]). For example, where d is function of distance between x1 and x2.
-#
+@doc """
+# Description
+ Creates a kernel matrix from vector inputs according to a function d, where D[i,j] = d(x1[i], x2[j]) or D[i,j] = d(x1[i], x1[j]). For example, where d is function of distance between x1 and x2.
 # Arguments:
-#  x1 matrix of observations (each column is an observation)
-#  x2 matrix of observations (each column is an observation)
-#  d fucntion
+* `x1::Matrix{Float64}`  : Input matrix
+* `x2::Matrix{Float64}`  : Input matrix (optional)
+* `d::Function`          : Testing function. In this case a function of distance between x1 and x2
+# Returns:
+* `D::Matrix{Float64}`: A positive definite matrix given as output from d(x1,x2)
+""" ->
 function crossKern(x1::Matrix{Float64}, x2::Matrix{Float64}, d::Function)
     dim, nobs1 = size(x1)
     nobs2 = size(x2,2)
     dim == size(x2,1) || throw(ArgumentError("Input observation matrices must have consistent dimensions"))
-    dist = Array(Float64, nobs1, nobs2)
+    D= Array(Float64, nobs1, nobs2)
     for i in 1:nobs1, j in 1:nobs2
-        dist[i,j] = d(x1[:,i], x2[:,j])
+        D[i,j] = d(x1[:,i], x2[:,j])
     end
-    return dist
+    return D
 end
 
 # Returns PD matrix D where D[i,j] = kernel(x1[i], x1[j])
@@ -22,14 +26,14 @@ end
 #  d is a function between two vectors
 function crossKern(x::Matrix{Float64}, d::Function)
     dim, nobsv = size(x)
-    dist = Array(Float64, nobsv, nobsv)
+    D = Array(Float64, nobsv, nobsv)
     for i in 1:nobsv
         for j in 1:i
-            dist[i,j] = d(x[:,i], x[:,j])
-            if i != j; dist[j,i] = dist[i,j]; end;
+            D[i,j] = d(x[:,i], x[:,j])
+            if i != j; D[j,i] = D[i,j]; end;
         end
     end
-    return dist
+    return D
 end
 
 
@@ -65,6 +69,7 @@ function grad_stack(x::Matrix{Float64}, k::Kernel)
     return stack
 end
 
+# Calculates the stack [dm / dθᵢ] of mean matrix gradients
 function grad_stack(x::Matrix{Float64}, m::Mean)
     n = num_params(m)
     d, nobsv = size(x)

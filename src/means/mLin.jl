@@ -1,5 +1,13 @@
 # Linear mean function
 
+@doc """
+# Description
+Constructor for the Linear mean function
+
+m(x) = xᵀβ
+# Arguments:
+* `β::Vector{Float64}`: One coefficient for each dimension
+""" ->
 type mLIN <: Mean
     β::Vector{Float64}
     dim::Int
