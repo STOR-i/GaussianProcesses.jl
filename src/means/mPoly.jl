@@ -29,11 +29,9 @@ end
 
 # Needs fixing...
 function grad_meanf(mPoly::mPOLY, x::Vector{Float64})
-    nobsv = size(x,2)
-    z = zeros(nobsv,1)
-    for i in 1:mPoly.d
-     z = z + x'.^i
-    end
-    dM_theta = z
+    dM_theta = Array(Float64,mPoly.dim*mPoly.deg)
+    ## for i in 1:mPoly.deg
+    ## dM_theta[i] = x'.^i
+    ## end
     return dM_theta
 end
