@@ -32,14 +32,17 @@ num_params(mPoly::mPOLY) = mPoly.dim * mPoly.deg
 function set_params!(mPoly::mPOLY, hyp::Vector{Float64})
     num_param = mPoly.dim * mPoly.deg
     length(hyp) == num_param || throw(ArgumentError("Polynomial mean function has $(num_param) parameters"))
-    mPoly.β = hyp
+    mPoly.β = reshape(hyp,mPoly.dim,mPoly.deg)
 end
 
-# Needs fixing...
+
 function grad_meanf(mPoly::mPOLY, x::Vector{Float64})
-    dM_theta = Array(Float64,mPoly.dim*mPoly.deg)
-    ## for i in 1:mPoly.deg
-    ## dM_theta[i] = x'.^i
-    ## end
-    return dM_theta
+    dM_theta = Array(Float64,mPoly.dim,mPoly.deg)
+    
+    for i in 1:mPoly.dim
+        for j in 1:mPoly.deg
+            dM_theta[i,j] = x[i].^j
+        end
+    end
+    return vec(dM_theta)
 end
