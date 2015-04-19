@@ -5,7 +5,7 @@ function Gadfly.plot(gp::GP, x::Matrix{Float64}, CI::Float64=1.96)
     d, n = size(x)
     if d==1
     mu, Sigma = predict(gp, x)
-    conf = CI*sqrt(max(diag(Sigma), 0.0))
+    conf = CI*sqrt(max(Sigma, 0.0))
     u = mu + conf
     l = mu - conf
     Gadfly.plot(Gadfly.layer(x=x, y=mu, ymin=l, ymax=u, Gadfly.Geom.line, Gadfly.Geom.ribbon),
