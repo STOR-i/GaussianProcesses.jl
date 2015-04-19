@@ -16,4 +16,4 @@ se = SE()
 gp = GP(x,y,mZero,se)
 
 # For plotting must have loading Gadfly before GaP or use initialisation function
-Gadfly.plot(gp, xpred)
+plot(gp, xpred)
