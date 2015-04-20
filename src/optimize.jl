@@ -9,17 +9,17 @@ A function for optimising the GP hyperparameters based on type II maximum likeli
 function optimize!(gp::GP; kwargs...)
     function mll(hyp::Vector{Float64})
         set_params!(gp, hyp)
-        update!(gp)
+        update_mll!(gp)
         return -gp.mLL
     end
     function dmll!(hyp::Vector{Float64}, grad::Vector{Float64})
         set_params!(gp, hyp)
-        update!(gp)
+        update_mll_and_dmll!(gp)
         grad[:] = -gp.dmLL
     end
     function mll_and_dmll!(hyp::Vector{Float64}, grad::Vector{Float64})
         set_params!(gp, hyp)
-        update!(gp)
+        update_mll_and_dmll!(gp)
         grad[:] = -gp.dmLL
         return -gp.mLL
     end

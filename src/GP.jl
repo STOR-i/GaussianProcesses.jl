@@ -31,7 +31,7 @@ type GP
         dim, nobsv = size(x)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         gp = new(x, y, dim, nobsv, logNoise, m, k)
-        update!(gp)
+        update_mll!(gp)
         return gp
    end
 end
@@ -40,13 +40,18 @@ end
 GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Float64=-1e8) = GP(x', y, meanf, kernel, logNoise)
 
 # Update auxiliarly data in GP object after changes have been made
-function update!(gp::GP)
+function update_mll!(gp::GP)
     m = meanf(gp.m,gp.x)
     gp.L = chol(crossKern(gp.x,gp.k) + exp(gp.logNoise)*eye(gp.nobsv), :L)
     gp.alpha = gp.L'\(gp.L\(gp.y-m))               
     gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - sum(log(diag(gp.L))) - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
-    gp.dmLL = Array(Float64, 1+ num_params(gp.m) + num_params(gp.k))
+end
 
+# Update gradient of marginal log likelihood
+function update_mll_and_dmll!(gp::GP)
+    update_mll!(gp::GP)
+    gp.dmLL = Array(Float64, 1+ num_params(gp.m) + num_params(gp.k))
+    
     # Calculate Gradient with respect to hyperparameters
     gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv))))  #Derivative wrt the observation noise
 
@@ -60,7 +65,6 @@ function update!(gp::GP)
     for i in 1:num_params(gp.k)
         gp.dmLL[i+num_params(gp.m)+1] = trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv)))*Kgrads[:,:,i])/2
     end
-
 end
 
 
