@@ -75,7 +75,7 @@ Calculates the posterior mean and variance of Gaussian Process at specified poin
 * `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
                                                     process at the specified points
 """ ->
-function predict(gp::GP, x::Matrix{Float64},full_cov::Bool=false)
+function predict(gp::GP, x::Matrix{Float64};full_cov::Bool=false)
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
     mu = meanf(gp.m,x) + crossKern(x,gp.x,gp.k)*gp.alpha        #Predictive mean 
     Sigma = crossKern(x,gp.k) - ((gp.L\crossKern(x,gp.x,gp.k)')')*(gp.L\crossKern(gp.x,x,gp.k)) #Predictive covariance
@@ -86,7 +86,7 @@ function predict(gp::GP, x::Matrix{Float64},full_cov::Bool=false)
 end
 
 # 1D Case for prediction
-predict(gp::GP, x::Vector{Float64},full_cov::Bool=false) = predict(gp, x')
+predict(gp::GP, x::Vector{Float64};full_cov::Bool=false) = predict(gp, x';full_cov=full_cov)
 
 
 get_params(gp::GP) = [gp.logNoise, get_params(gp.m), get_params(gp.k)]
