@@ -4,20 +4,20 @@
 # Description
 Constructor for the Periodic kernel (covariance)
 
-k(x,x') = σ²exp(-2sin²(π|x-x'|/p)/l²)
+k(x,x') = σ²exp(-2sin²(π|x-x'|/p)/ℓ²)
 # Arguments:
-* `ll::Vector{Float64}`: Log of length scale l
+* `ll::Vector{Float64}`: Log of length scale ℓ
 * `lσ::Float64`        : Log of the signal standard deviation σ
 * `lp::Float64`        : Log of the period
 """ ->
-type PERI <: Kernel
+type Peri <: Kernel
     ll::Float64      # Log of Length scale 
     lσ::Float64      # Log of signal std
     lp::Float64      # Log of period
-    PERI(ll::Float64=0.0, lσ::Float64=0.0, lp::Float64=0.0) = new(ll, lσ, lp)
+    Peri(ll::Float64, lσ::Float64, lp::Float64) = new(ll, lσ, lp)
 end
 
-function kern(peri::PERI, x::Vector{Float64}, y::Vector{Float64})
+function kern(peri::Peri, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(peri.ll)
     sigma2 = exp(2*peri.lσ)
     p      = exp(peri.lp)
@@ -26,15 +26,15 @@ function kern(peri::PERI, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-get_params(peri::PERI) = Float64[peri.ll, peri.lσ, peri.lp]
-num_params(peri::PERI) = 3
+get_params(peri::Peri) = Float64[peri.ll, peri.lσ, peri.lp]
+num_params(peri::Peri) = 3
 
-function set_params!(peri::PERI, hyp::Vector{Float64})
+function set_params!(peri::Peri, hyp::Vector{Float64})
     length(hyp) == 3 || throw(ArgumentError("Periodic function has three parameters"))
     peri.ll, peri.lσ, peri.lp = hyp
 end
 
-function grad_kern(peri::PERI, x::Vector{Float64}, y::Vector{Float64})
+function grad_kern(peri::Peri, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(peri.ll)
     sigma2 = exp(2*peri.lσ)
     p      = exp(peri.lp)

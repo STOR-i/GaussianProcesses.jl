@@ -8,9 +8,9 @@ m(x) = β
 # Arguments:
 * `β::Float64`: Constant
 """ ->
-type mCONST <: Mean
+type MeanConst <: Mean
     β::Float64
-    mCONST(β::Float64) = new(β)
+    MeanConst(β::Float64) = new(β)
 end
 
 @doc """
@@ -19,17 +19,17 @@ Constructor for the zero mean function
 
 m(x) = 0
 """ ->
-mZERO() = mCONST(0.0)
+MeanZero() = MeanConst(0.0)
 
-meanf(mConst::mCONST,x::Matrix{Float64}) =  fill(mConst.β, size(x,2))
+meanf(mConst::MeanConst,x::Matrix{Float64}) =  fill(mConst.β, size(x,2))
 
-get_params(mConst::mCONST) = Float64[mConst.β]
-num_params(mConst::mCONST) = 1
-function set_params!(mConst::mCONST, hyp::Vector{Float64})
+get_params(mConst::MeanConst) = Float64[mConst.β]
+num_params(mConst::MeanConst) = 1
+function set_params!(mConst::MeanConst, hyp::Vector{Float64})
     length(hyp) == 1 || throw(ArgumentError("Constant mean function only has 1 parameter"))
     mConst.β = hyp[1]
 end
-function grad_meanf(mConst::mCONST, x::Vector{Float64})
+function grad_meanf(mConst::MeanConst, x::Vector{Float64})
     dM_theta = ones(size(x,2))
     return dM_theta
 end

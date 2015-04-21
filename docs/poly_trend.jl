@@ -14,9 +14,9 @@ xpred = [-5.0:0.1:5.0];
 
 #Specify mean and covariance function 
 beta = [0.5 2.0]
-mPoly = mPOLY(beta)
-se = SE()
-gp = GP(x,y,mPoly,se)
+mPoly = MeanPoly(beta)
+kern = SE(0.0,0.0)
+gp = GP(x,y,mPoly,kern)
 
 # Load Gadfly and plot
 using Gadfly
