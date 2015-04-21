@@ -12,8 +12,9 @@ xpred = [-5.0:0.1:5.0];
 
 
 mZero = MeanZero()
-kern = SE(0.0,0.0)
-gp = GP(x,y,mZero,kern)
+kern = Mat(5,0.0,0.0)*Mat(3,0.0,0.0)*SE(0.0,0.0)*RQ(0.0,0.0,0.0) + SE(0.0,0.0)
 
-# For plotting must have loading Gadfly before GaP or use initialisation function
+gp = GP(x,y,mZero,kern)
+optimize!(gp,method=:bfgs,show_trace=true)
+
 plot(gp, xpred)

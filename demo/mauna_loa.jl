@@ -12,11 +12,11 @@ x = year[year.<2004]; y = co2[year.<2004]
 xpred = year[year.>=2004]; ypred = co2[year.>=2004]
 
 
-kernel = SE(4.0,4.0) + PERI(0.0,1.0,0.0)*SE(4.0,0.0) + RQ(0.0,0.0,-1.0) + SE(-2.0,-2.0)
+kernel = SE(4.0,4.0) + Peri(0.0,1.0,0.0)*SE(4.0,0.0) + RQ(0.0,0.0,-1.0) + SE(-2.0,-2.0)
 
-mConst = mCONST(mean(y))
-
+mConst = MeanConst(mean(y))
 gp = GP(x,y,mConst,kernel,-2.0)
+optimize!(gp,method=:bfgs,show_trace=true)
 
 mu, Sigma = predict(gp,xpred)
 

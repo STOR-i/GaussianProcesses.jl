@@ -19,9 +19,3 @@ end
 #For the 1D case
 Gadfly.plot(gp::GP,x::Vector{Float64}) = Gadfly.plot(gp,x')
 
-# For the 1D Gaussian process at the requested points with the expected improvement
-function plotEI(gp::GP, x::Array{Float64})
-    ei = EI(gp,x)   #Calculate the expected improvement
-    p1 = Gadfly.plot(x=x, y=ei,Gadfly.Geom.line)
-    p1
-end
