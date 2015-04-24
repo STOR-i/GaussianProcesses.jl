@@ -1,7 +1,7 @@
 import Gadfly
 
 
-function plot1D(gp::GP, c::(Float64, Float64), CI::Float64=1.96, res::Int=50)
+function plot1D(gp::GP, c::(Float64, Float64), CI::Float64=1.96, res::Int=100)
 
         sx = (c[2]-c[1])/(res-1)
         x=[c[1]:sx:c[2]]
@@ -10,7 +10,7 @@ function plot1D(gp::GP, c::(Float64, Float64), CI::Float64=1.96, res::Int=50)
         u = mu + conf
         l = mu - conf
         
-        Gadfly.plot(Gadfly.layer(x=gp.x, y=mu, ymin=l, ymax=u, Gadfly.Geom.line, Gadfly.Geom.ribbon),
+        Gadfly.plot(Gadfly.layer(x=x, y=mu, ymin=l, ymax=u, Gadfly.Geom.line, Gadfly.Geom.ribbon),
                 Gadfly.layer(x=gp.x,y=gp.y,Gadfly.Geom.point))
 end
 
