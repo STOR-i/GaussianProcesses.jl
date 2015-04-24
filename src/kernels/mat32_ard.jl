@@ -31,8 +31,8 @@ num_params(mat::Mat32Ard) = mat.dim
 
 function set_params!(mat::Mat32Ard, hyp::Vector{Float64})
     length(hyp) == mat.dim || throw(ArgumentError("Matern 3/2 only has $(mat.dim) parameters"))
-    mat.ll = hyp[1:(mat52Ard.dim-1)]
-    mat.lσ = hyp[mat52Ard.dim]
+    mat.ll = hyp[1:(mat.dim-1)]
+    mat.lσ = hyp[mat.dim]
 end
 
 function grad_kern(mat::Mat32Ard, x::Vector{Float64}, y::Vector{Float64})
