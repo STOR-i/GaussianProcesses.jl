@@ -13,6 +13,7 @@ kern = SE([0.0,0.0],0.0)
 gp = GP(x,y,mZero,kern,-2.0)
 optimize!(gp,method=:bfgs,show_trace=true)
 
-plot(gp)
+plot(gp; c=(-2π, 2π,-2π,2π))
+     
 
 

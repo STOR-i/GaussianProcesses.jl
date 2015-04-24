@@ -1,7 +1,7 @@
 import Gadfly
 
 
-function plot1D(gp::GP, c::(Float64, Float64), CI::Float64=1.96, res::Int=100)
+function plot1D(gp::GP; c::(Float64, Float64)=(minimum(gp.x), maximum(gp.x)), CI::Float64=1.96, res::Int=100)
 
         sx = (c[2]-c[1])/(res-1)
         x=[c[1]:sx:c[2]]
@@ -15,8 +15,9 @@ function plot1D(gp::GP, c::(Float64, Float64), CI::Float64=1.96, res::Int=100)
 end
 
 
-function plot2D(gp::GP, c::(Float64, Float64, Float64, Float64), res::Int=50)
-        
+function plot2D(gp::GP; c::(Float64, Float64, Float64, Float64) = (minimum(gp.x[1,:]), maximum(gp.x[1,:]),
+                                                                   minimum(gp.x[2,:]), maximum(gp.x[2,:])),
+                res::Int=50)
         sx = (c[2]-c[1])/(res-1)
         sy = (c[4]-c[3])/(res-1)
         A = Array(Float64,2,res^2)
@@ -31,20 +32,13 @@ function plot2D(gp::GP, c::(Float64, Float64, Float64, Float64), res::Int=50)
         Gadfly.plot(z=z,x=[c[1]:sx:c[2]],y=[c[3]:sy:c[4]],Gadfly.Geom.contour)
 end
 
-function Gadfly.plot(gp::GP)
+function Gadfly.plot(gp::GP; kwargs...)
     d, n = size(gp.x)
     if d>2
         error("Only 1D and 2D plots are permitted")
     elseif d==1
-        xmin = minimum(gp.x)
-        xmax = maximum(gp.x)
-        plot1D(gp, (xmin,xmax))
+        plot1D(gp; kwargs...)
     elseif d==2
-        xmin = minimum(gp.x[1,:]); xmax = maximum(gp.x[1,:])
-        ymin = minimum(gp.x[2,:]); ymax = maximum(gp.x[2,:])
-        plot2D(gp, (xmin,xmax,ymin,ymax))
+        plot2D(gp; kwargs...)
     end
 end
-
-
-
