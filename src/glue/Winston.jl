@@ -1,4 +1,4 @@
-import Gadfly
+import Winston
 
 
 function plot1D(gp::GP; clim::(Float64, Float64)=(minimum(gp.x), maximum(gp.x)), CI::Float64=1.96, res::Int=1000)
@@ -10,8 +10,12 @@ function plot1D(gp::GP; clim::(Float64, Float64)=(minimum(gp.x), maximum(gp.x)),
         u = mu + conf
         l = mu - conf
         
-        Gadfly.plot(Gadfly.layer(x=x, y=mu, ymin=l, ymax=u, Gadfly.Geom.line, Gadfly.Geom.ribbon),
-                Gadfly.layer(x=gp.x,y=gp.y,Gadfly.Geom.point))
+        p=Winston.FramedPlot()
+             Winston.add(p,Winston.Curve(x,l,color="red"))
+             Winston.add(p,Winston.Curve(x,u,color="red"))
+             Winston.add(p,Winston.FillBetween(x,l,x,u))
+             Winston.add(p,Winston.Curve(x,mu,color="black"))
+             Winston.add(p,Winston.Points(gp.x,gp.y,kind="filled circle"))
 end
 
 
@@ -29,10 +33,10 @@ function plot2D(gp::GP; clim::(Float64, Float64, Float64, Float64) = (minimum(gp
 
         mu = predict(gp,A)[1]
         z= reshape(mu,res,res)
-        Gadfly.plot(z=z,x=[clim[1]:sx:clim[2]],y=[clim[3]:sy:clim[4]],Gadfly.Geom.contour)
+        Winston.imagesc(z, (minimum(z),0.6maximum(z)))
 end
 
-function Gadfly.plot(gp::GP; kwargs...)
+function Winston.plot(gp::GP; kwargs...)
     d, n = size(gp.x)
     if d>2
         error("Only 1D and 2D plots are permitted")

@@ -1,6 +1,6 @@
 # Plot basic Gaussian Process
 
-using Gadfly, GaP
+using Winston, GaP
 
 # Training data
 x=[-4.0,-3.0,-1.0,0.0,2.0];
@@ -9,7 +9,7 @@ y=[-2.0,0.0,1.0,2.0,-1.0];
 
 #Select mean and covariance function
 mZero = MeanZero()                   #Zero mean function
-kern = SE(5,0.0,0.0)                #Matern 5/2
+kern = SE(0.0,0.0)                   #Sqaured exponential kernel
 
 gp = GP(x,y,mZero,kern)
 optimize!(gp,method=:bfgs,show_trace=true)
