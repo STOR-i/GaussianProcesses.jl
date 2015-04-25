@@ -11,31 +11,31 @@ include("mat52_ard.jl")
 
 @doc """
 # Description
-Constructor the Matern kernel
+Constructor the Matern kernel, where ν defines the Matern type (i.e. ν = 1/2, 3/2 or 5/2).
 
 # See also
 Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard
 """ ->
-function Mat(ν::Int,ll::Float64, lσ::Float64)
-    if ν==1
+function Mat(ν::Float64,ll::Float64, lσ::Float64)
+    if ν==1/2
         kern = Mat12Iso(ll, lσ)
-    elseif ν==3
+    elseif ν==3/2
         kern = Mat32Iso(ll, lσ)
-    elseif ν==5
+    elseif ν==5/2
         kern = Mat52Iso(ll, lσ)
-    else throw(ArgumentError("For the Matern covariance d must equal 1, 3 or 5"))
+    else throw(ArgumentError("Only Matern 1/2, 3/2 and 5/2 are implementable"))
     end
     return kern
 end    
 
-function Mat(ν::Int,ll::Vector{Float64}, lσ::Float64)
-    if ν==1
+function Mat(ν::Float64,ll::Vector{Float64}, lσ::Float64)
+    if ν==1/2
         kern = Mat12Ard(ll, lσ)
-    elseif ν==3
+    elseif ν==3/2
         kern = Mat32Ard(ll, lσ)
-    elseif ν==5
+    elseif ν==5/2
         kern = Mat52Ard(ll, lσ)
-    else throw(ArgumentError("For the Matern covariance d must equal 1, 3 or 5"))
+    else throw(ArgumentError("Only Matern 1/2, 3/2 and 5/2 are implementable"))
     end
     return kern
 end    
