@@ -16,7 +16,7 @@ function crossKern(x1::Matrix{Float64}, x2::Matrix{Float64}, d::Function)
     for i in 1:nobs1, j in 1:nobs2
         D[i,j] = d(x1[:,i], x2[:,j])
     end
-    return D
+    return max(D,0)
 end
 
 # Returns PD matrix D where D[i,j] = kernel(x1[i], x1[j])
@@ -33,7 +33,7 @@ function crossKern(x::Matrix{Float64}, d::Function)
             if i != j; D[j,i] = D[i,j]; end;
         end
     end
-    return D
+    return max(D,0)
 end
 
 
