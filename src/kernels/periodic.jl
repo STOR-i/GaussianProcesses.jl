@@ -10,14 +10,14 @@ k(x,x') = σ²exp(-2sin²(π|x-x'|/p)/ℓ²)
 * `lσ::Float64`        : Log of the signal standard deviation σ
 * `lp::Float64`        : Log of the period
 """ ->
-type Peri <: Kernel
+type Periodic <: Kernel
     ll::Float64      # Log of Length scale 
     lσ::Float64      # Log of signal std
     lp::Float64      # Log of period
-    Peri(ll::Float64, lσ::Float64, lp::Float64) = new(ll, lσ, lp)
+    Periodic(ll::Float64, lσ::Float64, lp::Float64) = new(ll, lσ, lp)
 end
 
-function kern(peri::Peri, x::Vector{Float64}, y::Vector{Float64})
+function kern(peri::Periodic, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(peri.ll)
     sigma2 = exp(2*peri.lσ)
     p      = exp(peri.lp)
@@ -26,15 +26,15 @@ function kern(peri::Peri, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-get_params(peri::Peri) = Float64[peri.ll, peri.lσ, peri.lp]
-num_params(peri::Peri) = 3
+get_params(peri::Periodic) = Float64[peri.ll, peri.lσ, peri.lp]
+num_params(peri::Periodic) = 3
 
-function set_params!(peri::Peri, hyp::Vector{Float64})
-    length(hyp) == 3 || throw(ArgumentError("Periodic function has three parameters"))
+function set_params!(peri::Periodic, hyp::Vector{Float64})
+    length(hyp) == 3 || throw(ArgumentError("Periodic function has only three parameters"))
     peri.ll, peri.lσ, peri.lp = hyp
 end
 
-function grad_kern(peri::Peri, x::Vector{Float64}, y::Vector{Float64})
+function grad_kern(peri::Periodic, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(peri.ll)
     sigma2 = exp(2*peri.lσ)
     p      = exp(peri.lp)

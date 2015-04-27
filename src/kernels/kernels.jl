@@ -15,7 +15,7 @@ include("lin.jl")               # Linear covariance function
 include("se.jl")                # Squared exponential covariance function
 include("rq.jl")                # Rational quadratic covariance function
 include("mat.jl")                # Matern covariance function
-include("peri.jl")              # Periodic covariance function
+include("periodic.jl")              # Periodic covariance function
 include("poly.jl")              # Polnomial covariance function
 
 # Composite kernels
