@@ -12,5 +12,5 @@ y=[-2.0,0.0,1.0,2.0,-1.0];
 
 mZero = MeanZero()
 kern = SE(0.0,0.0)
-gp = GP(x,y,mZero,kern)
-optimize!(gp, method=:bfgs, show_trace=true)
+gp = GP(x,y,mZero,kern, 0.0)
+optimize!(gp; kern=false, show_trace=true, method=:bfgs)

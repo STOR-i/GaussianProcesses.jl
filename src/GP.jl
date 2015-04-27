@@ -48,22 +48,31 @@ function update_mll!(gp::GP)
 end
 
 # Update gradient of marginal log likelihood
-function update_mll_and_dmll!(gp::GP)
+function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     update_mll!(gp::GP)
-    gp.dmLL = Array(Float64, 1+ num_params(gp.m) + num_params(gp.k))
+    gp.dmLL = Array(Float64, noise + mean*num_params(gp.m) + kern*num_params(gp.k))
     
     # Calculate Gradient with respect to hyperparameters
-    gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv))))  #Derivative wrt the observation noise
+    
+    #Derivative wrt the observation noise
+    if noise
+        gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv))))
+    end
 
-    Mgrads = grad_stack(gp.x, gp.m)
-    for i in 1:num_params(gp.m)
-        gp.dmLL[i+1] = -dot(Mgrads[:,i],gp.alpha) #Derivative wrt to mean hyperparameters, need to loop over as same with kernel hyperparameters
+    #Derivative wrt to mean hyperparameters, need to loop over as same with kernel hyperparameters
+    if mean
+        Mgrads = grad_stack(gp.x, gp.m)
+        for i in 1:num_params(gp.m)
+            gp.dmLL[i+noise] = -dot(Mgrads[:,i],gp.alpha) 
+        end
     end
     
     # Derivative of marginal log-likelihood with respect to kernel hyperparameters
-    Kgrads = grad_stack(gp.x, gp.k)   # [dK/dθᵢ]
-    for i in 1:num_params(gp.k)
-        gp.dmLL[i+num_params(gp.m)+1] = trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv)))*Kgrads[:,:,i])/2
+    if kern
+        Kgrads = grad_stack(gp.x, gp.k)   # [dK/dθᵢ]
+        for i in 1:num_params(gp.k)
+            gp.dmLL[i+mean*num_params(gp.m)+noise] = trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv)))*Kgrads[:,:,i])/2
+        end
     end
 end
 
@@ -93,11 +102,19 @@ end
 predict(gp::GP, x::Vector{Float64};full_cov::Bool=false) = predict(gp, x';full_cov=full_cov)
 
 
-get_params(gp::GP) = [gp.logNoise, get_params(gp.m), get_params(gp.k)]
-function set_params!(gp::GP, hyp::Vector{Float64})
-    gp.logNoise = hyp[1]
-    set_params!(gp.m, hyp[2:1+num_params(gp.m)])
-    set_params!(gp.k, hyp[end-num_params(gp.k)+1:end])
+function get_params(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
+    params = Float64[]
+    if noise; push!(params, gp.logNoise); end
+    if mean;  append!(params, get_params(gp.m)); end
+    if kern; append!(params, get_params(gp.k)); end
+    return params
+end
+        
+function set_params!(gp::GP, hyp::Vector{Float64}; noise::Bool=true, mean::Bool=true, kern::Bool=true)
+    # println("mean=$(mean)")
+    if noise; gp.logNoise = hyp[1]; end
+    if mean; set_params!(gp.m, hyp[1+noise:noise+num_params(gp.m)]); end
+    if kern; set_params!(gp.k, hyp[end-num_params(gp.k)+1:end]); end
 end
 
 function show(io::IO, gp::GP)
