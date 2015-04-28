@@ -3,7 +3,7 @@
 #This example follows from Chapter 5 of Gaussian Processes for Machine Learning, Rasmussen and Williams (2006)
 ############################################################################################
 
-using Winston, GaP
+using Gadfly, GaP
 
 data = readcsv("CO2_data.csv")
 
@@ -15,7 +15,8 @@ xpred = year[year.>=2004]; ypred = co2[year.>=2004]
 kernel = SE(4.0,4.0) + Peri(0.0,1.0,0.0)*SE(4.0,0.0) + RQ(0.0,0.0,-1.0) + SE(-2.0,-2.0)
 
 mConst = MeanConst(mean(y))
-gp = GP(x,y,mConst,kernel,-2.0)
+mLin = MeanLin([0.2])
+gp = GP(x,y,mLin,kernel,-2.0)
 optimize!(gp,method=:bfgs,show_trace=true)
 
 plot(gp,clim=(2004.0,2024.0))

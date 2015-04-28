@@ -17,22 +17,23 @@ function kern(noise::Noise, x::Vector{Float64}, y::Vector{Float64})
     sigma2 = exp(2*noise.lσ)
     prec   = eps()            #machine precision
     
-    K =  Float64[norm(x-y)<prec]
+    K =  norm(x-y)<prec
     return K
 end
 
-get_params(noise::Noiseo) = Float64[noise.lσ]
+get_params(noise::Noise) = Float64[noise.lσ]
 num_params(noise::Noise) = 1
 
 function set_params!(noise::Noise, hyp::Vector{Float64})
     length(hyp) == 1 || throw(ArgumentError("Noise kernel only has one parameter"))
-    noise.lσ = hyp
+    noise.lσ = hyp[1]
 end
 
 function grad_kern(noise::Noise, x::Vector{Float64}, y::Vector{Float64})
     sigma2 = exp(2*noise.lσ)
+    prec   = eps()            #machine precision
     
-    dK_sigma = 2.0*sigma2*
+    dK_sigma = 2.0*sigma2*norm(x-y)<prec
     
     dK_theta = [dK_sigma]
     return dK_theta
