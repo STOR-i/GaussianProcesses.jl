@@ -1,4 +1,4 @@
-using gaussianprocesses
+using GaP
 using BenchmarkLite
 
 
@@ -10,7 +10,7 @@ type GP_Benchmark <: Proc
     function GP_Benchmark(d::Int, n::Int, op::Function)
         x = 2π * rand(d,n)                             # Training set
         y = Float64[sum(sin(x[:,i])) for i in 1:n]/d  # y = 1/d Σᵢ sin(xᵢ)
-        new(GP(x, y, meanZero, mat32), op)
+        new(GP(x, y, MeanZero(), Mat32Iso(0.0,0.0)), op)
     end
 end
 
@@ -43,9 +43,3 @@ println("Benchmarking predict function....")
 predict_procs = vec(Proc[ GP_Benchmark(d, n, predict) for n in num_train, d in dims ])
 predict_table = run(predict_procs, num_pred)
 show(predict_table)
-
-
-println("\nBenchmarking EI function...")
-ei_procs = vec(Proc[ GP_Benchmark(d,n, EI) for n in num_train, d in dims ])
-ei_table = run(ei_procs, num_pred)
-show(ei_table)
