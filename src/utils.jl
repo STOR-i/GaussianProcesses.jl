@@ -14,7 +14,7 @@ function crossKern(x1::Matrix{Float64}, x2::Matrix{Float64}, d::Function)
     dim == size(x2,1) || throw(ArgumentError("Input observation matrices must have consistent dimensions"))
     D= Array(Float64, nobs1, nobs2)
     for i in 1:nobs1, j in 1:nobs2
-        D[i,j] = d(x1[:,i], x2[:,j])
+        @inbounds D[i,j] = d(x1[:,i], x2[:,j])
     end
     return max(D,0)
 end
@@ -29,8 +29,8 @@ function crossKern(x::Matrix{Float64}, d::Function)
     D = Array(Float64, nobsv, nobsv)
     for i in 1:nobsv
         for j in 1:i
-            D[i,j] = d(x[:,i], x[:,j])
-            if i != j; D[j,i] = D[i,j]; end;
+            @inbounds D[i,j] = d(x[:,i], x[:,j])
+            if i != j; @inbounds D[j,i] = D[i,j]; end;
         end
     end
     return max(D,0)
@@ -64,7 +64,7 @@ function grad_stack(x::Matrix{Float64}, k::Kernel)
     d, nobsv = size(x)
     stack = Array(Float64, nobsv, nobsv, n)
     for j in 1:nobsv, i in 1:nobsv
-        stack[i,j,:] = grad_kern(k, x[:,i], x[:,j])
+        @inbounds stack[i,j,:] = grad_kern(k, x[:,i], x[:,j])
     end
     return stack
 end
@@ -75,7 +75,7 @@ function grad_stack(x::Matrix{Float64}, m::Mean)
     d, nobsv = size(x)
     mat = Array(Float64, nobsv, n)
     for i in 1:nobsv
-        mat[i,:] = grad_meanf(m, x[:,i])
+        @inbounds mat[i,:] = grad_meanf(m, x[:,i])
     end
     return mat
 end
