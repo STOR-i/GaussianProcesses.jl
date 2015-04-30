@@ -3,20 +3,19 @@
 using Winston, GaP
 
 # Training data
-x=[-4.0,-3.0,-1.0,0.0,2.0];
-y=[-2.0,0.0,1.0,2.0,-1.0];
-
+n=10                 #number of training points
+x = 2π * rand(n)              
+y = sin(x) + 0.05*randn(n)
 
 #Select mean and covariance function
 mZero = MeanZero()                   #Zero mean function
 kern = SE(0.0,0.0)                   #Sqaured exponential kernel (note that hyperparameters are on the log scale)
 
-gp = GP(x,y,mZero,kern)                      #Fit the GP
-optimize!(gp,method=:bfgs,show_trace=true)   #Optimise the hyperparameters
+gp = GP(x,y,mZero,kern,-1.0)      #Fit the GP, where -1.0 is the log Gaussian noise
+plot(gp)                          #Plot the GP
 
-# Predict the GP at test points
-xpred = [-5.0:0.1:5.0];
-mu, Sigma = predict(gp,xpred);
+optimize!(gp,method=:bfgs)   #Optimise the hyperparameters
 
-#Plot the data 
-plot(gp)
+plot(gp)   #Plot the GP after the hyperparameters have been optimised 
+
+
