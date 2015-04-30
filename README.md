@@ -34,4 +34,4 @@ logObsNoise = -1.0                        # log standard deviation of observatio
 gp = GP(x,y,mZero,kern, logObsNoise)      # Fit the GP
 plot(gp)
 ```
-![1-D Gaussian Process](https://bitbucket.org/storicode/gap.jl/raw/master/docs/regression_1d.png "1-D Gaussian Process")
+![1-D Gaussian Process](/docs/regression_1d.png?raw=true "1-D Gaussian Process")
