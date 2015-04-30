@@ -6,7 +6,7 @@ function plot1D(gp::GP; clim::(Float64, Float64)=(minimum(gp.x), maximum(gp.x)),
         sx = (clim[2]-clim[1])/(res-1)
         x=[clim[1]:sx:clim[2]]
         mu, Sigma = predict(gp, x)
-        conf = CI*sqrt(max(Sigma, 0.0))
+        conf = CI*sqrt(Sigma)
         u = mu + conf
         l = mu - conf
         
