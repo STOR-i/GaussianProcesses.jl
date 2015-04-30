@@ -92,6 +92,7 @@ function predict(gp::GP, x::Matrix{Float64};full_cov::Bool=false)
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
     mu = meanf(gp.m,x) + crossKern(x,gp.x,gp.k)*gp.alpha        #Predictive mean 
     Sigma = crossKern(x,gp.k) - ((gp.L\crossKern(x,gp.x,gp.k)')')*(gp.L\crossKern(gp.x,x,gp.k)) #Predictive covariance
+    Sigma = max(Sigma,0)
     if full_cov==false
         Sigma = diag(Sigma)
     end
@@ -100,6 +101,7 @@ end
 
 # 1D Case for prediction
 predict(gp::GP, x::Vector{Float64};full_cov::Bool=false) = predict(gp, x';full_cov=full_cov)
+
 
 
 function get_params(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
