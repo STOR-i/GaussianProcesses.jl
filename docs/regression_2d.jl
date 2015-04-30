@@ -11,7 +11,7 @@ y = vec(sin(x[1,:]).*sin(x[2,:])) + 0.05*rand(n)
 mZero = MeanZero()
 kern = Mat(5/2,[0.0,0.0],0.0)
 gp = GP(x,y,mZero,kern,-2.0)
-optimize!(gp,method=:bfgs,show_trace=true)
+optimize!(gp)
 
 plot(gp; clim=(-10.0, 10.0,-10.0,10.0))
      

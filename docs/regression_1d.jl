@@ -14,7 +14,7 @@ kern = SE(0.0,0.0)                   #Sqaured exponential kernel (note that hype
 gp = GP(x,y,mZero,kern,-1.0)      #Fit the GP, where -1.0 is the log Gaussian noise
 plot(gp)                          #Plot the GP
 
-optimize!(gp,method=:bfgs)   #Optimise the hyperparameters
+optimize!(gp)   #Optimise the hyperparameters
 
 plot(gp)   #Plot the GP after the hyperparameters have been optimised 
 
