@@ -35,3 +35,5 @@ gp = GP(x,y,mZero,kern, logObsNoise)      # Fit the GP
 plot(gp)
 ```
 ![1-D Gaussian Process](/docs/regression_1d.png?raw=true "1-D Gaussian Process")
+
+![1-D Gaussian Process](/docs/regression_1da.png?raw=true "1-D Gaussian Process")
