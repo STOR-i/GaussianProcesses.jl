@@ -2,7 +2,12 @@
 
 A Gaussian Processes package for Julia. 
 
-This package is still in the early stages of development and any suggestions to improve the package are welcome.
+This package is still in the early stages of development. If you have any suggestions to improve the package, or if you've noticed a bug, then please post an [issue] (https://github.com/STOR-i/GaP.jl/issues/new) for us and we'll get to it as quickly as we can. 
+
+## Installation
+
+## Documentation
+
 
 ## Introduction
 
