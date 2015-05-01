@@ -1,4 +1,4 @@
-#This example fits a GP regression model to the Mauna Loa CO2 data set. This data is available from co2now.org/images/stories/data/co2-mlo-monthly-noaa-esrl.xls
+#This example fits a GP regression model to the Mauna Loa CO2 data set. This data set is regularly updated and can be found at co2now.org/images/stories/data/co2-mlo-monthly-noaa-esrl.xls
 #
 #This example follows from Chapter 5 of Gaussian Processes for Machine Learning, Rasmussen and Williams (2006)
 ############################################################################################
