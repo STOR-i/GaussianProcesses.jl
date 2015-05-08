@@ -6,7 +6,7 @@ using GaussianProcesses
 
 x=[-4.0,-3.0,-1.0,0.0,2.0];
 
-#Create linear data
+# Create linear data
 y = 0.5*x.^2 + 2.0*x + 0.5*rand(5)
 
 #Test data
@@ -22,4 +22,4 @@ gp = GP(x,y,mPoly,kern)
 using Gadfly
 GaussianProcesses.Gadfly_init()
 
-plot(gp, xpred)
+plot(gp)
