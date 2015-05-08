@@ -1,4 +1,4 @@
-module GaP
+module GaussianProcesses
 using Optim
 
 VERSION < v"0.4-" && using Docile

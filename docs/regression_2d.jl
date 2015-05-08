@@ -1,6 +1,6 @@
 #Plot basic Gaussian Process
 
-using Gadfly, GaP
+using Gadfly, GaussianProcesses
 
 #Training data
 d, n = 2, 50         #Dimension and number of observations

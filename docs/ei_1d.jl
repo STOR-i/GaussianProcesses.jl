@@ -1,6 +1,6 @@
 # Test expected improvement function
 
-using Gadfly, GaP
+using Gadfly, GaussianProcesses
 
 #Training data
 x = 2*π*rand(5);

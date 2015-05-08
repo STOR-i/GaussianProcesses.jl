@@ -1,6 +1,6 @@
 # Plot basic Gaussian Process
 
-using Winston, GaP
+using Winston, GaussianProcesses
 
 # Training data
 n=10                 #number of training points

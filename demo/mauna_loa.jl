@@ -3,7 +3,7 @@
 #This example follows from Chapter 5 of Gaussian Processes for Machine Learning, Rasmussen and Williams (2006)
 ############################################################################################
 
-using Gadfly, GaP
+using Gadfly, GaussianProcesses
 
 data = readcsv("CO2_data.csv")
 

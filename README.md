@@ -1,8 +1,8 @@
-# GaP.jl
+# GaussianProcesses.jl
 
 A Gaussian Processes package for Julia. 
 
-This package is still in the early stages of development. If you have any suggestions to improve the package, or if you've noticed a bug, then please post an [issue] (https://github.com/STOR-i/GaP.jl/issues/new) for us and we'll get to it as quickly as we can. Pull requests are also welcome.
+This package is still in the early stages of development. If you have any suggestions to improve the package, or if you've noticed a bug, then please post an [issue] (https://github.com/STOR-i/GaussianProcesses.jl/issues/new) for us and we'll get to it as quickly as we can. Pull requests are also welcome.
 
 ## Introduction
 
@@ -12,15 +12,15 @@ For an extensive review of Gaussian Processes there is an excellent book [Gaussi
 
 ## Installation
 
-GaP requires Julia version 0.3. To install GaP run the following command inside a Julia session:
+GaussianProcesses requires Julia version 0.3. To install GaussianProcesses run the following command inside a Julia session:
 
 ```julia
-julia> Pkg.add("GaP")
+julia> Pkg.add("GaussianProcesses")
 ```
 
 ## Documentation
 
-Most of the functionality of GaP has been documented using the [Docile](https://github.com/MichaelHatherly/Docile.jl) package. From Julia version 0.4 this functionality will form part of the Julia base. To view the documentation the user must install the [Lexicon](https://github.com/MichaelHatherly/Lexicon.jl) package and load it.
+Most of the functionality of GaussianProcesses has been documented using the [Docile](https://github.com/MichaelHatherly/Docile.jl) package. From Julia version 0.4 this functionality will form part of the Julia base. To view the documentation the user must install the [Lexicon](https://github.com/MichaelHatherly/Lexicon.jl) package and load it.
 
 ```julia
 julia> Pkg.add("Lexicon")
@@ -35,7 +35,7 @@ help?> GP
 
 [type]
 
-GaP.GP
+GaussianProcesses.GP
 
                                   Description
                                  -–––––––––––-
@@ -62,17 +62,17 @@ GaP.GP
 
  Details:
 
-	source: (16,"/home/jamie/.julia/v0.3/GaP/src/GP.jl")
+	source: (16,"/home/jamie/.julia/v0.3/GaussianProcesses/src/GP.jl")
 ```
 
 
 
 ## 1-dimensional regression example
 
-The first step in modelling with Gaussian Processes is to choose mean functions and kernels which describe the process. GaP can be optionally used with a plotting package. Currently the packages [Gadfly] (https://github.com/dcjones/Gadfly.jl) and [Winston] (https://github.com/nolta/Winston.jl) are supported.
+The first step in modelling with Gaussian Processes is to choose mean functions and kernels which describe the process. GaussianProcesses can be optionally used with a plotting package. Currently the packages [Gadfly] (https://github.com/dcjones/Gadfly.jl) and [Winston] (https://github.com/nolta/Winston.jl) are supported.
 
 ```julia
-using Winston, GaP
+using Winston, GaussianProcesses
 
 # Training data
 n = 10
@@ -125,7 +125,7 @@ plot(gp)       #Plot the GP after the hyperparameters have been optimised
 
 This is a simple 2-D regression example. 
 ```julia
-using Gadfly, GaP
+using Gadfly, GaussianProcesses
 
 #Training data
 d, n = 2, 50         # Dimension and number of observations

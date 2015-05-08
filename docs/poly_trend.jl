@@ -1,6 +1,6 @@
 #Playing around with the mean polynomial function
 
-using GaP
+using GaussianProcesses
 
 #Training data
 
@@ -20,6 +20,6 @@ gp = GP(x,y,mPoly,kern)
 
 # Load Gadfly and plot
 using Gadfly
-GaP.Gadfly_init()
+GaussianProcesses.Gadfly_init()
 
 plot(gp, xpred)

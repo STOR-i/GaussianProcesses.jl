@@ -1,6 +1,6 @@
 #Test out different covariance functions
 
-using Gadfly, GaP
+using Gadfly, GaussianProcesses
 
 #Training data
 
