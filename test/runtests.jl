@@ -1,4 +1,4 @@
-using GaP
+using GaussianProcesses
 using Base.Test
 
 # Add tests here...

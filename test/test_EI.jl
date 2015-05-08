@@ -1,4 +1,4 @@
-using GaP
+using GaussianProcesses
 
 d, n = 10, 20
 x = 2π * rand(d, n)
