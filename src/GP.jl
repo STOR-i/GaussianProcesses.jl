@@ -110,8 +110,10 @@ predict(gp::GP, x::Vector{Float64};full_cov::Bool=false) = predict(gp, x'; full_
 
 ## compute predictions
 function _predict(gp::GP, x::Array{Float64})
-    mu = meanf(gp.m,x) + crossKern(x,gp.x,gp.k)*gp.alpha        #Predictive mean
-    Sigma = crossKern(x,gp.k) - ((gp.L\crossKern(x,gp.x,gp.k)')')*(gp.L\crossKern(gp.x,x,gp.k)) #Predictive covariance
+    cK = crossKern(x,gp.x,gp.k)
+    Lck = gp.L\cK'
+    mu = meanf(gp.m,x) + cK*gp.alpha        #Predictive mean
+    Sigma = crossKern(x,gp.k) - (Lck')*(Lck) #Predictive covariance
     Sigma = max(Sigma,0)
     return (mu, Sigma)
 end
