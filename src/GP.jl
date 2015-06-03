@@ -23,8 +23,9 @@ type GP
     m:: Mean                # Mean object
     k::Kernel               # Kernel object
     # Auxiliary data
+    cK::AbstractPDMat       # (k + obsNoise)
     alpha::Vector{Float64}  # (k + obsNoise)⁻¹y
-    L::Matrix{Float64}      # Cholesky matrix
+    # L::Matrix{Float64}    # Cholesky matrix
     mLL::Float64            # Marginal log-likelihood
     dmLL::Vector{Float64}   # Gradient marginal log-likelihood
     function GP(x::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-1e8)
@@ -42,9 +43,12 @@ GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise
 # Update auxiliarly data in GP object after changes have been made
 function update_mll!(gp::GP)
     m = meanf(gp.m,gp.x)
-    gp.L = chol(crossKern(gp.x,gp.k) + exp(gp.logNoise)*eye(gp.nobsv), :L)
-    gp.alpha = gp.L'\(gp.L\(gp.y-m))               
-    gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - sum(log(diag(gp.L))) - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
+    gp.cK = PDMat(crossKern(gp.x,gp.k) + exp(gp.logNoise)*eye(gp.nobsv))
+    # gp.L = chol(crossKern(gp.x,gp.k) + exp(gp.logNoise)*eye(gp.nobsv), :L)
+    # gp.alpha = gp.L'\(gp.L\(gp.y-m))
+    gp.alpha = gp.cK \ (gp.y - m)
+    #gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - sum(log(diag(gp.L))) - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
+    gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
 end
 
 # Update gradient of marginal log likelihood
@@ -56,7 +60,8 @@ function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::B
     
     #Derivative wrt the observation noise
     if noise
-        gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv))))
+        #gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv))))
+        gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.cK \ eye(gp.nobsv)))
     end
 
     #Derivative wrt to mean hyperparameters, need to loop over as same with kernel hyperparameters
@@ -71,7 +76,7 @@ function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::B
     if kern
         Kgrads = grad_stack(gp.x, gp.k)   # [dK/dθᵢ]
         for i in 1:num_params(gp.k)
-            gp.dmLL[i+mean*num_params(gp.m)+noise] = trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv)))*Kgrads[:,:,i])/2
+            gp.dmLL[i+mean*num_params(gp.m)+noise] = trace((gp.alpha*gp.alpha' - gp.cK \ eye(gp.nobsv))*Kgrads[:,:,i])/2
         end
     end
 end
