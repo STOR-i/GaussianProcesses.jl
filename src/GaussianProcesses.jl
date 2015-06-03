@@ -1,5 +1,5 @@
 module GaussianProcesses
-using Optim
+using Optim, PDMats
 
 VERSION < v"0.4-" && using Docile
 

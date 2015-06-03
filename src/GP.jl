@@ -55,9 +55,9 @@ end
 function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     update_mll!(gp::GP)
     gp.dmLL = Array(Float64, noise + mean*num_params(gp.m) + kern*num_params(gp.k))
-    
+
     # Calculate Gradient with respect to hyperparameters
-    
+
     #Derivative wrt the observation noise
     if noise
         #gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv))))
@@ -68,10 +68,10 @@ function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::B
     if mean
         Mgrads = grad_stack(gp.x, gp.m)
         for i in 1:num_params(gp.m)
-            gp.dmLL[i+noise] = -dot(Mgrads[:,i],gp.alpha) 
+            gp.dmLL[i+noise] = -dot(Mgrads[:,i],gp.alpha)
         end
     end
-    
+
     # Derivative of marginal log-likelihood with respect to kernel hyperparameters
     if kern
         Kgrads = grad_stack(gp.x, gp.k)   # [dK/dθᵢ]
@@ -93,20 +93,36 @@ Calculates the posterior mean and variance of Gaussian Process at specified poin
 * `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
                                                     process at the specified points
 """ ->
-function predict(gp::GP, x::Matrix{Float64};full_cov::Bool=false)
+function predict(gp::GP, x::Matrix{Float64}; full_cov::Bool=false)
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
-    mu = meanf(gp.m,x) + crossKern(x,gp.x,gp.k)*gp.alpha        #Predictive mean 
-    Sigma = crossKern(x,gp.k) - ((gp.L\crossKern(x,gp.x,gp.k)')')*(gp.L\crossKern(gp.x,x,gp.k)) #Predictive covariance
-    Sigma = max(Sigma,0)
-    if full_cov==false
-        Sigma = diag(Sigma)
+    if full_cov
+        return _predict(gp, x)
+    else
+        ## calculate prediction for each point independently
+            mu = Array(Float64, size(x,2))
+            Sigma = copy(mu)
+        for k in 1:size(x,2)
+            out = _predict(gp, x[:,k:k])
+            mu[k] = out[1][1]
+            Sigma[k] = out[2][1]
+        end
+        return mu, Sigma
     end
-    return (mu, Sigma)
 end
 
 # 1D Case for prediction
-predict(gp::GP, x::Vector{Float64};full_cov::Bool=false) = predict(gp, x';full_cov=full_cov)
+predict(gp::GP, x::Vector{Float64};full_cov::Bool=false) = predict(gp, x'; full_cov=full_cov)
 
+## compute predictions
+function _predict(gp::GP, x::Array{Float64})
+    cK = crossKern(x,gp.x,gp.k)
+    #Lck = gp.L\cK'
+    Lck = whiten(gp.cK, cK')
+    mu = meanf(gp.m,x) + cK*gp.alpha        #Predictive mean
+    Sigma = crossKern(x,gp.k) - (Lck')*(Lck) #Predictive covariance
+    Sigma = max(Sigma,0)
+    return (mu, Sigma)
+end
 
 
 function get_params(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
@@ -116,7 +132,7 @@ function get_params(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     if kern; append!(params, get_params(gp.k)); end
     return params
 end
-        
+
 function set_params!(gp::GP, hyp::Vector{Float64}; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     # println("mean=$(mean)")
     if noise; gp.logNoise = hyp[1]; end
