@@ -25,7 +25,6 @@ type GP
     # Auxiliary data
     cK::AbstractPDMat       # (k + obsNoise)
     alpha::Vector{Float64}  # (k + obsNoise)⁻¹y
-    # L::Matrix{Float64}    # Cholesky matrix
     mLL::Float64            # Marginal log-likelihood
     dmLL::Vector{Float64}   # Gradient marginal log-likelihood
     function GP(x::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-1e8)
@@ -44,10 +43,7 @@ GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise
 function update_mll!(gp::GP)
     m = meanf(gp.m,gp.x)
     gp.cK = PDMat(crossKern(gp.x,gp.k) + exp(gp.logNoise)*eye(gp.nobsv))
-    # gp.L = chol(crossKern(gp.x,gp.k) + exp(gp.logNoise)*eye(gp.nobsv), :L)
-    # gp.alpha = gp.L'\(gp.L\(gp.y-m))
     gp.alpha = gp.cK \ (gp.y - m)
-    #gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - sum(log(diag(gp.L))) - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
     gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
 end
 
@@ -100,7 +96,7 @@ function predict(gp::GP, x::Matrix{Float64}; full_cov::Bool=false)
     else
         ## calculate prediction for each point independently
             mu = Array(Float64, size(x,2))
-            Sigma = copy(mu)
+            Sigma = similar(mu)
         for k in 1:size(x,2)
             out = _predict(gp, x[:,k:k])
             mu[k] = out[1][1]
@@ -116,10 +112,9 @@ predict(gp::GP, x::Vector{Float64};full_cov::Bool=false) = predict(gp, x'; full_
 ## compute predictions
 function _predict(gp::GP, x::Array{Float64})
     cK = crossKern(x,gp.x,gp.k)
-    #Lck = gp.L\cK'
     Lck = whiten(gp.cK, cK')
-    mu = meanf(gp.m,x) + cK*gp.alpha        #Predictive mean
-    Sigma = crossKern(x,gp.k) - (Lck')*(Lck) #Predictive covariance
+    mu = meanf(gp.m,x) + cK*gp.alpha    # Predictive mean
+    Sigma = crossKern(x,gp.k) - Lck'Lck # Predictive covariance
     Sigma = max(Sigma,0)
     return (mu, Sigma)
 end
