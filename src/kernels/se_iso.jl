@@ -18,7 +18,8 @@ end
 function kern(se::SEIso, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(se.ll)
     sigma2 = exp(2*se.lσ)
-    K = sigma2*exp(-0.5*norm(x-y)^2/ell^2)
+    K = sigma2*exp(-0.5*sqeuclidean(x, y)/ell^2)
+    #K = sigma2*exp(-0.5*norm(x-y)^2/ell^2)
     return K
 end
 
@@ -39,4 +40,14 @@ function grad_kern(se::SEIso, x::Vector{Float64}, y::Vector{Float64})
     
     dK_theta = [dK_ell,dK_sigma]
     return dK_theta
+end
+
+function crossKern(X::Matrix{Float64}, se::SEIso)
+    ell = exp(se.ll)
+    sigma2 = exp(2*se.lσ)
+    R = pairwise(SqEuclidean(), X)
+    broadcast!(/, R, R, -2*ell^2)
+    map!(exp, R, R)
+    broadcast!(*, R, R, 2.0*sigma2)
+    return R
 end
