@@ -34,9 +34,12 @@ end
 function grad_kern(se::SEIso, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(se.ll)
     sigma2 = exp(2*se.lσ)
+
+    dxy2 = sqeuclidean(x,y)
+    exp_dist = exp(-0.5*dxy2/ell^2)
     
-    dK_ell = sigma2*norm(x-y)^2/ell^2*exp(-0.5*norm(x-y)^2/ell^2)
-    dK_sigma = 2.0*sigma2*exp(-0.5*norm(x-y)^2/ell^2)
+    dK_ell = sigma2*dxy2/ell^2*exp_dist
+    dK_sigma = 2.0*sigma2*exp_dist
     
     dK_theta = [dK_ell,dK_sigma]
     return dK_theta
