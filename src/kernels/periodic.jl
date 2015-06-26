@@ -22,7 +22,7 @@ function kern(peri::Periodic, x::Vector{Float64}, y::Vector{Float64})
     sigma2 = exp(2*peri.lσ)
     p      = exp(peri.lp)
 
-    K = sigma2*exp(-2/ell^2*sin(pi*norm(x-y)/p)^2)
+    K = sigma2*exp(-2/ell^2*sin(pi*euclidean(x,y)/p)^2)
     return K
 end
 
@@ -38,10 +38,11 @@ function grad_kern(peri::Periodic, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(peri.ll)
     sigma2 = exp(2*peri.lσ)
     p      = exp(peri.lp)
+    dxy = euclidean(x,y)
     
-    dK_ell   = 4.0*sigma2*(sin(pi*norm(x-y)/p)/ell)^2*exp(-2/ell^2*sin(pi*norm(x-y)/p)^2)
-    dK_sigma = 2.0*sigma2*exp(-2/ell^2*sin(pi*norm(x-y)/p)^2)
-    dK_p     = 4.0/ell^2*sigma2*(pi*norm(x-y)/p)*sin(pi*norm(x-y)/p)*cos(pi*norm(x-y)/p)*exp(-2/ell^2*sin(pi*norm(x-y)/p)^2)
+    dK_ell   = 4.0*sigma2*(sin(pi*dxy/p)/ell)^2*exp(-2/ell^2*sin(pi*dxy/p)^2)
+    dK_sigma = 2.0*sigma2*exp(-2/ell^2*sin(pi*dxy/p)^2)
+    dK_p     = 4.0/ell^2*sigma2*(pi*dxy/p)*sin(pi*dxy/p)*cos(pi*dxy/p)*exp(-2/ell^2*sin(pi*dxy/p)^2)
     dK_theta = [dK_ell,dK_sigma,dK_p]
     return dK_theta
 end

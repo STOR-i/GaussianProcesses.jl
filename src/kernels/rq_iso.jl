@@ -21,8 +21,7 @@ function kern(rq::RQIso, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(rq.ll)
     sigma2 = exp(2*rq.lσ)
     alpha      = exp(rq.lα)
-
-    K =  sigma2*(1+(norm(x-y)^2)/(2*alpha*ell^2)).^(-alpha)
+    K =  sigma2*(1+sqeuclidean(x, y)/(2*alpha*ell^2)).^(-alpha)
     return K
 end
 
@@ -38,12 +37,13 @@ function grad_kern(rq::RQIso, x::Vector{Float64}, y::Vector{Float64})
     ell    = exp(rq.ll)
     sigma2 = exp(2*rq.lσ)
     alpha  = exp(rq.lα)
+    dxy2 = sqeuclidean(x,y)
     
-    dK_ell   = sigma2*((norm(x-y)^2)/ell^2)*(1+(norm(x-y)^2)/(2*alpha*ell^2))^(-alpha-1)
-    dK_sigma = 2.0*sigma2*(1+(norm(x-y)^2)/(2*alpha*ell^2))^(-alpha)
+    dK_ell   = sigma2*((dxy2)/ell^2)*(1+(dxy2)/(2*alpha*ell^2))^(-alpha-1)
+    dK_sigma = 2.0*sigma2*(1+(dxy2)/(2*alpha*ell^2))^(-alpha)
     
-    part     = (1+(norm(x-y)^2)/(2*alpha*ell^2))
-    dK_alpha = sigma2*part^(-alpha)*((norm(x-y)^2)/(2*ell^2*part)-alpha*log(part))
+    part     = (1+(dxy2)/(2*alpha*ell^2))
+    dK_alpha = sigma2*part^(-alpha)*((dxy2)/(2*ell^2*part)-alpha*log(part))
     dK_theta = [dK_ell,dK_sigma,dK_alpha]
     return dK_theta
 end
