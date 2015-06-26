@@ -18,12 +18,10 @@ type Periodic <: Kernel
 end
 
 function kern(peri::Periodic, x::Vector{Float64}, y::Vector{Float64})
-    ell = exp(peri.ll)
-    sigma2 = exp(2*peri.lσ)
-    p      = exp(peri.lp)
-
-    K = sigma2*exp(-2/ell^2*sin(pi*euclidean(x,y)/p)^2)
-    return K
+    ℓ2 = exp(2.0*peri.ll)
+    σ2 = exp(2.0*peri.lσ)
+    p = exp(peri.lp)
+    σ2*exp(-2.0/ℓ2*sin(π*euclidean(x,y)/p)^2)
 end
 
 get_params(peri::Periodic) = Float64[peri.ll, peri.lσ, peri.lp]
@@ -46,3 +44,21 @@ function grad_kern(peri::Periodic, x::Vector{Float64}, y::Vector{Float64})
     dK_theta = [dK_ell,dK_sigma,dK_p]
     return dK_theta
 end
+
+# This makes crossKern slower for some reason...
+
+## function crossKern(X::Matrix{Float64}, peri::Periodic)
+##     ℓ2 = exp(2.0*peri.ll)
+##     σ2 = exp(2.0*peri.lσ)
+##     p = exp(peri.lp)
+
+##     R = pairwise(Euclidean(), X)
+##     broadcast!(*, R, R, π/p)
+##     map!(sin, R, R)
+##     broadcast!(^, R, R, 2)
+##     broadcast!(*, R, R, -2.0/ℓ2)
+##     ## R^=2
+##     ## R *= (-2.0/ℓ2)
+##     map!(exp, R, R)
+##     R *= σ2
+## end

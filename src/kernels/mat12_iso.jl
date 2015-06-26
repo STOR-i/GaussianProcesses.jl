@@ -42,3 +42,13 @@ function grad_kern(mat::Mat12Iso, x::Vector{Float64}, y::Vector{Float64})
     
     return dK_theta
 end
+
+function crossKern(X::Matrix{Float64}, k::Mat12Iso)
+    ell = exp(k.ll)
+    sigma2 = exp(2*k.lσ)
+    R = pairwise(Euclidean(), X)
+    broadcast!(/, R, R, -ell)
+    map!(exp, R, R)
+    broadcast!(*, R, R, sigma2)
+    return R
+end
