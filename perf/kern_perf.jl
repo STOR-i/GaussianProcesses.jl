@@ -25,7 +25,6 @@ end
 
 Base.done(proc::KernelTest, cfg, s) = nothing
 
-
 d = 10
 n = [50, 100, 1000, 2000]
 

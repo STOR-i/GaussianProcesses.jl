@@ -31,6 +31,6 @@ dims = [10, 30, 50, 100] # Dimensions
 num_train = [20, 50, 100, 1000]  # Num training points
 
 println("Benchmarking update_mll! function....")
-mll_procs = vec(Proc[ GP_UpdateBenchmark(d, GaussianProcesses.update_mll!) for d in dims ])
+mll_procs = vec(Proc[ GP_UpdateBenchmark(d, GaussianProcesses.update_mll_and_dmll!) for d in dims ])
 mll_table = run(mll_procs, num_train)
 show(mll_table)
