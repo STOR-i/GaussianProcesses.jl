@@ -16,9 +16,9 @@ type Mat12Iso <: Kernel
 end
 
 function kern(mat::Mat12Iso, x::Vector{Float64},y::Vector{Float64})
-    ell = exp(mat.ll)
-    sigma2 = exp(2*mat.lσ)
-    K = sigma2*exp(-euclidean(x,y)/ell)
+    ℓ = exp(mat.ll)
+    σ2 = exp(2*mat.lσ)
+    K = σ2*exp(-euclidean(x,y)/ℓ)
     return K
 end
 
@@ -32,23 +32,41 @@ function set_params!(mat::Mat12Iso, hyp::Vector{Float64})
 end
 
 function grad_kern(mat::Mat12Iso, x::Vector{Float64}, y::Vector{Float64})
-    ell = exp(mat.ll)
-    sigma2 = exp(2*mat.lσ)
+    ℓ = exp(mat.ll)
+    σ2 = exp(2*mat.lσ)
     dxy = euclidean(x,y)
-
-    dK_ell = sigma2*dxy/ell*exp(-dxy/ell)
-    dK_sigma = 2.0*sigma2*exp(-dxy/ell)
-    dK_theta = [dK_ell,dK_sigma]
+    exp_dxy = exp(-dxy/ℓ)
     
-    return dK_theta
+    dK_dℓ = σ2*dxy/ℓ*exp_dxy
+    dK_dσ = 2.0*σ2*exp_dxy
+    dK_dθ = [dK_dℓ,dK_dσ]
+    
+    return dK_dθ
 end
 
 function crossKern(X::Matrix{Float64}, k::Mat12Iso)
-    ell = exp(k.ll)
-    sigma2 = exp(2*k.lσ)
+    ℓ = exp(k.ll)
+    σ2 = exp(2*k.lσ)
     R = pairwise(Euclidean(), X)
-    broadcast!(/, R, R, -ell)
+    broadcast!(/, R, R, -ℓ)
     map!(exp, R, R)
-    broadcast!(*, R, R, sigma2)
+    broadcast!(*, R, R, σ2)
     return R
+end
+
+function grad_stack(X::Matrix{Float64}, mat::Mat12Iso)
+    d, nobsv = size(X) 
+    ℓ = exp(mat.ll)
+    σ2 = exp(2*mat.lσ)
+
+    dxy = pairwise(Euclidean(), X)
+    exp_dxy = exp(-dxy/ℓ)
+
+    stack = Array(Float64, nobsv, nobsv, 2)
+    for i in 1:nobsv, j in 1:nobsv
+        @inbounds stack[i,j,1] = σ2*dxy[i,j]/ℓ*exp_dxy[i,j] # dK_dℓ
+        @inbounds stack[i,j,2] = 2.0 * σ2 * exp_dxy[i,j]    # dK_dσ
+    end
+    
+    return stack
 end

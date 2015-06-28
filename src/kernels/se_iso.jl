@@ -60,7 +60,7 @@ function grad_stack(X::Matrix{Float64}, se::SEIso)
     ℓ2 = exp(2.0 * se.ll)
     σ2 = exp(2*se.lσ)
     dxy2 = pairwise(SqEuclidean(), X)
-    exp_dxy2 = exp(dxy2/(2.0*ℓ2))
+    exp_dxy2 = exp(-dxy2/(2.0*ℓ2))
     
     stack = Array(Float64, nobsv, nobsv, 2)
     for i in 1:nobsv, j in 1:nobsv
