@@ -1,7 +1,7 @@
 require("kern_proc.jl")
 
 d = 10
-n = [10, 50, 100, 500]
+n = [50, 100, 500, 1000]
 
 cross_kern_procs = Array(Proc, 0)
 push!(cross_kern_procs, KernelTest(SEIso(1.0, 1.0) + RQIso(1.0, 1.0, 1.0), d, GaussianProcesses.crossKern))
