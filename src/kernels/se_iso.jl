@@ -46,12 +46,14 @@ function grad_kern(se::SEIso, x::Vector{Float64}, y::Vector{Float64})
 end
 
 function crossKern(X::Matrix{Float64}, se::SEIso)
+    d, nobsv = size(X)
     ℓ2 = exp(se.ll)
     σ2 = exp(2*se.lσ)
     R = pairwise(SqEuclidean(), X)
-    broadcast!(/, R, R, -2*ℓ2)
-    map!(exp, R, R)
-    broadcast!(*, R, R, 2.0*σ2)
+    for i in 1:nobsv, j in 1:i
+        @inbounds R[i,j] = σ2*exp(-0.5*R[i,j]/ℓ2)
+        if i != j; @inbounds R[j,i] = R[i,j]; end;
+    end
     return R
 end
 
