@@ -17,9 +17,9 @@ type SEArd <: Kernel
 end
 
 function kern(se::SEArd, x::Vector{Float64}, y::Vector{Float64})
-    ell    = exp(se.ll)
-    sigma2 = exp(2*se.lσ)
-    K      = sigma2*exp(-0.5*norm((x-y)./ell)^2)
+    ℓ    = exp(se.ll)
+    σ2 = exp(2*se.lσ)
+    K = σ2*exp(-0.5*wsqeuclidean(x,y,1.0./(ℓ.^2)))
     return K
 end
 
@@ -33,12 +33,15 @@ function set_params!(se::SEArd, hyp::Vector{Float64})
 end
 
 function grad_kern(se::SEArd, x::Vector{Float64}, y::Vector{Float64})
-    ell = exp(se.ll)
-    sigma2 = exp(2*se.lσ)
+    ℓ = exp(se.ll)
+    σ2 = exp(2*se.lσ)
+
+    wdiff = ((x-y)./ℓ).^2
+    dxy2 = sum(wdiff)
     
-    dK_ell   = sigma2.*(((x-y)./ell).^2).*exp(-0.5*norm((x-y)./ell)^2)
-    dK_sigma = 2.0*sigma2*exp(-0.5*norm((x-y)./ell)^2)
+    dK_dℓ   = σ2.*wdiff*exp(-0.5*dxy2)
+    dK_dσ = 2.0*σ2*exp(-0.5*dxy2)
     
-    dK_theta = [dK_ell,dK_sigma]
+    dK_theta = [dK_dℓ,dK_dσ]
     return dK_theta
 end

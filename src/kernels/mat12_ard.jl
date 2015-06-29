@@ -19,9 +19,7 @@ end
 function kern(mat::Mat12Ard, x::Vector{Float64},y::Vector{Float64})
     ell = exp(mat.ll)
     sigma2 = exp(2*mat.lσ)
-
-     K = sigma2*exp(-norm((x-y)./ell))
-    
+    K = sigma2*exp(-weuclidean(x,y, 1.0./(ell.^2)))
     return K
 end
 
@@ -38,9 +36,11 @@ end
 function grad_kern(mat::Mat12Ard, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(mat.ll)
     sigma2 = exp(2*mat.lσ)
-
-    dK_ell = sigma2.*((x-y)./ell).*exp(-norm((x-y)./ell))
-    dK_sigma = 2.0*sigma2*exp(-norm((x-y)./ell))
+    wdiff = (x-y)./ell
+    dxy = norm(wdiff)
+    
+    dK_ell = sigma2*wdiff*exp(-dxy)
+    dK_sigma = 2.0*sigma2*exp(-dxy)
     dK_theta = [dK_ell,dK_sigma]
     
     return dK_theta
