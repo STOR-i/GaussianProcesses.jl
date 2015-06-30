@@ -18,11 +18,10 @@ type RQIso <: Kernel
 end
 
 function kern(rq::RQIso, x::Vector{Float64}, y::Vector{Float64})
-    ell = exp(rq.ll)
-    sigma2 = exp(2*rq.lσ)
-    alpha      = exp(rq.lα)
-
-    K =  sigma2*(1+(norm(x-y)^2)/(2*alpha*ell^2)).^(-alpha)
+    ℓ2 = exp(2.0*rq.ll)
+    σ2 = exp(2.0*rq.lσ)
+    α = exp(rq.lα)
+    K =  σ2*(1.0+sqeuclidean(x, y)/(2.0*α*ℓ2)).^(-α)
     return K
 end
 
@@ -35,15 +34,46 @@ function set_params!(rq::RQIso, hyp::Vector{Float64})
 end
 
 function grad_kern(rq::RQIso, x::Vector{Float64}, y::Vector{Float64})
-    ell    = exp(rq.ll)
-    sigma2 = exp(2*rq.lσ)
-    alpha  = exp(rq.lα)
+    ℓ2 = exp(rq.ll)
+    σ2 = exp(2*rq.lσ)
+    α  = exp(rq.lα)
+    dxy2 = sqeuclidean(x,y)
     
-    dK_ell   = sigma2*((norm(x-y)^2)/ell^2)*(1+(norm(x-y)^2)/(2*alpha*ell^2))^(-alpha-1)
-    dK_sigma = 2.0*sigma2*(1+(norm(x-y)^2)/(2*alpha*ell^2))^(-alpha)
+    dK_dℓ = σ2*((dxy2)/ℓ2)*(1.0+(dxy2)/(2*α*ℓ2))^(-α-1.0) # Is this correct?
+    dK_dσ = 2.0*σ2*(1+(dxy2)/(2*α*ℓ2))^(-α)
     
-    part     = (1+(norm(x-y)^2)/(2*alpha*ell^2))
-    dK_alpha = sigma2*part^(-alpha)*((norm(x-y)^2)/(2*ell^2*part)-alpha*log(part))
-    dK_theta = [dK_ell,dK_sigma,dK_alpha]
-    return dK_theta
+    part = (1.0+dxy2/(2*α*ℓ2))
+    dK_dα = σ2*part^(-α)*((dxy2)/(2*ℓ2*part)-α*log(part))
+    dK_dθ = [dK_dℓ, dK_dσ, dK_dα]
+    return dK_dθ
+end
+
+function crossKern(X::Matrix{Float64}, rq::RQIso)
+    ℓ2 = exp(2.0*rq.ll)
+    σ2 = exp(2.0*rq.lσ)
+    α = exp(rq.lα)
+
+    R = pairwise(SqEuclidean(), X)
+    broadcast!(/, R, R, 2.0*α*ℓ2)
+    broadcast!(+, R, R, 1.0)
+    broadcast!(^, R, R, -α)
+    broadcast!(*, R, R, σ2)
+end
+
+function grad_stack(X::Matrix{Float64}, rq::RQIso)
+    d, nobsv = size(X)
+    ℓ2 = exp(2.0 * rq.ll)
+    σ2 = exp(2.0 * rq.lσ)
+    α = exp(rq.lα)
+    dxy2 = pairwise(SqEuclidean(), X)
+    
+    stack = Array(Float64, nobsv, nobsv, 3)
+    for i in 1:nobsv, j in 1:nobsv
+        # Check these derivatives!
+        @inbounds stack[i,j,1] = σ2*((dxy2[i,j])/ℓ2)*(1.0+(dxy2[i,j])/(2*α*ℓ2))^(-α-1.0)  # dK_dℓ
+        @inbounds stack[i,j,2] = 2.0*σ2*(1+(dxy2[i,j])/(2*α*ℓ2))^(-α)    # dK_dσ
+        part = (1.0+dxy2[i,j]/(2*α*ℓ2))
+        @inbounds stack[i,j,3] = σ2*part^(-α)*((dxy2[i,j])/(2*ℓ2*part)-α*log(part))  # dK_dα
+    end
+    return stack
 end

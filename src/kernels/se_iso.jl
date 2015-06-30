@@ -18,7 +18,8 @@ end
 function kern(se::SEIso, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(se.ll)
     sigma2 = exp(2*se.lσ)
-    K = sigma2*exp(-0.5*norm(x-y)^2/ell^2)
+    K = sigma2*exp(-0.5*sqeuclidean(x, y)/ell^2)
+    #K = sigma2*exp(-0.5*norm(x-y)^2/ell^2)
     return K
 end
 
@@ -31,12 +32,43 @@ function set_params!(se::SEIso, hyp::Vector{Float64})
 end
 
 function grad_kern(se::SEIso, x::Vector{Float64}, y::Vector{Float64})
-    ell = exp(se.ll)
-    sigma2 = exp(2*se.lσ)
+    ℓ2 = exp(2.0*se.ll)
+    σ2 = exp(2*se.lσ)
+
+    dxy2 = sqeuclidean(x,y)
+    exp_dist = exp(-0.5*dxy2/ℓ2)
     
-    dK_ell = sigma2*norm(x-y)^2/ell^2*exp(-0.5*norm(x-y)^2/ell^2)
-    dK_sigma = 2.0*sigma2*exp(-0.5*norm(x-y)^2/ell^2)
+    dK_ell = σ2*dxy2/ℓ2*exp_dist
+    dK_sigma = 2.0*σ2*exp_dist
     
     dK_theta = [dK_ell,dK_sigma]
     return dK_theta
+end
+
+function crossKern(X::Matrix{Float64}, se::SEIso)
+    d, nobsv = size(X)
+    ℓ2 = exp(se.ll)
+    σ2 = exp(2*se.lσ)
+    R = pairwise(SqEuclidean(), X)
+    for i in 1:nobsv, j in 1:i
+        @inbounds R[i,j] = σ2*exp(-0.5*R[i,j]/ℓ2)
+        if i != j; @inbounds R[j,i] = R[i,j]; end;
+    end
+    return R
+end
+
+function grad_stack(X::Matrix{Float64}, se::SEIso)
+    d, nobsv = size(X)
+    ℓ2 = exp(2.0 * se.ll)
+    σ2 = exp(2*se.lσ)
+    dxy2 = pairwise(SqEuclidean(), X)
+    exp_dxy2 = exp(-dxy2/(2.0*ℓ2))
+    
+    stack = Array(Float64, nobsv, nobsv, 2)
+    for i in 1:nobsv, j in 1:nobsv
+        @inbounds stack[i,j,1] = σ2*dxy2[i,j]/ℓ2 * exp_dxy2[i,j] # dK_dℓ
+        @inbounds stack[i,j,2] = 2.0 * σ2 * exp_dxy2[i,j]        # dK_dσ
+    end
+
+    return stack
 end

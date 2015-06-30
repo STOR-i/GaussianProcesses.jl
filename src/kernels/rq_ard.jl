@@ -19,11 +19,11 @@ type RQArd <: Kernel
 end
 
 function kern(rq::RQArd, x::Vector{Float64}, y::Vector{Float64})
-    ell    = exp(rq.ll)
-    sigma2 = exp(2*rq.lσ)
-    alpha  = exp(rq.lα)
-
-    K =  sigma2*(1+0.5*(norm((x-y)./ell)^2)/alpha)^(-alpha)
+    ℓ    = exp(rq.ll)
+    σ2 = exp(2*rq.lσ)
+    α  = exp(rq.lα)
+    #K =  σ2*(1+0.5*(norm((x-y)./ℓ)^2)/α)^(-α)
+    K =  σ2*(1+0.5*(wsqeuclidean(x,y,1.0./(ℓ.^2)))/α)^(-α)
     return K
 end
 
@@ -38,15 +38,18 @@ function set_params!(rq::RQArd, hyp::Vector{Float64})
 end
 
 function grad_kern(rq::RQArd, x::Vector{Float64}, y::Vector{Float64})
-    ell    = exp(rq.ll)
-    sigma2 = exp(2*rq.lσ)
-    alpha  = exp(rq.lα)
+    ℓ    = exp(rq.ll)
+    σ2 = exp(2*rq.lσ)
+    α  = exp(rq.lα)
+
+    wdiff = ((x-y)./ℓ).^2
+    dxy2 = sum(wdiff)
     
-    dK_ell   = sigma2*(((x-y)./ell).^2)*(1+0.5*(norm((x-y)./ell)^2)/alpha)^(-alpha-1)
-    dK_sigma = 2.0*sigma2*(1+0.5*(norm((x-y)./ell)^2)/alpha)^(-alpha)
+    dK_ℓ   = σ2*wdiff*(1+0.5*dxy2/α)^(-α-1)
+    dK_σ = 2.0*σ2*(1+0.5*dxy2/α)^(-α)
     
-    part     = (1+0.5*(norm((x-y)./ell)^2)/alpha)
-    dK_alpha = sigma2*part^(-alpha)*(0.5*(norm((x-y)./ell)^2)/part-alpha*log(part))
-    dK_theta = [dK_ell,dK_sigma,dK_alpha]
+    part     = (1+0.5*dxy2/α)
+    dK_α = σ2*part^(-α)*(0.5*dxy2/part-α*log(part))
+    dK_theta = [dK_ℓ,dK_σ,dK_α]
     return dK_theta
 end
