@@ -3,7 +3,6 @@ using Optim, PDMats, Distances
 
 VERSION < v"0.4-" && using Docile
 
-@document
 
 # Functions that should be available to package
 # users should be explicitly exported here
