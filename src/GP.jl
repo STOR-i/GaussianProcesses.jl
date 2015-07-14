@@ -19,7 +19,7 @@ type GP
     y::Vector{Float64}      # Output observations
     dim::Int                # Dimension of inputs
     nobsv::Int              # Number of observations
-    logNoise::Float64       # log variance of observation noise
+    logNoise::Vector{Float64}       # log variance of observation noise
     m:: Mean                # Mean object
     k::Kernel               # Kernel object
     # Auxiliary data
@@ -27,9 +27,10 @@ type GP
     alpha::Vector{Float64}  # (k + obsNoise)⁻¹y
     mLL::Float64            # Marginal log-likelihood
     dmLL::Vector{Float64}   # Gradient marginal log-likelihood
-    function GP(x::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-1e8)
+    function GP(x::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Vector{Float64})
         dim, nobsv = size(x)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
+        length(logNoise) == nobsv || throw(ArgumentError("Length of noise vector is not consitent with the length of the observation vector."))
         gp = new(x, y, dim, nobsv, logNoise, m, k)
         update_mll!(gp)
         return gp
@@ -37,12 +38,12 @@ type GP
 end
 
 # Creates GP object for 1D case
-GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Float64=-1e8) = GP(x', y, meanf, kernel, logNoise)
+GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Vector{Float64}) = GP(x', y, meanf, kernel, logNoise)
 
 # Update auxiliarly data in GP object after changes have been made
 function update_mll!(gp::GP)
     m = meanf(gp.m,gp.x)
-    gp.cK = PDMat(crossKern(gp.x,gp.k) + exp(gp.logNoise)*eye(gp.nobsv))
+    gp.cK = PDMat(crossKern(gp.x,gp.k) + diagm(exp(gp.logNoise)))
     gp.alpha = gp.cK \ (gp.y - m)
     gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
 end
@@ -50,21 +51,22 @@ end
 # Update gradient of marginal log likelihood
 function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     update_mll!(gp::GP)
-    gp.dmLL = Array(Float64, noise + mean*num_params(gp.m) + kern*num_params(gp.k))
+    noiseSize = size(gp.logNoise,1)
+    gp.dmLL = Array(Float64, noise*noiseSize + mean*num_params(gp.m) + kern*num_params(gp.k))
 
     # Calculate Gradient with respect to hyperparameters
 
     #Derivative wrt the observation noise
     if noise
-        #gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv))))
-        gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.cK \ eye(gp.nobsv)))
+        gp.dmLL[1:noiseSize] = exp(2*gp.logNoise)'*(gp.alpha*gp.alpha' - gp.cK \ eye(gp.nobsv))
     end
+
 
     #Derivative wrt to mean hyperparameters, need to loop over as same with kernel hyperparameters
     if mean
         Mgrads = grad_stack(gp.x, gp.m)
         for i in 1:num_params(gp.m)
-            gp.dmLL[i+noise] = -dot(Mgrads[:,i],gp.alpha)
+            gp.dmLL[i+noise*noiseSize] = -dot(Mgrads[:,i],gp.alpha)
         end
     end
 
@@ -72,7 +74,7 @@ function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::B
     if kern
         Kgrads = grad_stack(gp.x, gp.k)   # [dK/dθᵢ]
         for i in 1:num_params(gp.k)
-            gp.dmLL[i+mean*num_params(gp.m)+noise] = trace((gp.alpha*gp.alpha' - gp.cK \ eye(gp.nobsv))*Kgrads[:,:,i])/2
+            gp.dmLL[i+mean*num_params(gp.m)+noise*noiseSize] = trace((gp.alpha*gp.alpha' - gp.cK \ eye(gp.nobsv))*Kgrads[:,:,i])/2
         end
     end
 end
@@ -122,7 +124,7 @@ end
 
 function get_params(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     params = Float64[]
-    if noise; push!(params, gp.logNoise); end
+    if noise; append!(params, gp.logNoise); end
     if mean;  append!(params, get_params(gp.m)); end
     if kern; append!(params, get_params(gp.k)); end
     return params
@@ -130,8 +132,8 @@ end
 
 function set_params!(gp::GP, hyp::Vector{Float64}; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     # println("mean=$(mean)")
-    if noise; gp.logNoise = hyp[1]; end
-    if mean; set_params!(gp.m, hyp[1+noise:noise+num_params(gp.m)]); end
+    if noise; gp.logNoise = hyp[1:size(gp.logNoise,1)]; end
+    if mean; set_params!(gp.m, hyp[1+noise*size(gp.logNoise,1):noise*size(gp.logNoise,1)+num_params(gp.m)]); end
     if kern; set_params!(gp.k, hyp[end-num_params(gp.k)+1:end]); end
 end
 
