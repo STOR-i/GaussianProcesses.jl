@@ -26,6 +26,15 @@ function kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
     return p
 end
 
+function crossKern(X::Matrix{Float64}, prodkern::ProdKernel)
+    d, nobsv = size(X)
+    p = ones(nobsv, nobsv)
+    for k in prodkern.kerns
+        p[:,:] = p .* crossKern(X,k)
+    end
+    return p
+end
+
 function get_params(prodkern::ProdKernel)
     p = Array(Float64, 0)
     for k in prodkern.kerns
@@ -52,6 +61,7 @@ function set_params!(prodkern::ProdKernel, hyp::Vector{Float64})
     end
 end
 
+# This function is extremely inefficient
 function grad_kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
      dk = Array(Float64, 0)
       for k in prodkern.kerns
@@ -62,6 +72,29 @@ function grad_kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
         append!(dk,grad_kern(k, x, y).*p) 
       end
     dk
+end
+
+function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, prodkern::ProdKernel)
+    d, nobsv = size(X)
+    num_kerns = length(prodkern.kerns)
+    
+    cross_kerns = Array(Float64, nobsv, nobsv, num_kerns)
+    for (i,kern) in enumerate(prodkern.kerns)
+        cross_kerns[:,:,i] = crossKern(X, kern)
+    end
+
+    s = 1
+    for (i,kern) in enumerate(prodkern.kerns)
+        np = num_params(kern)
+        grad_stack!(view(stack,:,:,s:(s+np-1)), X, kern)
+        for j in 1:num_kerns
+            if j != i
+                broadcast!(.*, view(stack,:,:,s:(s+np-1)), view(stack,:,:,s:(s+np-1)), view(cross_kerns, :,:,j))
+            end
+        end
+        s += np
+    end
+    stack
 end
 
 # Multiplication operators
