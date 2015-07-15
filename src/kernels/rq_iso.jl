@@ -60,20 +60,22 @@ function crossKern(X::Matrix{Float64}, rq::RQIso)
     broadcast!(*, R, R, σ2)
 end
 
-function grad_stack(X::Matrix{Float64}, rq::RQIso)
+function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, rq::RQIso)
     d, nobsv = size(X)
     ℓ2 = exp(2.0 * rq.ll)
     σ2 = exp(2.0 * rq.lσ)
     α = exp(rq.lα)
     dxy2 = pairwise(SqEuclidean(), X)
     
-    stack = Array(Float64, nobsv, nobsv, 3)
-    for i in 1:nobsv, j in 1:nobsv
+    for i in 1:nobsv, j in 1:i
         # Check these derivatives!
         @inbounds stack[i,j,1] = σ2*((dxy2[i,j])/ℓ2)*(1.0+(dxy2[i,j])/(2*α*ℓ2))^(-α-1.0)  # dK_dℓ
+        @inbounds stack[j,i,1] = stack[i,j,1]
         @inbounds stack[i,j,2] = 2.0*σ2*(1+(dxy2[i,j])/(2*α*ℓ2))^(-α)    # dK_dσ
+        @inbounds stack[j,i,2] = stack[i,j,2]
         part = (1.0+dxy2[i,j]/(2*α*ℓ2))
         @inbounds stack[i,j,3] = σ2*part^(-α)*((dxy2[i,j])/(2*ℓ2*part)-α*log(part))  # dK_dα
+        @inbounds stack[j,i,3] = stack[i,j,3]        
     end
     return stack
 end
