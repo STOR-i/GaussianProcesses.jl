@@ -19,7 +19,7 @@ function crossKern(x1::Matrix{Float64}, x2::Matrix{Float64}, d::Function)
     return max(D,0)
 end
 
-# Returns PD matrix D where D[i,j] = kernel(x1[i], x1[j])
+# Returns matrix D where D[i,j] = kernel(x1[i], x1[j])
 #
 # Arguments:
 #  x matrix of observations (each column is an observation)
@@ -34,39 +34,6 @@ function crossKern(x::Matrix{Float64}, d::Function)
         end
     end
     return max(D,0)
-end
-
-
-# Returns matrix where D[i,j] = kernel(x1[i], x2[j])
-#
-# Arguments:
-#  x1 matrix of observations (each column is an observation)
-#  x2 matrix of observations (each column is an observation)
-#  k kernel object
-function crossKern(x1::Matrix{Float64}, x2::Matrix{Float64}, k::Kernel)
-    d(x,y) = kern(k, x, y)
-    return crossKern(x1, x2, d)
-end
-
-# Returns PD matrix of distances D where D[i,j] = kernel(x1[i], x1[j])
-#
-# Arguments:
-#  x matrix of observations (each column is an observation)
-#  k kernel object
-function crossKern(x::Matrix{Float64}, k::Kernel)
-    d(x,y) = kern(k, x, y)
-    return crossKern(x, d)
-end
-
-# Calculates the stack [dk / dθᵢ] of kernel matrix gradients
-function grad_stack(x::Matrix{Float64}, k::Kernel)
-    n = num_params(k)
-    d, nobsv = size(x)
-    stack = Array(Float64, nobsv, nobsv, n)
-    for j in 1:nobsv, i in 1:nobsv
-        @inbounds stack[i,j,:] = grad_kern(k, x[:,i], x[:,j])
-    end
-    return stack
 end
 
 # Calculates the stack [dm / dθᵢ] of mean matrix gradients
