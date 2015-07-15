@@ -72,6 +72,16 @@ function grad_kern(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
     dk
 end
 
+function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, sumkern::SumKernel)
+    s = 1
+    for kern in sumkern.kerns
+        np = num_params(kern)
+        grad_stack!(view(stack,:, :, s:(s+np)), X, kern)
+        s += np
+    end
+    return stack
+end
+        
 # Addition operators
 function +(k1::SumKernel, k2::Kernel)
     kerns = [k1.kerns, k2]
