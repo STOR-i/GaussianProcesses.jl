@@ -47,21 +47,18 @@ end
 
 # This makes crossKern slower for some reason...
 
-## function crossKern(X::Matrix{Float64}, peri::Periodic)
-##     ℓ2 = exp(2.0*peri.ll)
-##     σ2 = exp(2.0*peri.lσ)
-##     p = exp(peri.lp)
-
-##     R = pairwise(Euclidean(), X)
-##     broadcast!(*, R, R, π/p)
-##     map!(sin, R, R)
-##     broadcast!(^, R, R, 2)
-##     broadcast!(*, R, R, -2.0/ℓ2)
-##     ## R^=2
-##     ## R *= (-2.0/ℓ2)
-##     map!(exp, R, R)
-##     R *= σ2
-##
+function crossKern(X::Matrix{Float64}, peri::Periodic)
+    d, nobsv = size(X)
+    ℓ2 = exp(2.0*peri.ll)
+    σ2 = exp(2.0*peri.lσ)
+    p = exp(peri.lp)
+    R = pairwise(Euclidean(), X)
+    for i in 1:1:nobsv, j in 1:i
+        @inbounds R[i,j] =  σ2*exp(-2.0/ℓ2*sin(π*R[i,j]/p)^2)
+        @inbounds R[j,i] = R[i,j]
+    end
+    return R
+end
 
 function grad_stack(X::Matrix{Float64}, peri::Periodic)
     d, nobsv = size(X)
