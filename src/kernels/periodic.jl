@@ -60,7 +60,7 @@ function crossKern(X::Matrix{Float64}, peri::Periodic)
     return R
 end
 
-function grad_stack(X::Matrix{Float64}, peri::Periodic)
+function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, peri::Periodic)
     d, nobsv = size(X)
     ℓ = exp(peri.ll)
     σ2 = exp(2*peri.lσ)

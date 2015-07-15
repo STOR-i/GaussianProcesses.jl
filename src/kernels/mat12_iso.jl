@@ -54,7 +54,7 @@ function crossKern(X::Matrix{Float64}, k::Mat12Iso)
     return R
 end
 
-function grad_stack(X::Matrix{Float64}, mat::Mat12Iso)
+function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, mat::Mat12Iso)
     d, nobsv = size(X) 
     ℓ = exp(mat.ll)
     σ2 = exp(2*mat.lσ)
@@ -62,7 +62,6 @@ function grad_stack(X::Matrix{Float64}, mat::Mat12Iso)
     dxy = pairwise(Euclidean(), X)
     exp_dxy = exp(-dxy/ℓ)
 
-    stack = Array(Float64, nobsv, nobsv, 2)
     for i in 1:nobsv, j in 1:nobsv
         @inbounds stack[i,j,1] = σ2*dxy[i,j]/ℓ*exp_dxy[i,j] # dK_dℓ
         @inbounds stack[i,j,2] = 2.0 * σ2 * exp_dxy[i,j]    # dK_dσ
