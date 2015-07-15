@@ -67,7 +67,6 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, peri::Periodic)
     p      = exp(peri.lp)
     dxy = pairwise(Euclidean(), X)
     
-    stack = Array(Float64, nobsv, nobsv, 3)
     for i in 1:nobsv, j in 1:nobsv
         @inbounds stack[i,j,1] = 4.0*σ2*(sin(pi*dxy[i,j]/p)/ℓ)^2*exp(-2/ℓ^2*sin(pi*dxy[i,j]/p)^2)  # dK_dℓ
         @inbounds stack[i,j,2] = 2.0*σ2*exp(-2/ℓ^2*sin(pi*dxy[i,j]/p)^2)        # dK_dσ
