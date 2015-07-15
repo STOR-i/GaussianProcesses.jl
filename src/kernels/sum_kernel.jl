@@ -93,7 +93,7 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, sumkern::SumKerne
     s = 1
     for kern in sumkern.kerns
         np = num_params(kern)
-        grad_stack!(view(stack,:, :, s:(s+np)), X, kern)
+        grad_stack!(view(stack,:, :, s:(s+np-1)), X, kern)
         s += np
     end
     return stack
