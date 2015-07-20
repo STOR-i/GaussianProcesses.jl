@@ -16,9 +16,9 @@ type SEIso <: Kernel
 end
 
 function kern(se::SEIso, x::Vector{Float64}, y::Vector{Float64})
-    ell = exp(se.ll)
-    sigma2 = exp(2*se.lσ)
-    K = sigma2*exp(-0.5*sqeuclidean(x, y)/ell^2)
+    ℓ2 = exp(2.0*se.ll)
+    σ2 = exp(2.0*se.lσ)
+    K = σ2*exp(-0.5*sqeuclidean(x, y)/ℓ2)
     #K = sigma2*exp(-0.5*norm(x-y)^2/ell^2)
     return K
 end
@@ -47,8 +47,8 @@ end
 
 function crossKern(X::Matrix{Float64}, se::SEIso)
     d, nobsv = size(X)
-    ℓ2 = exp(se.ll)
-    σ2 = exp(2*se.lσ)
+    ℓ2 = exp(2.0*se.ll)
+    σ2 = exp(2.0*se.lσ)
     R = pairwise(SqEuclidean(), X)
     for i in 1:nobsv, j in 1:i
         @inbounds R[i,j] = σ2*exp(-0.5*R[i,j]/ℓ2)
