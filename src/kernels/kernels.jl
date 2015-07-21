@@ -50,6 +50,8 @@ function grad_stack(x::Matrix{Float64}, k::Kernel)
     return stack
 end
 
+include("stationary.jl")
+
 include("lin.jl")               # Linear covariance function
 include("se.jl")                # Squared exponential covariance function
 include("rq.jl")                # Rational quadratic covariance function
