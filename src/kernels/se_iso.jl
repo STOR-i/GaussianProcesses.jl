@@ -80,9 +80,12 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, se::SEIso)
     dxy2 = pairwise(SqEuclidean(), X)
     exp_dxy2 = exp(-dxy2/(2.0*ℓ2))
     
-    for i in 1:nobsv, j in 1:nobsv
+    for i in 1:nobsv, j in 1:i
         @inbounds stack[i,j,1] = σ2*dxy2[i,j]/ℓ2 * exp_dxy2[i,j] # dK_dℓ
+        @inbounds stack[i,j,1] = stack[i,j,1]
+        
         @inbounds stack[i,j,2] = 2.0 * σ2 * exp_dxy2[i,j]        # dK_dσ
+        @inbounds stack[j,i,2] = stack[i,j,2]
     end
 
     return stack
