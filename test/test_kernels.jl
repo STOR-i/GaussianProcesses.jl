@@ -18,13 +18,16 @@ end
 
 function test_Kernel(kern::Kernel, x::Matrix{Float64})
     t = typeof(kern)
-    println("Testing $(t)...")
+    println("\tTesting $(t)...")
     test_crossKern(kern, x)
     test_grad_stack(kern, x)
 end
     
 d, n = 5, 4
+ll = rand(d)
 x = 2π * rand(d, n)
+
+# Isotropic kernels
 
 se = SEIso(1.0, 1.0)
 test_Kernel(se, x)
@@ -40,6 +43,19 @@ test_Kernel(mat52, x)
 
 rq = RQIso(1.0, 1.0, 1.0)
 test_Kernel(rq, x)
+
+peri = Periodic(1.0, 1.0, 2π)
+test_Kernel(peri, x)
+
+# ARD kernels
+
+se_ard = SEArd(ll, 1.0)
+test_Kernel(se_ard, x)
+
+mat12_ard = Mat12Ard(ll, 1.0)
+test_Kernel(mat12_ard, x)
+
+# Composite kernels
 
 sum = se + mat12
 test_Kernel(sum, x)

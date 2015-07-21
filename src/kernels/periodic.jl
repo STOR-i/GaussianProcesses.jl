@@ -70,4 +70,5 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, peri::Periodic)
         @inbounds stack[i,j,2] = 2.0*σ2*exp(-2/ℓ^2*sin(pi*dxy[i,j]/p)^2)        # dK_dσ
         @inbounds stack[i,j,3] = 4.0/ℓ^2*σ2*(pi*dxy[i,j]/p)*sin(pi*dxy[i,j]/p)*cos(pi*dxy[i,j]/p)*exp(-2/ℓ^2*sin(pi*dxy[i,j]/p)^2)    # dK_dp
     end
+    stack
 end
