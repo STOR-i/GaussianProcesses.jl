@@ -67,13 +67,13 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, peri::Periodic)
     
     for i in 1:nobsv, j in 1:i
         @inbounds stack[i,j,1] = 4.0*σ2*(sin(pi*dxy[i,j]/p)/ℓ)^2*exp(-2/ℓ^2*sin(pi*dxy[i,j]/p)^2)  # dK_dℓ
-        @inbounds stack[i,j,1] = stack[j,i,1]
+        @inbounds stack[j,i,1] = stack[i,j,1]
         
         @inbounds stack[i,j,2] = 2.0*σ2*exp(-2/ℓ^2*sin(pi*dxy[i,j]/p)^2)        # dK_dσ
-        @inbounds stack[i,j,2] = stack[j,i,2]
+        @inbounds stack[j,i,2] = stack[i,j,2]
         
         @inbounds stack[i,j,3] = 4.0/ℓ^2*σ2*(pi*dxy[i,j]/p)*sin(pi*dxy[i,j]/p)*cos(pi*dxy[i,j]/p)*exp(-2/ℓ^2*sin(pi*dxy[i,j]/p)^2)    # dK_dp
-        @inbounds stack[i,j,3] = stack[j,i,3]
+        @inbounds stack[j,i,3] = stack[i,j,3]
     end
     return stack
 end

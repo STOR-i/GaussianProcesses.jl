@@ -9,11 +9,12 @@ end
 function test_grad_stack(kern::Kernel, x::Matrix{Float64})
     n = GaussianProcesses.num_params(kern)
     d, nobsv = size(x)
-    stack = Array(Float64, nobsv, nobsv, n)
+    stack1 = Array(Float64, nobsv, nobsv, n)
+    stack2 = Array(Float64, nobsv, nobsv, n)
     
-    spec = GaussianProcesses.grad_stack!(stack, x, kern)
-    gen = invoke(GaussianProcesses.grad_stack!, (AbstractArray, Matrix{Float64}, Kernel), stack, x, kern)
-    @test_approx_eq spec gen
+    GaussianProcesses.grad_stack!(stack1, x, kern)
+    invoke(GaussianProcesses.grad_stack!, (AbstractArray, Matrix{Float64}, Kernel), stack2, x, kern)
+    @test_approx_eq stack1 stack2
 end
 
 function test_Kernel(kern::Kernel, x::Matrix{Float64})
@@ -60,5 +61,5 @@ test_Kernel(mat12_ard, x)
 sum = se + mat12
 test_Kernel(sum, x)
 
-prod = se + mat12
+prod = se * mat12
 test_Kernel(prod, x)

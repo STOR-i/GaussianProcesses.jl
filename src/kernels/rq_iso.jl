@@ -34,8 +34,8 @@ function set_params!(rq::RQIso, hyp::Vector{Float64})
 end
 
 function grad_kern(rq::RQIso, x::Vector{Float64}, y::Vector{Float64})
-    ℓ2 = exp(rq.ll)
-    σ2 = exp(2*rq.lσ)
+    ℓ2 = exp(2.0*rq.ll)
+    σ2 = exp(2.0*rq.lσ)
     α  = exp(rq.lα)
     dxy2 = sqeuclidean(x,y)
     
