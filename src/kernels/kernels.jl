@@ -32,12 +32,18 @@ function crossKern(x::Matrix{Float64}, k::Kernel)
     return crossKern(x, d)
 end
 
+function grad_kern!(grad::AbstractArray, k::Kernel, x::Vector, y::Vector)
+    g = grad_kern(k, x, y)
+    for i in 1:num_params(k)
+        grad[i] = g[i]
+    end
+end
+
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients
 function grad_stack!(stack::AbstractArray, x::Matrix{Float64}, k::Kernel)
-    n = num_params(k)
     d, nobsv = size(x)
     for j in 1:nobsv, i in 1:nobsv
-        @inbounds stack[i,j,:] = grad_kern(k, x[:,i], x[:,j])
+        @inbounds grad_kern!(view(stack,i,j,:), k, x[:,i], x[:,j])
     end
     return stack
 end

@@ -1,5 +1,3 @@
-# Squared Exponential Function with istropic distance
-
 @doc """
 # Description
 Constructor for the isotropic Squared Exponential kernel (covariance)
@@ -26,29 +24,8 @@ num_params(se::SEIso) = 2
 metric(se::SEIso) = SqEuclidean()
 kern(se::SEIso, r::Float64) = se.σ2*exp(-0.5*r/se.ℓ2)
 
-function grad_kern(se::SEIso, x::Vector{Float64}, y::Vector{Float64})
-    dxy2 = distance(se,x,y)
-    exp_dist = exp(-0.5*dxy2/se.ℓ2)
-    
-    dK_ell = se.σ2*dxy2/se.ℓ2*exp_dist
-    dK_sigma = 2.0*se.σ2*exp_dist
-    
-    dK_theta = [dK_ell,dK_sigma]
-    return dK_theta
-end
-
-function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, se::SEIso)
-    d, nobsv = size(X)
-    dxy2 = distance(se, X)
-    exp_dxy2 = exp(-dxy2/(2.0*se.ℓ2))
-    
-    for i in 1:nobsv, j in 1:i
-        @inbounds stack[i,j,1] = se.σ2*dxy2[i,j]/se.ℓ2 * exp_dxy2[i,j] # dK_dℓ
-        @inbounds stack[i,j,1] = stack[i,j,1]
-        
-        @inbounds stack[i,j,2] = 2.0 * se.σ2 * exp_dxy2[i,j]        # dK_dσ
-        @inbounds stack[j,i,2] = stack[i,j,2]
-    end
-
-    return stack
+function grad_kern!(grad::AbstractArray, se::SEIso, r::Float64)
+    exp_r = exp(-0.5*r/se.ℓ2)
+    grad[1] = se.σ2*r/se.ℓ2*exp_r # dK_d(log ℓ)
+    grad[2] = 2.0*se.σ2*exp_r     # dK_d(log σ)
 end
