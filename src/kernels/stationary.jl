@@ -31,15 +31,3 @@ function crossKern(x::Matrix{Float64}, k::Stationary)
     end
     return R
 end
-
-grad_kern!(grad::AbstractArray, k::Stationary, x::Vector{Float64}, y::Vector{Float64}) = grad_kern!(grad, k, distance(k, x, y))
-
-function grad_stack!(stack::AbstractArray, x::Matrix{Float64}, k::Stationary)
-    nobsv = size(x, 2)
-    R = distance(k, x)
-    for i in 1:nobsv, j in 1:i
-        @inbounds grad_kern!(unsafe_view(stack, i, j, :), k, R[i,j])
-        #@inbounds copy!(view(stack,j,i,:), view(stack,i,j,:))
-    end
-    return stack
-end

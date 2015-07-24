@@ -24,8 +24,24 @@ num_params(se::SEIso) = 2
 metric(se::SEIso) = SqEuclidean()
 kern(se::SEIso, r::Float64) = se.σ2*exp(-0.5*r/se.ℓ2)
 
-function grad_kern!(grad::AbstractArray, se::SEIso, r::Float64)
+function grad_kern(se::SEIso, x::Vector{Float64}, y::Vector{Float64})
+    r = distance(se, x, y)
     exp_r = exp(-0.5*r/se.ℓ2)
-    grad[1] = se.σ2*r/se.ℓ2*exp_r # dK_d(log ℓ)
-    grad[2] = 2.0*se.σ2*exp_r     # dK_d(log σ)
+    g1 = se.σ2*r/se.ℓ2*exp_r # dK_d(log ℓ)
+    g2 = 2.0*se.σ2*exp_r     # dK_d(log σ)
+    return [g1,g2]
 end
+
+function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, se::SEIso)
+    nobsv = size(X, 2)
+    R = distance(se, X)
+    exp_R = exp(-0.5*R/se.ℓ2)
+    for i in 1:nobsv, j in 1:nobsv
+        @inbounds stack[i,j,1] = se.σ2*R[i,j]/se.ℓ2*exp_R[i,j]
+        @inbounds stack[i,j,2] = 2.0*se.σ2*exp_R[i,j]
+    end
+
+    return stack
+end
+
+
