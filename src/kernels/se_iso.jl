@@ -36,9 +36,11 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, se::SEIso)
     nobsv = size(X, 2)
     R = distance(se, X)
     exp_R = exp(-0.5*R/se.ℓ2)
-    for i in 1:nobsv, j in 1:nobsv
+    for i in 1:nobsv, j in 1:i
         @inbounds stack[i,j,1] = se.σ2*R[i,j]/se.ℓ2*exp_R[i,j]
+        @inbounds stack[j,i,1] = stack[i,j,1]
         @inbounds stack[i,j,2] = 2.0*se.σ2*exp_R[i,j]
+        @inbounds stack[j,i,2] = stack[i,j,2]
     end
 
     return stack
