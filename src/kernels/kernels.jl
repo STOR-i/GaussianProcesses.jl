@@ -34,7 +34,6 @@ end
 
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients
 function grad_stack!(stack::AbstractArray, x::Matrix{Float64}, k::Kernel)
-    n = num_params(k)
     d, nobsv = size(x)
     for j in 1:nobsv, i in 1:nobsv
         @inbounds stack[i,j,:] = grad_kern(k, x[:,i], x[:,j])
@@ -49,6 +48,8 @@ function grad_stack(x::Matrix{Float64}, k::Kernel)
     grad_stack!(stack, x, k)
     return stack
 end
+
+include("stationary.jl")
 
 include("lin.jl")               # Linear covariance function
 include("se.jl")                # Squared exponential covariance function

@@ -9,62 +9,43 @@ k(x,x') = σ²exp(-d/ℓ), where d=|x-x'|
 * `ll::Float64`: Log of the length scale ℓ
 * `lσ::Float64`: Log of the signal standard deviation σ
 """ ->
-type Mat12Iso <: Kernel
-    ll::Float64     #Log of length scale
-    lσ::Float64     #Log of signal std
-    Mat12Iso(ll::Float64, lσ::Float64) = new(ll,lσ)
+type Mat12Iso <: Stationary
+    ℓ::Float64     # Length scale
+    σ2::Float64    # Signal std
+    Mat12Iso(ll::Float64, lσ::Float64) = new(exp(ll),exp(2*lσ))
 end
-
-function kern(mat::Mat12Iso, x::Vector{Float64},y::Vector{Float64})
-    ℓ = exp(mat.ll)
-    σ2 = exp(2*mat.lσ)
-    K = σ2*exp(-euclidean(x,y)/ℓ)
-    return K
-end
-
-get_params(mat::Mat12Iso) = exp(Float64[mat.ll, mat.lσ])
-
-num_params(mat::Mat12Iso) = 2
 
 function set_params!(mat::Mat12Iso, hyp::Vector{Float64})
     length(hyp) == 2 || throw(ArgumentError("Matern 1/2 covariance function only has two parameters"))
-    mat.ll, mat.lσ = hyp
+    mat.ℓ, mat.σ2 = exp(hyp[1]), exp(2.0*hyp[2])
 end
+
+get_params(mat::Mat12Iso) = Float64[log(mat.ℓ), log(mat.σ2)/2.0]
+num_params(mat::Mat12Iso) = 2
+
+metric(mat::Mat12Iso) = Euclidean()
+kern(mat::Mat12Iso, r::Float64) = mat.σ2*exp(-r/mat.ℓ)
 
 function grad_kern(mat::Mat12Iso, x::Vector{Float64}, y::Vector{Float64})
-    ℓ = exp(mat.ll)
-    σ2 = exp(2*mat.lσ)
-    dxy = euclidean(x,y)
-    exp_dxy = exp(-dxy/ℓ)
+    r = distance(mat,x,y)
+    exp_r = exp(-r/mat.ℓ)
     
-    dK_dℓ = σ2*dxy/ℓ*exp_dxy
-    dK_dσ = 2.0*σ2*exp_dxy
-    dK_dθ = [dK_dℓ,dK_dσ]
-    
-    return dK_dθ
+    g1 = mat.σ2*r/mat.ℓ*exp_r  #dK_d(log ℓ)
+    g2 = 2.0*mat.σ2*exp_r      #dK_d(log σ)
+    return [g1,g2]
 end
 
-function crossKern(X::Matrix{Float64}, k::Mat12Iso)
-    ℓ = exp(k.ll)
-    σ2 = exp(2*k.lσ)
-    R = pairwise(Euclidean(), X)
-    broadcast!(/, R, R, -ℓ)
-    map!(exp, R, R)
-    broadcast!(*, R, R, σ2)
-    return R
-end
 
 function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, mat::Mat12Iso)
-    d, nobsv = size(X) 
-    ℓ = exp(mat.ll)
-    σ2 = exp(2*mat.lσ)
+    nobsv = size(X,2)
+    R = distance(mat, X)
+    exp_R = exp(-R/mat.ℓ)
 
-    dxy = pairwise(Euclidean(), X)
-    exp_dxy = exp(-dxy/ℓ)
-
-    for i in 1:nobsv, j in 1:nobsv
-        @inbounds stack[i,j,1] = σ2*dxy[i,j]/ℓ*exp_dxy[i,j] # dK_dℓ
-        @inbounds stack[i,j,2] = 2.0 * σ2 * exp_dxy[i,j]    # dK_dσ
+    for i in 1:nobsv, j in 1:i
+        @inbounds stack[i,j,1] = mat.σ2*R[i,j]/mat.ℓ*exp_R[i,j] # dK_dℓ
+        @inbounds stack[j,i,1] = stack[i,j,1] 
+        @inbounds stack[i,j,2] = 2.0 * mat.σ2 * exp_R[i,j]    # dK_dσ
+        @inbounds stack[j,i,2] = stack[i,j,2] 
     end
     
     return stack

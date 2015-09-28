@@ -9,39 +9,32 @@ k(x,x') = σ²(1+√3*d/L)exp(-√3*d/L), where d = |x-x'| and L = diag(ℓ₁,�
 * `ll::Vector{Float64}`: Log of the length scale ℓ
 * `lσ::Float64`: Log of the signal standard deviation σ
 """ ->
-type Mat32Ard <: Kernel
-    ll::Vector{Float64}    # Log of Length scale 
-    lσ::Float64            # Log of Signal std
+type Mat32Ard <: Stationary
+    ℓ::Vector{Float64}    # Log of Length scale 
+    σ2::Float64            # Log of Signal std
     dim::Int               # Number of hyperparameters
-    Mat32Ard(ll::Vector{Float64}, lσ::Float64) = new(ll, lσ, size(ll,1)+1)
+    Mat32Ard(ll::Vector{Float64}, lσ::Float64) = new(exp(ll), exp(2.0*lσ), size(ll,1)+1)
 end
-
-function kern(mat::Mat32Ard, x::Vector{Float64}, y::Vector{Float64})
-    ell = exp(mat.ll)
-    sigma2 = exp(2*mat.lσ)
-
-    K = sigma2*(1+sqrt(3)*norm((x-y)./ell))*exp(-sqrt(3)*norm((x-y)./ell))
-
-    return K
-end
-
-get_params(mat::Mat32Ard) = [mat.ll, mat.lσ]
-
-num_params(mat::Mat32Ard) = mat.dim
 
 function set_params!(mat::Mat32Ard, hyp::Vector{Float64})
     length(hyp) == mat.dim || throw(ArgumentError("Matern 3/2 only has $(mat.dim) parameters"))
-    mat.ll = hyp[1:(mat.dim-1)]
-    mat.lσ = hyp[mat.dim]
+    mat.ℓ = exp(hyp[1:(mat.dim-1)])
+    mat.σ2 = exp(2.0*hyp[mat.dim])
 end
 
-function grad_kern(mat::Mat32Ard, x::Vector{Float64}, y::Vector{Float64})
-    ell = exp(mat.ll)
-    sigma2 = exp(2*mat.lσ)
+get_params(mat::Mat32Ard) = [log(mat.ℓ), log(mat.σ2)/2.0]
+num_params(mat::Mat32Ard) = mat.dim
 
-    dK_ell = sigma2.*(sqrt(3).*((x-y)./ell).^2).*exp(-sqrt(3).*norm((x-y)./ell))
-    dK_sigma = 2.0*sigma2*(1+sqrt(3)*norm((x-y)./ell))*exp(-sqrt(3)*norm((x-y)./ell))
-    dK_theta = [dK_ell,dK_sigma]
+metric(mat::Mat32Ard) = WeightedEuclidean(1.0./(mat.ℓ))
+kern(mat::Mat32Ard, r::Float64) = mat.σ2*(1+sqrt(3)*r)*exp(-sqrt(3)*r)
+
+function grad_kern(mat::Mat32Ard, x::Vector{Float64}, y::Vector{Float64})
+    r = distance(mat, x, y)
+    exp_r = exp(-sqrt(3)*r)
+    wdiff = (x-y)./mat.ℓ
     
-    return dK_theta
+    g1 = mat.σ2*(sqrt(3).*wdiff).^2*exp_r
+    g2 = 2.0*mat.σ2*(1+sqrt(3)*r)*exp_r
+    
+    return [g1, g2]
 end    
