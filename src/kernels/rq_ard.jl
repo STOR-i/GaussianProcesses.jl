@@ -11,9 +11,9 @@ k(x,x') = σ²(1+(x-x')ᵀL⁻²(x-x')/2α)^{-α}, where L = diag(ℓ₁,ℓ₂,
 * `lα::Float64`        : Log of shape parameter α
 """ ->
 type RQArd <: Stationary
-    ℓ2::Vector{Float64}      # Log of length scale 
-    σ2::Float64              # Log of signal std
-    α::Float64              # Log of shape parameter
+    ℓ2::Vector{Float64}      # Length scale 
+    σ2::Float64              # Signal std
+    α::Float64               # Shape parameter
     dim::Int                 # Number of hyperparameters
     RQArd(ll::Vector{Float64}, lσ::Float64, lα::Float64) = new(exp(2.0*ll), exp(2.0*lσ), exp(lα), size(ll,1)+2)
 end
