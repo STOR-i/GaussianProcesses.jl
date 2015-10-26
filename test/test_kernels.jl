@@ -58,8 +58,8 @@ test_Kernel(mat12_ard, x)
 
 # Composite kernels
 
-sum = se + mat12
-test_Kernel(sum, x)
+sum_kern = se + mat12
+test_Kernel(sum_kern, x)
 
-prod = se * mat12
-test_Kernel(prod, x)
+prod_kern = se * mat12
+test_Kernel(prod_kern, x)
