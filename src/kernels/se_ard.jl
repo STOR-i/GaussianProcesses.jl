@@ -22,7 +22,7 @@ function set_params!(se::SEArd, hyp::Vector{Float64})
     se.σ2 = exp(2.0*hyp[se.dim])
 end
 
-get_params(se::SEArd) = [log(se.ℓ2)/2.0, log(se.σ2)/2.0]
+get_params(se::SEArd) = [log(se.ℓ2)/2.0; log(se.σ2)/2.0]
 num_params(se::SEArd) = se.dim
 
 metric(se::SEArd) = WeightedSqEuclidean(1.0./(se.ℓ2))
@@ -36,5 +36,5 @@ function grad_kern(se::SEArd, x::Vector{Float64}, y::Vector{Float64})
     g1   = se.σ2.*wdiff*exp_r   #dK_d(log ℓ)
     g2 = 2.0*se.σ2*exp_r        #dK_d(log σ)
     
-    return [g1, g2]
+    return [g1; g2]
 end

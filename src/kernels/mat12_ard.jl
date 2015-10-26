@@ -22,7 +22,7 @@ function set_params!(mat::Mat12Ard, hyp::Vector{Float64})
     mat.σ2 = exp(2.0*hyp[mat.dim])
 end
 
-get_params(mat::Mat12Ard) = [log(mat.ℓ), log(mat.σ2)/2.0]
+get_params(mat::Mat12Ard) = [log(mat.ℓ); log(mat.σ2)/2.0]
 num_params(mat::Mat12Ard) = mat.dim
 
 metric(mat::Mat12Ard) = WeightedEuclidean(1.0./(mat.ℓ))
@@ -36,5 +36,5 @@ function grad_kern(mat::Mat12Ard, x::Vector{Float64}, y::Vector{Float64})
     g1 = mat.σ2*wdiff*exp_r
     g2 = 2.0*mat.σ2*exp_r
     
-    return [g1, g2]
+    return [g1; g2]
 end

@@ -1,8 +1,9 @@
 module GaussianProcesses
 using Optim, PDMats, Distances, ArrayViews
-
 VERSION < v"0.4-" && using Docile
 
+
+import Base: +, *
 
 # Functions that should be available to package
 # users should be explicitly exported here
@@ -16,7 +17,7 @@ include("utils.jl")
 include("GP.jl")
 include("optimize.jl")
 
-# This approach to loading supported plotting packages is taken directly from the "KernelDensity" package
+# This approach to loading supported plotting packages is taken from the "KernelDensity" package
 macro glue(pkg)
     path = joinpath(dirname(@__FILE__),"glue",string(pkg,".jl"))
     init = symbol(string(pkg,"_init"))

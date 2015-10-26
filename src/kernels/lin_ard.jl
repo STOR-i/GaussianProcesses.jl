@@ -21,7 +21,7 @@ function kern(lin::LinArd, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
-get_params(lin::LinArd) = [lin.ll]
+get_params(lin::LinArd) = lin.ll
 num_params(lin::LinArd) = lin.dim
 
 function set_params!(lin::LinArd, hyp::Vector{Float64})
@@ -31,8 +31,6 @@ end
 
 function grad_kern(lin::LinArd, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(lin.ll)
-    
     dK_ell = -2.0*(x./ell).*(y./ell)
-    dK_theta = [dK_ell]
-    return dK_theta
+    return dK_ell
 end
