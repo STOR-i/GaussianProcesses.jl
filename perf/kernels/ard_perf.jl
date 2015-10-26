@@ -1,7 +1,7 @@
-require("kern_proc.jl")
+include("kern_proc.jl")
 
 d = 10
-n = [50, 100, 500, 1000]
+n = [50, 100, 500]
 
 λ = rand(d)
 
