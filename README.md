@@ -12,7 +12,7 @@ For an extensive review of Gaussian Processes there is an excellent book [Gaussi
 
 ## Installation
 
-GaussianProcesses requires Julia version 0.3. To install GaussianProcesses run the following command inside a Julia session:
+GaussianProcesses requires Julia version 0.3 or above. To install GaussianProcesses run the following command inside a Julia session:
 
 ```julia
 julia> Pkg.add("GaussianProcesses")
