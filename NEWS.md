@@ -3,6 +3,7 @@
 ## Version 0.1.3 (2015-10-26)
 
 * Major speed improvements to kernel calculations, in particular to stationary and composite kernels
+* Fixed depraction warnings for Julia v0.4
 * All stationary kernels have the super type Stationary
 * Distance matrix calculations outsourced to Distances
 
