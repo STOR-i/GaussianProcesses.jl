@@ -1,10 +1,9 @@
 import Gadfly
 
-
-function plot1D(gp::GP; clim::(Float64, Float64)=(minimum(gp.x), maximum(gp.x)), CI::Float64=1.96, res::Int=1000)
+function plot1D(gp::GP; clim::Tuple{Float64, Float64}=(minimum(gp.x), maximum(gp.x)), CI::Float64=1.96, res::Int=1000)
 
         sx = (clim[2]-clim[1])/(res-1)
-        x=[clim[1]:sx:clim[2]]
+        x=collect(clim[1]:sx:clim[2])
         mu, Sigma = predict(gp, x)
         conf = CI*sqrt(Sigma)
         u = mu + conf
@@ -15,7 +14,7 @@ function plot1D(gp::GP; clim::(Float64, Float64)=(minimum(gp.x), maximum(gp.x)),
 end
 
 
-function plot2D(gp::GP; clim::(Float64, Float64, Float64, Float64) = (minimum(gp.x[1,:]), maximum(gp.x[1,:]),
+function plot2D(gp::GP; clim::Tuple{Float64, Float64, Float64, Float64} = (minimum(gp.x[1,:]), maximum(gp.x[1,:]),
                                                                    minimum(gp.x[2,:]), maximum(gp.x[2,:])),
                 res::Int=50)
         sx = (clim[2]-clim[1])/(res-1)
@@ -29,7 +28,7 @@ function plot2D(gp::GP; clim::(Float64, Float64, Float64, Float64) = (minimum(gp
 
         mu = predict(gp,A)[1]
         z= reshape(mu,res,res)
-        Gadfly.plot(z=z,x=[clim[1]:sx:clim[2]],y=[clim[3]:sy:clim[4]],Gadfly.Geom.contour)
+        Gadfly.plot(z=z,x=collect(clim[1]:sx:clim[2]),y=collect(clim[3]:sy:clim[4]),Gadfly.Geom.contour)
 end
 
 function Gadfly.plot(gp::GP; kwargs...)
