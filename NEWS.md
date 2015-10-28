@@ -1,5 +1,8 @@
 # News
 
+## Version 0.1.4 (2015-10-28)
+* Fixed plotting deprecation errors with Julia 0.4
+
 ## Version 0.1.3 (2015-10-26)
 
 * Major speed improvements to kernel calculations, in particular to stationary and composite kernels
