@@ -9,7 +9,7 @@ A function for optimising the GP hyperparameters based on type II maximum likeli
 * `kern::Bool`: Kernel function hyperparameters should be optmized
 * `kwargs`: Keyword arguments for the optimize function from the Optim package
 """ ->
-function optimize!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true, method=:bfgs, kwargs...)
+function optimize!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true, method=:cg, kwargs...)
     function mll(hyp::Vector{Float64})
         set_params!(gp, hyp; noise=noise, mean=mean, kern=kern)
         update_mll!(gp)
