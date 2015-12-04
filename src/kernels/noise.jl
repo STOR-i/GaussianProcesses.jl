@@ -17,7 +17,7 @@ function kern(noise::Noise, x::Vector{Float64}, y::Vector{Float64})
     sigma2 = exp(2*noise.lσ)
     prec   = eps()            #machine precision
     
-    K =  norm(x-y)<prec
+    K =  sigma2*(norm(x-y)<prec)
     return K
 end
 
@@ -33,7 +33,7 @@ function grad_kern(noise::Noise, x::Vector{Float64}, y::Vector{Float64})
     sigma2 = exp(2*noise.lσ)
     prec   = eps()            #machine precision
     
-    dK_sigma = 2.0*sigma2*norm(x-y)<prec
+    dK_sigma = 2.0*sigma2*(norm(x-y)<prec)
     
     dK_theta = [dK_sigma]
     return dK_theta
