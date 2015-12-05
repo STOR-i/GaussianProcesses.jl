@@ -5,12 +5,14 @@ import Base.show
 @doc """
 # Description
 Fits a Gaussian process to a set of training points. The Gaussian process is defined in terms of its mean and covaiance (kernel) functions, which are user defined. As a default it is assumed that the observations are noise free.
+
 # Arguments:
 * `x::Matrix{Float64}`: Training inputs
 * `y::Vector{Float64}`: Observations
 * `m::Mean`           : Mean function
 * `k::kernel`         : Covariance function
 * `logNoise::Float64` : Log of the observation noise. The default is -1e8, which is equivalent to assuming no observation noise.
+
 # Returns:
 * `gp::GP`            : A Gaussian process fitted to the training data
 """ ->
@@ -81,10 +83,12 @@ end
 @doc """
 # Description
 Calculates the posterior mean and variance of Gaussian Process at specified points
+
 # Arguments:
 * `gp::GP`: Gaussian Process object
 * `x::Matrix{Float64}`:  matrix of points for which one would would like to predict the value of the process.
                        (each column of the matrix is a point)
+
 # Returns:
 * `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
                                                     process at the specified points
