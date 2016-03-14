@@ -1,10 +1,15 @@
 import Base.show
+import ScikitLearnBase
 
 # Main GaussianProcess type
 
 @doc """
 # Description
 Fits a Gaussian process to a set of training points. The Gaussian process is defined in terms of its mean and covaiance (kernel) functions, which are user defined. As a default it is assumed that the observations are noise free.
+
+# Constructors:
+    GP(x, y, m, k, logNoise)
+    GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8) # ScikitLearn constructor
 
 # Arguments:
 * `x::Matrix{Float64}`: Training inputs
@@ -35,11 +40,28 @@ type GP
         gp = new(x, y, dim, nobsv, logNoise, m, k)
         update_mll!(gp)
         return gp
-   end
+    end
+    # ScikitLearn.jl constructor
+    function GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8)
+        # We could leave x/y/dim/nobsv undefined if we reordered the fields
+        new(zeros(Float64,0,0), zeros(Float64, 0), 0, 0, logNoise, m, k)
+    end
 end
 
 # Creates GP object for 1D case
 GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Float64=-1e8) = GP(x', y, meanf, kernel, logNoise)
+
+ScikitLearnBase.declare_hyperparameters(GP, [:m, :k, :logNoise])
+ScikitLearnBase.is_classifier(::GP) = false
+
+function ScikitLearnBase.fit!(gp::GP, X::Matrix{Float64}, y::Vector{Float64})
+    gp.x = X' # ScikitLearn's X is (n_samples, n_features)
+    gp.y = y
+    gp.dim, gp.nobsv = size(gp.x)
+    length(y) == gp.nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
+    update_mll!(gp)
+    return gp
+end
 
 # Update auxiliarly data in GP object after changes have been made
 function update_mll!(gp::GP)
@@ -107,6 +129,15 @@ function predict(gp::GP, x::Matrix{Float64}; full_cov::Bool=false)
             Sigma[k] = max(out[2][1],0)
         end
         return mu, Sigma
+    end
+end
+
+function ScikitLearnBase.predict(gp::GP, X::Matrix{Float64}; eval_MSE::Bool=false)
+    mu, Sigma = predict(gp, X'; full_cov=false)
+    if eval_MSE
+        return mu, Sigma
+    else
+        return mu
     end
 end
 
