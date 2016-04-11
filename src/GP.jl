@@ -6,6 +6,10 @@ import Base.show
 # Description
 Fits a Gaussian process to a set of training points. The Gaussian process is defined in terms of its mean and covaiance (kernel) functions, which are user defined. As a default it is assumed that the observations are noise free.
 
+# Constructors:
+    GP(x, y, m, k, logNoise)
+    GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8) # observation-free constructor
+
 # Arguments:
 * `x::Matrix{Float64}`: Training inputs
 * `y::Vector{Float64}`: Observations
@@ -35,7 +39,11 @@ type GP
         gp = new(x, y, dim, nobsv, logNoise, m, k)
         update_mll!(gp)
         return gp
-   end
+    end
+    function GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8)
+        # We could leave x/y/dim/nobsv undefined if we reordered the fields
+        new(zeros(Float64,0,0), zeros(Float64, 0), 0, 0, logNoise, m, k)
+    end
 end
 
 # Creates GP object for 1D case
