@@ -23,6 +23,7 @@ function set_params!(rq::RQIso, hyp::Vector{Float64})
 end
 
 get_params(rq::RQIso) = Float64[log(rq.ℓ2)/2.0, log(rq.σ2)/2.0, log(rq.α)]
+get_param_names(rq::RQIso) = [:ll, :lσ, :lα]
 num_params(rq::RQIso) = 3
 
 metric(rq::RQIso) = SqEuclidean()

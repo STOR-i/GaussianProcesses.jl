@@ -19,6 +19,7 @@ function set_params!(se::SEIso, hyp::Vector{Float64})
 end
 
 get_params(se::SEIso) = Float64[log(se.ℓ2)/2.0, log(se.σ2)/2.0]
+get_param_names(::SEIso) = [:ll, :lσ]
 num_params(se::SEIso) = 2
 
 metric(se::SEIso) = SqEuclidean()

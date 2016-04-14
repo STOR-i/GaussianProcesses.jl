@@ -34,6 +34,8 @@ function get_params(prodmean::ProdMean)
     p
 end
 
+get_param_names(prodmean::ProdMean) = composite_param_names(prodmean.means, :pm)
+
 function num_params(prodmean::ProdMean)
     n = 0
     for m in prodmean.means

@@ -98,17 +98,36 @@ end
 
 ################################################################################
 # get_param_names definitions
-# Maybe they should be moved next to each Kernel and Mean definition?
 
 # This generates names like [:ll_1, :ll_2, ...] for parameter vectors
 get_param_names(n::Int, prefix::Symbol) = [symbol(prefix, :_, i) for i in 1:n]
 get_param_names(v::Vector, prefix::Symbol) = get_param_names(length(v), prefix)
 
-# Kernels
-get_param_names(::SEIso) = [:ll, :lσ]
-get_param_names(k::SEArd) = vcat(get_param_names(k.ℓ2, :ll), :lσ)
+# Fallback. Yields names like :Matl2Iso_param_1 => 0.5
+# Ideally this is never used, because the names are uninformative.
+get_param_names(obj::Union{Kernel, Mean}) =
+    get_param_names(num_params(obj),
+                    symbol(typeof(obj).name.name, :_param_))
 
-# Means
-get_param_names(::MeanConst) = [:β]
+""" `composite_param_names(objects, prefix)`, where `objects` is a
+vector of kernels/means, calls `get_param_names` on each object and prefixes the
+name returned with `prefix` + object #. Eg.
 
-# TODO: fill in for all Kernels and Means
+    get_param_names(ProdKernel(Mat(1/2, 1/2, 1/2), SEArd([0.0, 1.0],0.0)))
+
+yields
+
+    :pk1_ll  
+    :pk1_lσ  
+    :pk2_ll_1
+    :pk2_ll_2
+    :pk2_lσ  
+"""
+function composite_param_names(objects, prefix)
+    p = Symbol[]
+    for (i, obj) in enumerate(objects)
+        append!(p, [symbol(prefix, i, :_, sym) for sym in get_param_names(obj)])
+    end
+    p
+end
+

@@ -23,6 +23,7 @@ function set_params!(mat::Mat52Ard, hyp::Vector{Float64})
 end
 
 get_params(mat::Mat52Ard) = [log(mat.ℓ); log(mat.σ2)/2.0]
+get_param_names(mat::Mat52Ard) = [get_param_names(mat.ℓ, :ll); :lσ]
 num_params(mat::Mat52Ard) = mat.dim
 
 metric(mat::Mat52Ard) = WeightedEuclidean(1.0./(mat.ℓ))

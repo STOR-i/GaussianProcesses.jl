@@ -1,4 +1,5 @@
 using GaussianProcesses, Base.Test
+using GaussianProcesses: get_params, get_param_names, num_params
 
 function test_crossKern(kern::Kernel, x::Matrix{Float64})
     spec = GaussianProcesses.crossKern(x, kern)
@@ -20,6 +21,7 @@ end
 function test_Kernel(kern::Kernel, x::Matrix{Float64})
     t = typeof(kern)
     println("\tTesting $(t)...")
+    @assert length(get_param_names(kern)) == length(get_params(kern)) == num_params(kern)
     test_crossKern(kern, x)
     test_grad_stack(kern, x)
 end

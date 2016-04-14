@@ -23,6 +23,7 @@ function set_params!(se::SEArd, hyp::Vector{Float64})
 end
 
 get_params(se::SEArd) = [log(se.ℓ2)/2.0; log(se.σ2)/2.0]
+get_param_names(k::SEArd) = [get_param_names(k.ℓ2, :ll); :lσ]
 num_params(se::SEArd) = se.dim
 
 metric(se::SEArd) = WeightedSqEuclidean(1.0./(se.ℓ2))

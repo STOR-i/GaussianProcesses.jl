@@ -25,6 +25,7 @@ function kern(peri::Periodic, x::Vector{Float64}, y::Vector{Float64})
 end
 
 get_params(peri::Periodic) = Float64[peri.ll, peri.lσ, peri.lp]
+get_param_names(peri::Periodic) = [:ll, :lσ, :lp]
 num_params(peri::Periodic) = 3
 
 function set_params!(peri::Periodic, hyp::Vector{Float64})

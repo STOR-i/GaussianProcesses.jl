@@ -17,6 +17,7 @@ end
 meanf(mLin::MeanLin,x::Matrix{Float64}) =  x'mLin.β
 
 get_params(mLin::MeanLin) = mLin.β
+get_param_names(::MeanLin) = [:β]
 num_params(mLin::MeanLin) = mLin.dim
 
 function set_params!(mLin::MeanLin, hyp::Vector{Float64})

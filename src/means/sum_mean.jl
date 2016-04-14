@@ -34,6 +34,8 @@ function get_params(summean::SumMean)
     p
 end
 
+get_param_names(summean::SumMean) = composite_param_names(summean.means, :sm)
+
 function num_params(summean::SumMean)
     n = 0
     for m in summean.means
