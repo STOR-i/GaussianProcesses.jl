@@ -81,6 +81,10 @@ end
 function show(io::IO, k::Kernel, depth::Int = 0)
     pad = repeat(" ", 2*depth)
     print(io, "$(pad)Type: $(typeof(k)), Params: ")
+    # params_dict = zip(get_param_names(k), get_params(k))
+    # for (k, val) in params_dict
+    #     print(io, "$(k)=$(val) ")
+    # end
     show(io, get_params(k))
     print(io, "\n")
 end
