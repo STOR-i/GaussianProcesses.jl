@@ -175,3 +175,7 @@ plot(gp; clim=(-10.0, 10.0,-10.0,10.0)) # Plot the GP over range clim
 ```
 
 ![2-D Gaussian Process](/docs/regression_2d.png?raw=true "2-D Gaussian Process")
+
+## ScikitLearn
+
+This package also supports the [ScikitLearn](https://github.com/cstjean/ScikitLearn.jl) interface. ScikitLearn provides many tools for machine learning such as hyperparameter tuning and cross-validation. See [here](https://github.com/cstjean/ScikitLearn.jl/blob/master/examples/Gaussian_Processes_Julia.ipynb) for an example of its usage with this package.
