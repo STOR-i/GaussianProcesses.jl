@@ -130,6 +130,15 @@ function _predict(gp::GP, x::Array{Float64})
     return (mu, Sigma)
 end
 
+#Sample from 1D GP
+sample(gp::GP,n::Int64, x::Vector{Float64}) = sample(gp, n, x')
+
+#Sample from the GP 
+function sample(gp::GP, n::Int64, x::Array{Float64})
+    mu,sigma = predict(gp,x;full_cov=true)
+    return rand(Distributions.MvNormal(mu,sigma),n)
+end
+
 
 function get_params(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     params = Float64[]
