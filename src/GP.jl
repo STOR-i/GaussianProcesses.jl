@@ -135,9 +135,12 @@ sample(gp::GP,n::Int64, x::Vector{Float64}) = sample(gp, n, x')
 
 #Sample from the GP 
 function sample(gp::GP, n::Int64, x::Array{Float64})
-    mu,sigma = predict(gp,x;full_cov=true)
-    d = size(sigma)[1]
-    return mu.+PDMat(sigma+1e-10*eye(size(sigma)[1]))*randn(d,n)
+    d = size(x,2)
+    #need something like .. if isnull(gp.x)=true then prior otherwise posterior
+    # mu = meanf(gp.m,x); sigma = PDMat(crossKern(x,gp.k)) #prior mean and covariance
+    mu,sigma = predict(gp,x;full_cov=true)                 #posterior mean and covariance
+    cSig = try PDMat(sigma) catch; PDMat(sigma+1e-8*sum(diag(sigma))/d*eye(d)) end 
+    return mu.+cSig*randn(d,n)
 end
 
 
