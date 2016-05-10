@@ -106,42 +106,59 @@ function predict(gp::GP, x::Matrix{Float64}; full_cov::Bool=false)
     if full_cov
         return _predict(gp, x)
     else
-        ## calculate prediction for each point independently
-            mu = Array(Float64, size(x,2))
-            Sigma = similar(mu)
+        ## Calculate prediction for each point independently
+            μ = Array(Float64, size(x,2))
+            σ2 = similar(μ)
         for k in 1:size(x,2)
-            out = _predict(gp, x[:,k:k])
-            mu[k] = out[1][1]
-            Sigma[k] = max(out[2][1],0)
+            m, sig = _predict(gp, x[:,k:k])
+            μ[k] = m[1]
+            σ2[k] = max(full(sig)[1,1], 0.0)
         end
-        return mu, Sigma
+        return μ, σ2
     end
 end
 
 # 1D Case for prediction
-predict(gp::GP, x::Vector{Float64};full_cov::Bool=false) = predict(gp, x'; full_cov=full_cov)
+predict(gp::GP, x::Vector{Float64}; full_cov::Bool=false) = predict(gp, x'; full_cov=full_cov)
 
 ## compute predictions
 function _predict(gp::GP, x::Array{Float64})
+    n = size(x, 2)
     cK = crossKern(x,gp.x,gp.k)
     Lck = whiten(gp.cK, cK')
-    mu = meanf(gp.m,x) + cK*gp.alpha    # Predictive mean
-    Sigma = crossKern(x,gp.k) - Lck'Lck # Predictive covariance
+    mu = meanf(gp.m,x) + cK*gp.alpha        # Predictive mean
+    Sigma_raw = crossKern(x,gp.k) - Lck'Lck # Predictive covariance
+    # Hack to get stable covariance
+    Sigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+1e-8*sum(diag(Sigma_raw))/n*eye(n)) end 
     return (mu, Sigma)
 end
 
-#Sample from 1D GP
-sample(gp::GP,n::Int64, x::Vector{Float64}) = sample(gp, n, x')
 
-#Sample from the GP 
-function sample(gp::GP, n::Int64, x::Array{Float64})
-    d = size(x,2)
-    #need something like .. if isnull(gp.x)=true then prior otherwise posterior
-    # mu = meanf(gp.m,x); sigma = PDMat(crossKern(x,gp.k)) #prior mean and covariance
-    mu,sigma = predict(gp,x;full_cov=true)                 #posterior mean and covariance
-    cSig = try PDMat(sigma) catch; PDMat(sigma+1e-8*sum(diag(sigma))/d*eye(d)) end 
-    return mu.+cSig*randn(d,n)
+# Sample from the GP 
+function rand!(gp::GP, x::Matrix{Float64}, A::DenseMatrix)
+    nobsv = size(x,2)
+    n_sample = size(A,2)
+
+    if gp.nobsv == 0
+        # Prior mean and covariance
+        μ = meanf(gp.m,x);
+        Σ = PDMat(crossKern(x,gp.k))
+    else
+        # Posterior mean and covariance
+        μ, Σ = predict(gp, x; full_cov=true)
+    end
+    
+    return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobsv, n_sample)))
 end
+
+function rand(gp::GP, x::Matrix{Float64}, n::Int)
+    nobsv=size(x,2)
+    A = Array(Float64, nobsv, n)
+    return rand!(gp, x, A)
+end
+
+# Sample from 1D GP
+rand(gp::GP, x::Vector{Float64}, n::Int) = rand(gp, x', n)
 
 
 function get_params(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
