@@ -38,3 +38,5 @@ plot(layer(x=range,y=post[:,1],Geom.line), #plot sample paths of the posterior
      layer(x=range,y=post[:,5],Geom.line,Theme(default_color=colorant"yellow")),
      layer(x=x,y=y,Geom.point, Theme(default_color=colorant"black",default_point_size=4pt)))
 
+
+
