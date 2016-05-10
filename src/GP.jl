@@ -142,7 +142,8 @@ function rand!(gp::GP, x::Matrix{Float64}, A::DenseMatrix)
     if gp.nobsv == 0
         # Prior mean and covariance
         μ = meanf(gp.m,x);
-        Σ = PDMat(crossKern(x,gp.k))
+        Σraw = crossKern(x,gp.k);
+        Σ = try PDMat(Σraw) catch; PDMat(Σraw+1e-8*sum(diag(Σraw))/nobsv*eye(nobsv)) end  
     else
         # Posterior mean and covariance
         μ, Σ = predict(gp, x; full_cov=true)
