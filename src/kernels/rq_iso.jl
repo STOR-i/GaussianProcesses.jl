@@ -36,7 +36,7 @@ function grad_kern(rq::RQIso, x::Vector{Float64}, y::Vector{Float64})
     g1 = rq.σ2*(r/rq.ℓ2)*(1.0+r/(2*rq.α*rq.ℓ2))^(-rq.α-1.0)       # dK_d(log ℓ)
     g2 = 2.0*rq.σ2*(1+r/(2*rq.α*rq.ℓ2))^(-rq.α)                   # dK_d(log σ)
     part = (1.0+r/(2*rq.α*rq.ℓ2))
-    g3 = rq.σ2*part^(-rq.α)*(r/(2*rq.ℓ2*part)-rq.α*log(part))     # dK_d(log α)
+    g3 = rq.σ2*part^(-rq.α)*(r/(2*rq.ℓ2*part)-rq.α*log(part))*rq.α  # dK_d(log α)
     return [g1,g2,g3]
 end
 
@@ -52,7 +52,7 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, rq::RQIso)
         @inbounds stack[i,j,2] = 2.0*rq.σ2*(1+(R[i,j])/(2*rq.α*rq.ℓ2))^(-rq.α) # dK_d(log σ)
         @inbounds stack[j,i,2] = stack[i,j,2]
         part = (1.0+R[i,j]/(2*rq.α*rq.ℓ2))
-        @inbounds stack[i,j,3] = rq.σ2*part^(-rq.α)*((R[i,j])/(2*rq.ℓ2*part)-rq.α*log(part))  # dK_d(log α)
+        @inbounds stack[i,j,3] = rq.σ2*part^(-rq.α)*((R[i,j])/(2*rq.ℓ2*part)-rq.α*log(part))*rq.α  # dK_d(log α)
         @inbounds stack[j,i,3] = stack[i,j,3]        
     end
     return stack
