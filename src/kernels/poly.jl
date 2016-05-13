@@ -26,6 +26,7 @@ function kern(poly::Poly, x::Vector{Float64}, y::Vector{Float64})
 end
 
 get_params(poly::Poly) = Float64[poly.lc, poly.lσ]
+get_param_names(poly::Poly) = [:lc, :lσ]
 num_params(poly::Poly) = 2
 
 function set_params!(poly::Poly, hyp::Vector{Float64})

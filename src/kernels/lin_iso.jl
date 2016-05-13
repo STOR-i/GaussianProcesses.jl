@@ -20,6 +20,7 @@ function kern(lin::LinIso, x::Vector{Float64}, y::Vector{Float64})
 end
 
 get_params(lin::LinIso) = Float64[lin.ll]
+get_param_names(lin::LinIso) = [:ll]
 num_params(lin::LinIso) = 1
 
 function set_params!(lin::LinIso, hyp::Vector{Float64})

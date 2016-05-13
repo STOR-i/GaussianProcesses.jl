@@ -22,6 +22,7 @@ function kern(noise::Noise, x::Vector{Float64}, y::Vector{Float64})
 end
 
 get_params(noise::Noise) = Float64[noise.lσ]
+get_param_names(noise::Noise) = [:lσ]
 num_params(noise::Noise) = 1
 
 function set_params!(noise::Noise, hyp::Vector{Float64})

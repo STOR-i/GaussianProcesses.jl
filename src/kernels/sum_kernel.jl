@@ -63,6 +63,8 @@ function get_params(sumkern::SumKernel)
     p
 end
 
+get_param_names(sumkern::SumKernel) = composite_param_names(sumkern.kerns, :sk)
+
 function num_params(sumkern::SumKernel)
     n = 0
     for k in sumkern.kerns

@@ -22,6 +22,7 @@ function kern(lin::LinArd, x::Vector{Float64}, y::Vector{Float64})
 end
 
 get_params(lin::LinArd) = lin.ll
+get_param_names(lin::LinArd) = get_param_names(lin.ll, :ll)
 num_params(lin::LinArd) = lin.dim
 
 function set_params!(lin::LinArd, hyp::Vector{Float64})

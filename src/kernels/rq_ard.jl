@@ -26,6 +26,7 @@ function set_params!(rq::RQArd, hyp::Vector{Float64})
 end
 
 get_params(rq::RQArd) = [log(rq.ℓ2)/2.0; log(rq.σ2)/2.0; log(rq.α)]
+get_param_names(rq::RQArd) = [get_param_names(rq.ℓ2, :ll); :lσ; :lα]
 num_params(rq::RQArd) = rq.dim
 
 metric(rq::RQArd) = WeightedSqEuclidean(1.0./(rq.ℓ2))

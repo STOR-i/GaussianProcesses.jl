@@ -28,6 +28,7 @@ function meanf(mPoly::MeanPoly,x::Matrix{Float64})
 end
 
 get_params(mPoly::MeanPoly) = vec(mPoly.β)
+get_param_names(mPoly::MeanPoly) = get_param_names(mPoly.β, :β)
 num_params(mPoly::MeanPoly) = mPoly.dim * mPoly.deg
 function set_params!(mPoly::MeanPoly, hyp::Vector{Float64})
     num_param = mPoly.dim * mPoly.deg

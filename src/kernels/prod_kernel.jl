@@ -43,6 +43,8 @@ function get_params(prodkern::ProdKernel)
     p
 end
 
+get_param_names(prodkern::ProdKernel) = composite_param_names(prodkern.kerns, :pk)
+
 function num_params(prodkern::ProdKernel)
     n = 0
     for k in prodkern.kerns

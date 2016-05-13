@@ -2,6 +2,7 @@
 
 using Winston, GaussianProcesses
 
+srand(13579)
 # Training data
 n=10                 #number of training points
 x = 2π * rand(n)              
@@ -17,7 +18,6 @@ plot(gp)                          #Plot the GP
 optimize!(gp)   #Optimise the hyperparameters
 
 plot(gp)   #Plot the GP after the hyperparameters have been optimised 
-
 
 
 

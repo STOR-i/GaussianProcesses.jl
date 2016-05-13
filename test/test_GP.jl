@@ -1,4 +1,5 @@
 using GaussianProcesses
+import ScikitLearnBase
 
 d, n = 10, 20
 
@@ -16,6 +17,14 @@ function test_pred_matches_obs(gp::GP)
 end
 
 test_pred_matches_obs(gp)
+
+function sk_test_pred_matches_obs() # ScikitLearn interface test
+    gp_sk = ScikitLearnBase.fit!(GP(), x', y)
+    y_pred = ScikitLearnBase.predict(gp_sk, x')
+    @test_approx_eq_eps maximum(abs(gp_sk.y - y_pred)) 0.0 1e-4
+end
+
+sk_test_pred_matches_obs()
 
 # Modify kernel and update
 gp.k.ℓ2 = 4.0

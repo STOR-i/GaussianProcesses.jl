@@ -6,6 +6,10 @@ import Base.show
 # Description
 Fits a Gaussian process to a set of training points. The Gaussian process is defined in terms of its mean and covaiance (kernel) functions, which are user defined. As a default it is assumed that the observations are noise free.
 
+# Constructors:
+    GP(x, y, m, k, logNoise)
+    GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8) # observation-free constructor
+
 # Arguments:
 * `x::Matrix{Float64}`: Training inputs
 * `y::Vector{Float64}`: Observations
@@ -35,7 +39,11 @@ type GP
         gp = new(x, y, dim, nobsv, logNoise, m, k)
         update_mll!(gp)
         return gp
-   end
+    end
+    function GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8)
+        # We could leave x/y/dim/nobsv undefined if we reordered the fields
+        new(zeros(Float64,0,0), zeros(Float64, 0), 0, 0, logNoise, m, k)
+    end
 end
 
 # Creates GP object for 1D case
@@ -44,7 +52,7 @@ GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise
 # Update auxiliarly data in GP object after changes have been made
 function update_mll!(gp::GP)
     m = meanf(gp.m,gp.x)
-    gp.cK = PDMat(crossKern(gp.x,gp.k) + exp(gp.logNoise)*eye(gp.nobsv))
+    gp.cK = PDMat(crossKern(gp.x,gp.k) + exp(gp.logNoise)*eye(gp.nobsv) + 1e-8*eye(gp.nobsv))
     gp.alpha = gp.cK \ (gp.y - m)
     gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
 end
@@ -98,30 +106,60 @@ function predict(gp::GP, x::Matrix{Float64}; full_cov::Bool=false)
     if full_cov
         return _predict(gp, x)
     else
-        ## calculate prediction for each point independently
-            mu = Array(Float64, size(x,2))
-            Sigma = similar(mu)
+        ## Calculate prediction for each point independently
+            μ = Array(Float64, size(x,2))
+            σ2 = similar(μ)
         for k in 1:size(x,2)
-            out = _predict(gp, x[:,k:k])
-            mu[k] = out[1][1]
-            Sigma[k] = out[2][1]
+            m, sig = _predict(gp, x[:,k:k])
+            μ[k] = m[1]
+            σ2[k] = max(full(sig)[1,1], 0.0)
         end
-        return mu, Sigma
+        return μ, σ2
     end
 end
 
 # 1D Case for prediction
-predict(gp::GP, x::Vector{Float64};full_cov::Bool=false) = predict(gp, x'; full_cov=full_cov)
+predict(gp::GP, x::Vector{Float64}; full_cov::Bool=false) = predict(gp, x'; full_cov=full_cov)
 
 ## compute predictions
 function _predict(gp::GP, x::Array{Float64})
+    n = size(x, 2)
     cK = crossKern(x,gp.x,gp.k)
     Lck = whiten(gp.cK, cK')
-    mu = meanf(gp.m,x) + cK*gp.alpha    # Predictive mean
-    Sigma = crossKern(x,gp.k) - Lck'Lck # Predictive covariance
-    Sigma = max(Sigma,0)
+    mu = meanf(gp.m,x) + cK*gp.alpha        # Predictive mean
+    Sigma_raw = crossKern(x,gp.k) - Lck'Lck # Predictive covariance
+    # Hack to get stable covariance
+    Sigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+1e-8*sum(diag(Sigma_raw))/n*eye(n)) end 
     return (mu, Sigma)
 end
+
+
+# Sample from the GP 
+function rand!(gp::GP, x::Matrix{Float64}, A::DenseMatrix)
+    nobsv = size(x,2)
+    n_sample = size(A,2)
+
+    if gp.nobsv == 0
+        # Prior mean and covariance
+        μ = meanf(gp.m,x);
+        Σraw = crossKern(x,gp.k);
+        Σ = try PDMat(Σraw) catch; PDMat(Σraw+1e-8*sum(diag(Σraw))/nobsv*eye(nobsv)) end  
+    else
+        # Posterior mean and covariance
+        μ, Σ = predict(gp, x; full_cov=true)
+    end
+    
+    return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobsv, n_sample)))
+end
+
+function rand(gp::GP, x::Matrix{Float64}, n::Int)
+    nobsv=size(x,2)
+    A = Array(Float64, nobsv, n)
+    return rand!(gp, x, A)
+end
+
+# Sample from 1D GP
+rand(gp::GP, x::Vector{Float64}, n::Int) = rand(gp, x', n)
 
 
 function get_params(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)

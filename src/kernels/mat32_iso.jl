@@ -21,6 +21,7 @@ function set_params!(mat::Mat32Iso, hyp::Vector{Float64})
 end
 
 get_params(mat::Mat32Iso) = Float64[log(mat.ℓ), log(mat.σ2)/2.0]
+get_param_names(mat::Mat32Iso) = [:ll, :lσ]
 num_params(mat::Mat32Iso) = 2
 
 metric(mat::Mat32Iso) = Euclidean()

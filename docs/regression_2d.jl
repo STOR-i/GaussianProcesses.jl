@@ -17,3 +17,5 @@ gp = GP(x,y,mZero,kern,-2.0)          # Fit the GP
 optimize!(gp)                         # Optimize the hyperparameters
 
 plot(gp; clim=(-10.0, 10.0,-10.0,10.0)) #Plot the GP over range clim
+
+
