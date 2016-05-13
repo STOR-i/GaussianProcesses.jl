@@ -41,8 +41,7 @@ function grad_kern(se::SEArd, x::Vector{Float64}, y::Vector{Float64})
 end
 
 function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, se::SEArd)
-    d, nobsv = size(X)
-    R = distance(se, X)
+    d = size(X,1)
     stack[:,:,d+1] = crossKern(X, se)
     ck = view(stack, :, :, d+1)
     for i in 1:d
