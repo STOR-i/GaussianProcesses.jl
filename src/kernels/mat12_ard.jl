@@ -42,12 +42,13 @@ end
 
 # function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, mat::Mat12Ard)
 #     d = size(X,1)
+#     R = distance(mat,X)
 #     stack[:,:,d+1] = crossKern(X, mat)
 #     ck = view(stack, :, :, d+1)
 #     for i in 1:d
 #         dim_dist = view(stack, :, :, i)
 #         pairwise!(dim_dist, WeightedEuclidean([1.0/mat.ℓ[i]]), view(X, i, :))
-#         map!(*, dim_dist, dim_dist, ck)
+#         map!(*, dim_dist, dim_dist.^2, ck/R)
 #     end
 #     stack[:,:, d+1] = 2.0 * ck
 #     return stack
