@@ -161,6 +161,10 @@ end
 # Sample from 1D GP
 rand(gp::GP, x::Vector{Float64}, n::Int) = rand(gp, x', n)
 
+#Generate only one sample from the GP and returns a vector
+rand(gp::GP,x::Matrix{Float64}) = vec(rand(gp,x,1))
+rand(gp::GP,x::Vector{Float64}) = vec(rand(gp,x',1))
+
 
 function get_params(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     params = Float64[]
