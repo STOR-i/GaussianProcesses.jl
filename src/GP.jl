@@ -152,14 +152,14 @@ function rand!(gp::GP, x::Matrix{Float64}, A::DenseMatrix)
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobsv, n_sample)))
 end
 
-function rand(gp::GP, x::Matrix{Float64}, n::Int)
+function rand(gp::GP, x::Matrix{Float64}, n::Int=1)
     nobsv=size(x,2)
     A = Array(Float64, nobsv, n)
     return rand!(gp, x, A)
 end
 
 # Sample from 1D GP
-rand(gp::GP, x::Vector{Float64}, n::Int) = rand(gp, x', n)
+rand(gp::GP, x::Vector{Float64}, n::Int=1) = rand(gp, x', n)
 
 #Generate only one sample from the GP and returns a vector
 rand(gp::GP,x::Matrix{Float64}) = vec(rand(gp,x,1))
