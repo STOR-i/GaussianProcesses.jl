@@ -34,7 +34,6 @@ kern(rq::RQArd,r::Float64) = rq.σ2*(1+0.5*r/rq.α)^(-rq.α)
     
 
 function grad_kern(rq::RQArd, x::Vector{Float64}, y::Vector{Float64})
-
     wdiff = ((x-y).^2)./rq.ℓ2
     dxy2  = sum(wdiff)
     part  = (1+0.5*dxy2/rq.α)
@@ -54,11 +53,11 @@ end
 #     ck = view(stack, :, :, d+1)
 
 #     for i in 1:d
-#         dim_dist = view(stack, :, :, i)
-#         pairwise!(dim_dist, WeightedSqEuclidean([1.0/rq.ℓ2[i]]), view(X, i, :))
-#         map!(*, dim_dist, dim_dist, ck/part)
+#         grad_ls = view(stack, :, :, i)
+#         pairwise!(grad_ls, WeightedSqEuclidean([1.0/rq.ℓ2[i]]), view(X, i, :))
+#         map!(*, grad_ls, grad_ls, ck./part)
 #     end
 #     stack[:,:, d+1] = 2.0 * ck
-#     stack[:,:, d+2] = ck*(0.5*R/part-rq.α*log(part))*rq.α
+#     stack[:,:, d+2] = ck.*(0.5*R./part-rq.α*log(part))*rq.α
 #     return stack
 # end

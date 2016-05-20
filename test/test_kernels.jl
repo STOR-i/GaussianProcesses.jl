@@ -75,7 +75,7 @@ test_Kernel(mat32_ard, x)
 mat52_ard = Mat52Ard(ll, 1.0)
 test_Kernel(mat52_ard, x)
 
-rq_ard=RQArd(ll, 0.0, 0.0)
+rq_ard=RQArd(ll, 0.0, 2.0)
 test_Kernel(rq_ard, x)
 
 lin_ard = LinArd(ll)

@@ -29,7 +29,6 @@ num_params(mat::Mat52Ard) = mat.dim
 metric(mat::Mat52Ard) = WeightedEuclidean(1.0./(mat.ℓ))
 kern(mat::Mat52Ard, r::Float64) = mat.σ2*(1+sqrt(5)*r+5/3*r^2)*exp(-sqrt(5)*r)
 
-
 function grad_kern(mat::Mat52Ard, x::Vector{Float64}, y::Vector{Float64})
     r = distance(mat,x,y)
     exp_r = exp(-sqrt(5)*r)
@@ -40,3 +39,18 @@ function grad_kern(mat::Mat52Ard, x::Vector{Float64}, y::Vector{Float64})
     
     return [g1; g2]
 end
+
+# function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, mat::Mat52Ard)
+#     d = size(X,1)
+#     R = distance(mat,X)
+#     exp_R = exp(-sqrt(5)*R)
+#     stack[:,:,d+1] = crossKern(X, mat)
+#     ck = view(stack, :, :, d+1)
+#     for i in 1:d
+#         grad_ls = view(stack, :, :, i)
+#         pairwise!(grad_ls, WeightedCityblock([1.0/mat.ℓ[i]]), view(X, i, :))
+#         grad_ls = mat.σ2 .* (5.0* grad_ls.^2) .* ((1.0 + sqrt(5) .* grad_ls)./3.0) .* exp_R 
+#     end
+#     stack[:,:, d+1] = 2.0 * ck
+#     return stack
+# end

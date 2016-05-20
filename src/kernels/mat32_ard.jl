@@ -39,3 +39,18 @@ function grad_kern(mat::Mat32Ard, x::Vector{Float64}, y::Vector{Float64})
     
     return [g1; g2]
 end    
+
+function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, mat::Mat32Ard)
+    d = size(X,1)
+    R = distance(mat,X)
+    exp_R = exp(-sqrt(3)*R)
+    stack[:,:,d+1] = crossKern(X, mat)
+    ck = view(stack, :, :, d+1)
+    for i in 1:d
+        grad_ls = view(stack, :, :, i)
+        pairwise!(grad_ls, WeightedSqEuclidean([1.0/mat.ℓ[i]^2]), view(X, i, :))
+        map!(*, grad_ls, grad_ls, 3* mat.σ2 * exp_R)
+    end
+    stack[:,:, d+1] = 2.0 * ck
+    return stack
+end

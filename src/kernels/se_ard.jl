@@ -45,9 +45,9 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, se::SEArd)
     stack[:,:,d+1] = crossKern(X, se)
     ck = view(stack, :, :, d+1)
     for i in 1:d
-        dim_dist = view(stack, :, :, i)
-        pairwise!(dim_dist, WeightedSqEuclidean([1.0/se.ℓ2[i]]), view(X, i, :))
-        map!(*, dim_dist, dim_dist, ck)
+        grad_ls = view(stack, :, :, i)
+        pairwise!(grad_ls, WeightedSqEuclidean([1.0/se.ℓ2[i]]), view(X, i, :))
+        map!(*, grad_ls, grad_ls, ck)
     end
     stack[:,:, d+1] = 2.0 * ck
     return stack
