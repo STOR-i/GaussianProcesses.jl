@@ -38,7 +38,7 @@ function grad_kern(rq::RQArd, x::Vector{Float64}, y::Vector{Float64})
     wdiff = ((x-y).^2)./rq.ℓ2
     dxy2  = sum(wdiff)
     part  = (1+0.5*dxy2/rq.α)
-    
+
     g1   = rq.σ2*wdiff*part^(-rq.α-1)
     g2   = 2.0*rq.σ2*part^(-rq.α)
     g3   = rq.σ2*part^(-rq.α)*(0.5*dxy2/part-rq.α*log(part))*rq.α
