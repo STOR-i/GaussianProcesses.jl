@@ -1,6 +1,6 @@
 # News
 
-## Version 0.1.5 (2016-05-14)
+## Version 0.1.5 (2016-06-02)
 * Support added for ScikitLearn
 * rand and rand! functions added to sample prior and posterior paths of Gaussian process
 * Major speed improvements for gradient calculations of stationary ARD kernels
