@@ -35,29 +35,29 @@ kern(rq::RQArd,r::Float64) = rq.σ2*(1+0.5*r/rq.α)^(-rq.α)
 
 function grad_kern(rq::RQArd, x::Vector{Float64}, y::Vector{Float64})
     wdiff = ((x-y).^2)./rq.ℓ2
-    dxy2  = sum(wdiff)
-    part  = (1+0.5*dxy2/rq.α)
+    r  = sum(wdiff)
+    part  = (1+0.5*r/rq.α)
 
     g1   = rq.σ2*wdiff*part^(-rq.α-1)
     g2   = 2.0*rq.σ2*part^(-rq.α)
-    g3   = rq.σ2*part^(-rq.α)*(0.5*dxy2/part-rq.α*log(part))*rq.α
+    g3   = rq.σ2*part^(-rq.α)*(0.5*r/part-rq.α*log(part))
     return [g1; g2; g3]
 end
 
-# function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, rq::RQArd)
-#     d = size(X,1)
-#     R = distance(rq,X)
-#     part  = (1+0.5*R/rq.α)
+function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, rq::RQArd)
+    d = size(X,1)
+    R = distance(rq,X)
+    part  = (1+0.5*R/rq.α)
     
-#     stack[:,:,d+1] = crossKern(X, rq)
-#     ck = view(stack, :, :, d+1)
+    stack[:,:,d+2] = crossKern(X, rq)
+    ck = view(stack, :, :, d+2)
 
-#     for i in 1:d
-#         grad_ls = view(stack, :, :, i)
-#         pairwise!(grad_ls, WeightedSqEuclidean([1.0/rq.ℓ2[i]]), view(X, i, :))
-#         map!(*, grad_ls, grad_ls, ck./part)
-#     end
-#     stack[:,:, d+1] = 2.0 * ck
-#     stack[:,:, d+2] = ck.*(0.5*R./part-rq.α*log(part))*rq.α
-#     return stack
-# end
+    for i in 1:d
+        grad_ls = view(stack, :, :, i)
+        pairwise!(grad_ls, WeightedSqEuclidean([1.0/rq.ℓ2[i]]), view(X, i, :))
+        map!(*, grad_ls, grad_ls, ck./part)
+    end
+    stack[:,:, d+1] = 2.0 * ck
+    stack[:,:, d+2] = ck.*(0.5*R./part-rq.α*log(part))
+    return stack
+end
