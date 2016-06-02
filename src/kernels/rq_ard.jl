@@ -51,11 +51,12 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, rq::RQArd)
     
     stack[:,:,d+2] = crossKern(X, rq)
     ck = view(stack, :, :, d+2)
+    part2 = ck./part
 
     for i in 1:d
         grad_ls = view(stack, :, :, i)
         pairwise!(grad_ls, WeightedSqEuclidean([1.0/rq.ℓ2[i]]), view(X, i, :))
-        map!(*, grad_ls, grad_ls, ck./part)
+        map!(*, grad_ls, grad_ls, part2)
     end
     stack[:,:, d+1] = 2.0 * ck
     stack[:,:, d+2] = ck.*(0.5*R./part-rq.α*log(part))
