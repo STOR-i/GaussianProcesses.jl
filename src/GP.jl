@@ -11,14 +11,14 @@ Fits a Gaussian process to a set of training points. The Gaussian process is def
     GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8) # observation-free constructor
 
 # Arguments:
-* `x::Matrix{Float64}`: Training inputs
-* `y::Vector{Float64}`: Observations
+* `x::Matrix{Float64}`: Input observations
+* `y::Vector{Float64}`: Output observations
 * `m::Mean`           : Mean function
 * `k::kernel`         : Covariance function
 * `logNoise::Float64` : Log of the observation noise. The default is -1e8, which is equivalent to assuming no observation noise.
 
 # Returns:
-* `gp::GP`            : A Gaussian process fitted to the training data
+* `gp::GP`            : Gaussian process object, fitted to the training data if provided
 """ ->
 type GP
     x::Matrix{Float64}      # Input observations  - each column is an observation
@@ -48,6 +48,30 @@ end
 
 # Creates GP object for 1D case
 GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Float64=-1e8) = GP(x', y, meanf, kernel, logNoise)
+
+@doc """
+# Description
+Fits an existing Gaussian process to a set of training points.
+
+# Arguments:
+* `gp::GP`: Exiting Gaussian process object
+* `x::Matrix{Float64}`: Input observations
+* `y::Vector{Float64}`: Output observations
+
+# Returns:
+* `gp::GP`            : A Gaussian process fitted to the training data
+""" ->
+function fit!(gp::GP, x::Matrix{Float64}, y::Vector{Float64})
+    length(y) == size(x,2) || throw(ArgumentError("Input and output observations must have consistent dimensions."))
+    gp.x = x # ScikitLearn's X is (n_samples, n_features)
+    gp.y = y
+    gp.dim, gp.nobsv = size(gp.x)
+    update_mll!(gp)
+    return gp
+end
+
+fit!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
+
 
 # Update auxiliarly data in GP object after changes have been made
 function update_mll!(gp::GP)
@@ -96,6 +120,9 @@ Calculates the posterior mean and variance of Gaussian Process at specified poin
 * `gp::GP`: Gaussian Process object
 * `x::Matrix{Float64}`:  matrix of points for which one would would like to predict the value of the process.
                        (each column of the matrix is a point)
+
+# Keyword Arguments
+* `full_cov::Bool`: indicates whether full covariance matrix should be returned instead of only variances (default is false)
 
 # Returns:
 * `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior

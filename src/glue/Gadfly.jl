@@ -34,7 +34,7 @@ end
 function Gadfly.plot(gp::GP; kwargs...)
     d, n = size(gp.x)
     if d>2
-        error("Only 1D and 2D plots are permitted")
+        error("Can only plot one or two dimensional Gaussian processes")
     elseif d==1
         plot1D(gp; kwargs...)
     elseif d==2
