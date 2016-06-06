@@ -1,5 +1,8 @@
 # News
 
+## Version 0.2.1 (2016-06-06)
+* Added fit! function to fit a new set observations to existing GP object
+
 ## Version 0.2.0 (2016-06-03)
 * Julia requirement moved up to v0.4
 * Support added for ScikitLearn
