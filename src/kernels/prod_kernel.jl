@@ -18,19 +18,19 @@ function show(io::IO, prodkern::ProdKernel, depth::Int = 0)
     end
 end
 
-function kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
+function cov(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
     p = 1.0
     for k in prodkern.kerns
-        p = p.*kern(k, x, y)
+        p = p.*cov(k, x, y)
     end
     return p
 end
 
-function cov(X::Matrix{Float64}, prodkern::ProdKernel)
+function cov(prodkern::ProdKernel, X::Matrix{Float64})
     d, nobsv = size(X)
     p = ones(nobsv, nobsv)
     for k in prodkern.kerns
-        p[:,:] = p .* cov(X,k)
+        p[:,:] = p .* cov(k, X)
     end
     return p
 end
@@ -69,7 +69,7 @@ function grad_kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
       for k in prodkern.kerns
           p = 1.0
           for j in prodkern.kerns[find(k.!=prodkern.kerns)]
-              p = p.*kern(j, x, y)
+              p = p.*cov(j, x, y)
           end
         append!(dk,grad_kern(k, x, y).*p) 
       end
@@ -82,7 +82,7 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, prodkern::ProdKer
     
     cross_kerns = Array(Float64, nobsv, nobsv, num_kerns)
     for (i,kern) in enumerate(prodkern.kerns)
-        cross_kerns[:,:,i] = cov(X, kern)
+        cross_kerns[:,:,i] = cov(kern, X)
     end
 
     s = 1

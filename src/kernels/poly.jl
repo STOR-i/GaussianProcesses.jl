@@ -17,7 +17,7 @@ type Poly <: Kernel
     Poly(lc::Float64, lσ::Float64, deg::Int64) = new(lc, lσ, deg)
 end
 
-function kern(poly::Poly, x::Vector{Float64}, y::Vector{Float64})
+function cov(poly::Poly, x::Vector{Float64}, y::Vector{Float64})
     c = exp(poly.lc)
     sigma2 = exp(2*poly.lσ)
 

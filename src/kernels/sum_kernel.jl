@@ -18,10 +18,10 @@ function show(io::IO, sumkern::SumKernel, depth::Int = 0)
     end
 end
 
-function kern(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
+function cov(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
     s = 0.0
     for k in sumkern.kerns
-        s += kern(k, x, y)
+        s += cov(k, x, y)
     end
     return s
 end
@@ -45,12 +45,12 @@ end
 ##     end
 ## end
 
-function cov(X::Matrix{Float64}, sumkern::SumKernel)
+function cov(sumkern::SumKernel, X::Matrix{Float64})
     d, nobsv = size(X)
     s = zeros(nobsv, nobsv)
     for k in sumkern.kerns
         #add_matrices!(s, cov(X,k))
-        s[:,:] = s + cov(X,k)
+        s[:,:] = s + cov(k, X)
     end
     return s
 end

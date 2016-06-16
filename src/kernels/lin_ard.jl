@@ -15,7 +15,7 @@ type LinArd <: Kernel
     LinArd(ll::Vector{Float64}) = new(ll,size(ll,1))
 end
 
-function kern(lin::LinArd, x::Vector{Float64}, y::Vector{Float64})
+function cov(lin::LinArd, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(lin.ll)
     K = dot(x./ell,y./ell)
     return K

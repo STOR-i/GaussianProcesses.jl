@@ -23,7 +23,7 @@ get_param_names(::SEIso) = [:ll, :lσ]
 num_params(se::SEIso) = 2
 
 metric(se::SEIso) = SqEuclidean()
-kern(se::SEIso, r::Float64) = se.σ2*exp(-0.5*r/se.ℓ2)
+cov(se::SEIso, r::Float64) = se.σ2*exp(-0.5*r/se.ℓ2)
 
 function grad_kern(se::SEIso, x::Vector{Float64}, y::Vector{Float64})
     r = distance(se, x, y)

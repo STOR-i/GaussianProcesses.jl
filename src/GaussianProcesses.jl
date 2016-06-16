@@ -2,7 +2,7 @@ module GaussianProcesses
 using Optim, PDMats, Distances, ArrayViews
 
 import Base: +, *
-import Base: rand, rand!
+import Base: rand, rand!, cov
 
 # Functions that should be available to package
 # users should be explicitly exported here

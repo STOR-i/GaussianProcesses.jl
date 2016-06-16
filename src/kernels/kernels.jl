@@ -9,15 +9,15 @@ abstract Kernel
 Constructs covariance matrix from kernel and input observations
 
 # Arguments
+# `k::Kernel`: kernel for calculating covariance between pairs of points
 * `X::Matrix{Float64}`: matrix of observations (each column is an observation)
 # `Y::Matrix{Float64}`: another matrix of observations
-# `k::Kernel`: kernel for calculating covariance between pairs of points
 
 # Return
 `Σ::Matrix{Float64}`: covariance matrix where `Σ[i,j]` is the covariance of the Gaussian process between points `X[:,i]` and `Y[:,j]`.
 """
-function cov(X::Matrix{Float64}, Y::Matrix{Float64}, k::Kernel)
-    d(x,y) = kern(k, x, y)
+function cov(k::Kernel, X::Matrix{Float64}, Y::Matrix{Float64})
+    d(x,y) = cov(k, x, y)
     return map_column_pairs(d, X, Y)
 end
 
@@ -26,14 +26,14 @@ end
 Constructs covariance matrix from kernel and input observations
 
 # Arguments
-* `X::Matrix{Float64}`: matrix of observations (each column is an observation)
 # `k::Kernel`: kernel for calculating covariance between pairs of points
+* `X::Matrix{Float64}`: matrix of observations (each column is an observation)
 
 # Return
 `Σ::Matrix{Float64}`: covariance matrix where `Σ[i,j]` is the covariance of the Gaussian process between points `X[:,i]` and `X[:,j]`.
 """
-function cov(X::Matrix{Float64}, k::Kernel)
-    d(x,y) = kern(k, x, y)
+function cov(k::Kernel, X::Matrix{Float64})
+    d(x,y) = cov(k, x, y)
     return map_column_pairs(d, X)
 end
 

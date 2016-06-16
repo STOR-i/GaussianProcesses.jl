@@ -25,7 +25,7 @@ get_param_names(mat::Mat32Iso) = [:ll, :lσ]
 num_params(mat::Mat32Iso) = 2
 
 metric(mat::Mat32Iso) = Euclidean()
-kern(mat::Mat32Iso, r::Float64) = mat.σ2*(1+sqrt(3)*r/mat.ℓ)*exp(-sqrt(3)*r/mat.ℓ)
+cov(mat::Mat32Iso, r::Float64) = mat.σ2*(1+sqrt(3)*r/mat.ℓ)*exp(-sqrt(3)*r/mat.ℓ)
 
 function grad_kern(mat::Mat32Iso, x::Vector{Float64}, y::Vector{Float64})
     r = distance(mat,x,y)

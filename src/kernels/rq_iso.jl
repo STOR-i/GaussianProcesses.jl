@@ -27,7 +27,7 @@ get_param_names(rq::RQIso) = [:ll, :lσ, :lα]
 num_params(rq::RQIso) = 3
 
 metric(rq::RQIso) = SqEuclidean()
-kern(rq::RQIso, r::Float64) = rq.σ2*(1.0+r/(2.0*rq.α*rq.ℓ2)).^(-rq.α)
+cov(rq::RQIso, r::Float64) = rq.σ2*(1.0+r/(2.0*rq.α*rq.ℓ2)).^(-rq.α)
 
 
 function grad_kern(rq::RQIso, x::Vector{Float64}, y::Vector{Float64})

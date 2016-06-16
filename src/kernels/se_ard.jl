@@ -27,7 +27,7 @@ get_param_names(k::SEArd) = [get_param_names(k.ℓ2, :ll); :lσ]
 num_params(se::SEArd) = se.dim
 
 metric(se::SEArd) = WeightedSqEuclidean(1.0./(se.ℓ2))
-kern(se::SEArd, r::Float64) = se.σ2*exp(-0.5*r)
+cov(se::SEArd, r::Float64) = se.σ2*exp(-0.5*r)
 
 function grad_kern(se::SEArd, x::Vector{Float64}, y::Vector{Float64})
     r = distance(se, x, y)
@@ -42,7 +42,7 @@ end
 
 function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, se::SEArd)
     d = size(X,1)
-    stack[:,:,d+1] = cov(X, se)
+    stack[:,:,d+1] = cov(se, X)
     ck = view(stack, :, :, d+1)
     for i in 1:d
         grad_ls = view(stack, :, :, i)

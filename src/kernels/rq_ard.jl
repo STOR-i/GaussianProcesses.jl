@@ -30,7 +30,7 @@ get_param_names(rq::RQArd) = [get_param_names(rq.ℓ2, :ll); :lσ; :lα]
 num_params(rq::RQArd) = rq.dim
 
 metric(rq::RQArd) = WeightedSqEuclidean(1.0./(rq.ℓ2))
-kern(rq::RQArd,r::Float64) = rq.σ2*(1+0.5*r/rq.α)^(-rq.α)
+cov(rq::RQArd,r::Float64) = rq.σ2*(1+0.5*r/rq.α)^(-rq.α)
     
 
 function grad_kern(rq::RQArd, x::Vector{Float64}, y::Vector{Float64})
@@ -49,7 +49,7 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, rq::RQArd)
     R = distance(rq,X)
     part  = (1+0.5*R/rq.α)
     
-    stack[:,:,d+2] = cov(X, rq)
+    stack[:,:,d+2] = cov(rq, X)
     ck = view(stack, :, :, d+2)
     part2 = ck./part
 

@@ -17,7 +17,7 @@ type Periodic <: Kernel
     Periodic(ll::Float64, lσ::Float64, lp::Float64) = new(ll, lσ, lp)
 end
 
-function kern(peri::Periodic, x::Vector{Float64}, y::Vector{Float64})
+function cov(peri::Periodic, x::Vector{Float64}, y::Vector{Float64})
     ℓ2 = exp(2.0*peri.ll)
     σ2 = exp(2.0*peri.lσ)
     p = exp(peri.lp)

@@ -1,9 +1,9 @@
 using GaussianProcesses, Base.Test
 using GaussianProcesses: get_params, get_param_names, num_params
 
-function test_cov(kern::Kernel, x::Matrix{Float64})
-    spec = GaussianProcesses.cov(x, kern)
-    gen = invoke(GaussianProcesses.cov, (Matrix{Float64}, Kernel), x, kern)
+function test_cov(kern::Kernel, X::Matrix{Float64})
+    spec = GaussianProcesses.cov(kern, X)
+    gen = invoke(GaussianProcesses.cov, (Kernel, Matrix{Float64}), kern, X)
     @test_approx_eq spec gen
 end
 

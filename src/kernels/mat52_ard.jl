@@ -27,7 +27,7 @@ get_param_names(mat::Mat52Ard) = [get_param_names(mat.ℓ, :ll); :lσ]
 num_params(mat::Mat52Ard) = mat.dim
 
 metric(mat::Mat52Ard) = WeightedEuclidean(1.0./(mat.ℓ.^2))
-kern(mat::Mat52Ard, r::Float64) = mat.σ2*(1+sqrt(5)*r+5/3*r^2)*exp(-sqrt(5)*r)
+cov(mat::Mat52Ard, r::Float64) = mat.σ2*(1+sqrt(5)*r+5/3*r^2)*exp(-sqrt(5)*r)
 
 function grad_kern(mat::Mat52Ard, x::Vector{Float64}, y::Vector{Float64})
     #r = distance(mat,x,y)
@@ -46,7 +46,7 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, mat::Mat52Ard)
     R = distance(mat,X)
     exp_R = exp(-sqrt(5)*R)
 
-    stack[:,:,d+1] = 2.0*cov(X, mat)
+    stack[:,:,d+1] = 2.0*cov(mat, X)
     part = (5/3) * mat.σ2 .* exp_R .* (1.0 + sqrt(5)*R)
     for i in 1:d
        grad_ls = view(stack, :, :, i)

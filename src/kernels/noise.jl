@@ -13,7 +13,7 @@ type Noise <: Kernel
     Noise(lσ::Float64) = new(lσ)
 end
 
-function kern(noise::Noise, x::Vector{Float64}, y::Vector{Float64})
+function cov(noise::Noise, x::Vector{Float64}, y::Vector{Float64})
     sigma2 = exp(2*noise.lσ)
     prec   = eps()            #machine precision
     

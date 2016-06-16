@@ -76,7 +76,7 @@ fit!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 # Update auxiliarly data in GP object after changes have been made
 function update_mll!(gp::GP)
     m = meanf(gp.m,gp.x)
-    gp.cK = PDMat(cov(gp.x,gp.k) + exp(2*gp.logNoise)*eye(gp.nobsv) + 1e-8*eye(gp.nobsv))
+    gp.cK = PDMat(cov(gp.k, gp.x) + exp(2*gp.logNoise)*eye(gp.nobsv) + 1e-8*eye(gp.nobsv))
     gp.alpha = gp.cK \ (gp.y - m)
     gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
 end
@@ -151,10 +151,10 @@ predict(gp::GP, x::Vector{Float64}; full_cov::Bool=false) = predict(gp, x'; full
 ## compute predictions
 function _predict(gp::GP, x::Array{Float64})
     n = size(x, 2)
-    cK = cov(x,gp.x,gp.k)
+    cK = cov(gp.k, x, gp.x)
     Lck = whiten(gp.cK, cK')
     mu = meanf(gp.m,x) + cK*gp.alpha        # Predictive mean
-    Sigma_raw = cov(x,gp.k) - Lck'Lck # Predictive covariance
+    Sigma_raw = cov(gp.k, x) - Lck'Lck # Predictive covariance
     # Hack to get stable covariance
     Sigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+1e-8*sum(diag(Sigma_raw))/n*eye(n)) end 
     return (mu, Sigma)
@@ -168,8 +168,8 @@ function rand!(gp::GP, x::Matrix{Float64}, A::DenseMatrix)
 
     if gp.nobsv == 0
         # Prior mean and covariance
-        μ = meanf(gp.m,x);
-        Σraw = cov(x,gp.k);
+        μ = meanf(gp.m, x);
+        Σraw = cov(gp.k, x);
         Σ = try PDMat(Σraw) catch; PDMat(Σraw+1e-8*sum(diag(Σraw))/nobsv*eye(nobsv)) end  
     else
         # Posterior mean and covariance
