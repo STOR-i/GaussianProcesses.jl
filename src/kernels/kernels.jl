@@ -4,25 +4,37 @@ import Base.show
 
 abstract Kernel
 
-# Returns matrix where D[i,j] = kernel(x1[i], x2[j])
-#
-# Arguments:
-#  x1 matrix of observations (each column is an observation)
-#  x2 matrix of observations (each column is an observation)
-#  k kernel object
-function cov(x1::Matrix{Float64}, x2::Matrix{Float64}, k::Kernel)
+"""
+# Description
+Constructs covariance matrix from kernel and input observations
+
+# Arguments
+* `X::Matrix{Float64}`: matrix of observations (each column is an observation)
+# `Y::Matrix{Float64}`: another matrix of observations
+# `k::Kernel`: kernel for calculating covariance between pairs of points
+
+# Return
+`Σ::Matrix{Float64}`: covariance matrix where `Σ[i,j]` is the covariance of the Gaussian process between points `X[:,i]` and `Y[:,j]`.
+"""
+function cov(X::Matrix{Float64}, Y::Matrix{Float64}, k::Kernel)
     d(x,y) = kern(k, x, y)
-    return cov(x1, x2, d)
+    return map_column_pairs(d, X, Y)
 end
 
-# Returns matrix of distances D where D[i,j] = kernel(x1[i], x1[j])
-#
-# Arguments:
-#  x matrix of observations (each column is an observation)
-#  k kernel object
-function cov(x::Matrix{Float64}, k::Kernel)
+"""
+# Description
+Constructs covariance matrix from kernel and input observations
+
+# Arguments
+* `X::Matrix{Float64}`: matrix of observations (each column is an observation)
+# `k::Kernel`: kernel for calculating covariance between pairs of points
+
+# Return
+`Σ::Matrix{Float64}`: covariance matrix where `Σ[i,j]` is the covariance of the Gaussian process between points `X[:,i]` and `X[:,j]`.
+"""
+function cov(X::Matrix{Float64}, k::Kernel)
     d(x,y) = kern(k, x, y)
-    return cov(x, d)
+    return map_column_pairs(d, X)
 end
 
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients
