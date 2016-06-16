@@ -12,7 +12,7 @@ distance(k::Stationary, x::Vector{Float64}, y::Vector{Float64}) = evaluate(metri
 kern(k::Stationary, x::Vector{Float64}, y::Vector{Float64}) = kern(k, distance(k, x, y))
 
 
-function crossKern(x1::Matrix{Float64}, x2::Matrix{Float64}, k::Stationary)
+function cov(x1::Matrix{Float64}, x2::Matrix{Float64}, k::Stationary)
     nobsv1 = size(x1, 2)
     nobsv2 = size(x2, 2)
     R = distance(k, x1, x2)
@@ -22,7 +22,7 @@ function crossKern(x1::Matrix{Float64}, x2::Matrix{Float64}, k::Stationary)
     return R
 end
 
-function crossKern(x::Matrix{Float64}, k::Stationary)
+function cov(x::Matrix{Float64}, k::Stationary)
     nobsv = size(x, 2)
     R = distance(k, x)
     for i in 1:nobsv, j in 1:i

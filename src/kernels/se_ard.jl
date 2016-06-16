@@ -42,7 +42,7 @@ end
 
 function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, se::SEArd)
     d = size(X,1)
-    stack[:,:,d+1] = crossKern(X, se)
+    stack[:,:,d+1] = cov(X, se)
     ck = view(stack, :, :, d+1)
     for i in 1:d
         grad_ls = view(stack, :, :, i)

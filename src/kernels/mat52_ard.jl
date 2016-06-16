@@ -46,7 +46,7 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, mat::Mat52Ard)
     R = distance(mat,X)
     exp_R = exp(-sqrt(5)*R)
 
-    stack[:,:,d+1] = 2.0*crossKern(X, mat)
+    stack[:,:,d+1] = 2.0*cov(X, mat)
     part = (5/3) * mat.σ2 .* exp_R .* (1.0 + sqrt(5)*R)
     for i in 1:d
        grad_ls = view(stack, :, :, i)

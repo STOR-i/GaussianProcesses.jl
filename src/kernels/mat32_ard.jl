@@ -49,6 +49,6 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, mat::Mat32Ard)
         pairwise!(grad_ls, WeightedSqEuclidean([1.0/mat.ℓ[i]^2]), view(X, i, :))
         map!(*, grad_ls, grad_ls, 3* mat.σ2 * exp_R)
     end
-    stack[:,:, d+1] = 2.0 * crossKern(X, mat)
+    stack[:,:, d+1] = 2.0 * cov(X, mat)
     return stack
 end

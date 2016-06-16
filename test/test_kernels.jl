@@ -1,9 +1,9 @@
 using GaussianProcesses, Base.Test
 using GaussianProcesses: get_params, get_param_names, num_params
 
-function test_crossKern(kern::Kernel, x::Matrix{Float64})
-    spec = GaussianProcesses.crossKern(x, kern)
-    gen = invoke(GaussianProcesses.crossKern, (Matrix{Float64}, Kernel), x, kern)
+function test_cov(kern::Kernel, x::Matrix{Float64})
+    spec = GaussianProcesses.cov(x, kern)
+    gen = invoke(GaussianProcesses.cov, (Matrix{Float64}, Kernel), x, kern)
     @test_approx_eq spec gen
 end
 
@@ -22,7 +22,7 @@ function test_Kernel(kern::Kernel, x::Matrix{Float64})
     t = typeof(kern)
     println("\tTesting $(t)...")
     @assert length(get_param_names(kern)) == length(get_params(kern)) == num_params(kern)
-    test_crossKern(kern, x)
+    test_cov(kern, x)
     test_grad_stack(kern, x)
 end
     

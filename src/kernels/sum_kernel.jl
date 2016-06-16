@@ -26,14 +26,14 @@ function kern(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
     return s
 end
 
-# This slows down crossKern...
+# This slows down cov...
 
-## function crossKern(X::Matrix{Float64}, sumkern::SumKernel)
+## function cov(X::Matrix{Float64}, sumkern::SumKernel)
 ##     d, nobsv = size(X)
 ##     s = zeros(nobsv, nobsv)
 ##     for k in sumkern.kerns
-##         BLAS.axpy!(nobsv*nobsv, 1.0, crossKern(X,k), 1, s, 1)
-##         #s += crossKern(X, k)
+##         BLAS.axpy!(nobsv*nobsv, 1.0, cov(X,k), 1, s, 1)
+##         #s += cov(X, k)
 ##     end
 ##     return s
 ## end
@@ -45,12 +45,12 @@ end
 ##     end
 ## end
 
-function crossKern(X::Matrix{Float64}, sumkern::SumKernel)
+function cov(X::Matrix{Float64}, sumkern::SumKernel)
     d, nobsv = size(X)
     s = zeros(nobsv, nobsv)
     for k in sumkern.kerns
-        #add_matrices!(s, crossKern(X,k))
-        s[:,:] = s + crossKern(X,k)
+        #add_matrices!(s, cov(X,k))
+        s[:,:] = s + cov(X,k)
     end
     return s
 end

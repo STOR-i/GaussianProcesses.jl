@@ -46,7 +46,7 @@ function grad_kern(peri::Periodic, x::Vector{Float64}, y::Vector{Float64})
     return dK_theta
 end
 
-function crossKern(X::Matrix{Float64}, peri::Periodic)
+function cov(X::Matrix{Float64}, peri::Periodic)
     d, nobsv = size(X)
     ℓ2 = exp(2.0*peri.ll)
     σ2 = exp(2.0*peri.lσ)

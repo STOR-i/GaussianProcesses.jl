@@ -49,7 +49,7 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, rq::RQArd)
     R = distance(rq,X)
     part  = (1+0.5*R/rq.α)
     
-    stack[:,:,d+2] = crossKern(X, rq)
+    stack[:,:,d+2] = cov(X, rq)
     ck = view(stack, :, :, d+2)
     part2 = ck./part
 

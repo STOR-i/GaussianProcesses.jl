@@ -10,9 +10,9 @@ abstract Kernel
 #  x1 matrix of observations (each column is an observation)
 #  x2 matrix of observations (each column is an observation)
 #  k kernel object
-function crossKern(x1::Matrix{Float64}, x2::Matrix{Float64}, k::Kernel)
+function cov(x1::Matrix{Float64}, x2::Matrix{Float64}, k::Kernel)
     d(x,y) = kern(k, x, y)
-    return crossKern(x1, x2, d)
+    return cov(x1, x2, d)
 end
 
 # Returns matrix of distances D where D[i,j] = kernel(x1[i], x1[j])
@@ -20,9 +20,9 @@ end
 # Arguments:
 #  x matrix of observations (each column is an observation)
 #  k kernel object
-function crossKern(x::Matrix{Float64}, k::Kernel)
+function cov(x::Matrix{Float64}, k::Kernel)
     d(x,y) = kern(k, x, y)
-    return crossKern(x, d)
+    return cov(x, d)
 end
 
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients

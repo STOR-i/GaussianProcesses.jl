@@ -8,7 +8,7 @@
 # Returns:
 * `D::Matrix{Float64}`: A positive definite matrix given as output from d(x1,x2)
 """ ->
-function crossKern(x1::Matrix{Float64}, x2::Matrix{Float64}, d::Function)
+function cov(x1::Matrix{Float64}, x2::Matrix{Float64}, d::Function)
     dim, nobs1 = size(x1)
     nobs2 = size(x2,2)
     dim == size(x2,1) || throw(ArgumentError("Input observation matrices must have consistent dimensions"))
@@ -19,12 +19,15 @@ function crossKern(x1::Matrix{Float64}, x2::Matrix{Float64}, d::Function)
     return max(D,0)
 end
 
-# Returns matrix D where D[i,j] = kernel(x1[i], x1[j])
-#
-# Arguments:
-#  x matrix of observations (each column is an observation)
-#  d is a function between two vectors
-function crossKern(x::Matrix{Float64}, d::Function)
+@doc """
+# Description
+Constructs matrix D where D[i,j] = cov(x1[i], x1[j])
+
+# Arguments
+  `x::Matrix{Float64}`: matrix of observations (each column is an observation)
+  `d::Function`: function specifying covariance between two points
+""" ->
+function cov(x::Matrix{Float64}, d::Function)
     dim, nobsv = size(x)
     D = Array(Float64, nobsv, nobsv)
     for i in 1:nobsv
