@@ -14,7 +14,7 @@ type MeanLin <: Mean
     MeanLin(β::Vector{Float64}) = new(β, length(β))
 end
     
-meanf(mLin::MeanLin,x::Matrix{Float64}) =  x'mLin.β
+mean(mLin::MeanLin,x::Matrix{Float64}) =  x'mLin.β
 
 get_params(mLin::MeanLin) = mLin.β
 get_param_names(::MeanLin) = [:β]

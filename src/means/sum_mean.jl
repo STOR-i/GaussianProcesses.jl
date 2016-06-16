@@ -18,10 +18,10 @@ function show(io::IO, sm::SumMean, depth::Int = 0)
     end
 end
 
-function meanf(summean::SumMean, x::Matrix{Float64})
+function mean(summean::SumMean, x::Matrix{Float64})
     s = 0.0
     for m in summean.means
-        s += meanf(m, x)
+        s += mean(m, x)
     end
     return s
 end

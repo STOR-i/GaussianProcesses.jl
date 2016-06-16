@@ -44,16 +44,6 @@ function map_column_pairs(f::Function, X::Matrix{Float64})
     return D
 end
 
-# Calculates the stack [dm / dθᵢ] of mean matrix gradients
-function grad_stack(X::Matrix{Float64}, m::Mean)
-    n = num_params(m)
-    d, nobsv = size(X)
-    mat = Array(Float64, nobsv, n)
-    for i in 1:nobsv
-        @inbounds mat[i,:] = grad_meanf(m, X[:,i])
-    end
-    return mat
-end
 
 # Taken from Distributions package
 φ(z::Real) = exp(-0.5*z*z)/√2π
