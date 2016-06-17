@@ -21,29 +21,33 @@ Fits a Gaussian process to a set of training points. The Gaussian process is def
 * `gp::GP`            : Gaussian process object, fitted to the training data if provided
 """ ->
 type GP
-    x::Matrix{Float64}      # Input observations  - each column is an observation
-    y::Vector{Float64}      # Output observations
-    dim::Int                # Dimension of inputs
-    nobsv::Int              # Number of observations
-    logNoise::Float64       # log variance of observation noise
     m:: Mean                # Mean object
     k::Kernel               # Kernel object
+    logNoise::Float64       # log variance of observation noise
+    
+    # Observation data
+    nobsv::Int              # Number of observations
+    X::Matrix{Float64}      # Input observations
+    y::Vector{Float64}      # Output observations
+    data::KernelData        # Auxiliary observation data (to speed up calculations)
+    dim::Int                # Dimension of inputs
+    
     # Auxiliary data
     cK::AbstractPDMat       # (k + obsNoise)
     alpha::Vector{Float64}  # (k + obsNoise)⁻¹y
     mLL::Float64            # Marginal log-likelihood
     dmLL::Vector{Float64}   # Gradient marginal log-likelihood
-    function GP(x::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-1e8)
-        dim, nobsv = size(x)
+    
+    function GP(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-1e8)
+        dim, nobsv = size(X)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        gp = new(x, y, dim, nobsv, logNoise, m, k)
+        gp = new(m, k, logNoise, nobsv, X, y, KernelData(k, X), dim)
         update_mll!(gp)
         return gp
     end
-    function GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8)
-        # We could leave x/y/dim/nobsv undefined if we reordered the fields
-        new(zeros(Float64,0,0), zeros(Float64, 0), 0, 0, logNoise, m, k)
-    end
+    
+    GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8) =  new(m, k, logNoise, 0)
+    
 end
 
 # Creates GP object for 1D case
@@ -61,11 +65,12 @@ Fits an existing Gaussian process to a set of training points.
 # Returns:
 * `gp::GP`            : A Gaussian process fitted to the training data
 """ ->
-function fit!(gp::GP, x::Matrix{Float64}, y::Vector{Float64})
-    length(y) == size(x,2) || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-    gp.x = x # ScikitLearn's X is (n_samples, n_features)
+function fit!(gp::GP, X::Matrix{Float64}, y::Vector{Float64})
+    length(y) == size(X,2) || throw(ArgumentError("Input and output observations must have consistent dimensions."))
+    gp.X = X
     gp.y = y
-    gp.dim, gp.nobsv = size(gp.x)
+    gp.data = KernelData(X)
+    gp.dim, gp.nobsv = size(X)
     update_mll!(gp)
     return gp
 end
@@ -75,10 +80,10 @@ fit!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 
 # Update auxiliarly data in GP object after changes have been made
 function update_mll!(gp::GP)
-    m = mean(gp.m,gp.x)
-    gp.cK = PDMat(cov(gp.k, gp.x) + exp(2*gp.logNoise)*eye(gp.nobsv) + 1e-8*eye(gp.nobsv))
+    m = mean(gp.m,gp.X)
+    gp.cK = PDMat(cov(gp.k, gp.data) + exp(2*gp.logNoise)*eye(gp.nobsv) + 1e-8*eye(gp.nobsv))
     gp.alpha = gp.cK \ (gp.y - m)
-    gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 #Marginal log-likelihood
+    gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
 
 # Update gradient of marginal log likelihood
@@ -149,12 +154,12 @@ end
 predict(gp::GP, x::Vector{Float64}; full_cov::Bool=false) = predict(gp, x'; full_cov=full_cov)
 
 ## compute predictions
-function _predict(gp::GP, x::Array{Float64})
-    n = size(x, 2)
-    cK = cov(gp.k, x, gp.x)
+function _predict(gp::GP, X::Array{Float64})
+    n = size(X, 2)
+    cK = cov(gp.k, X, gp.X)
     Lck = whiten(gp.cK, cK')
-    mu = mean(gp.m,x) + cK*gp.alpha        # Predictive mean
-    Sigma_raw = cov(gp.k, x) - Lck'Lck # Predictive covariance
+    mu = mean(gp.m,X) + cK*gp.alpha        # Predictive mean
+    Sigma_raw = cov(gp.k, X) - Lck'Lck # Predictive covariance
     # Hack to get stable covariance
     Sigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+1e-8*sum(diag(Sigma_raw))/n*eye(n)) end 
     return (mu, Sigma)
@@ -162,34 +167,34 @@ end
 
 
 # Sample from the GP 
-function rand!(gp::GP, x::Matrix{Float64}, A::DenseMatrix)
-    nobsv = size(x,2)
+function rand!(gp::GP, X::Matrix{Float64}, A::DenseMatrix)
+    nobsv = size(X,2)
     n_sample = size(A,2)
 
     if gp.nobsv == 0
         # Prior mean and covariance
-        μ = mean(gp.m, x);
-        Σraw = cov(gp.k, x);
+        μ = mean(gp.m, X);
+        Σraw = cov(gp.k, X);
         Σ = try PDMat(Σraw) catch; PDMat(Σraw+1e-8*sum(diag(Σraw))/nobsv*eye(nobsv)) end  
     else
         # Posterior mean and covariance
-        μ, Σ = predict(gp, x; full_cov=true)
+        μ, Σ = predict(gp, X; full_cov=true)
     end
     
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobsv, n_sample)))
 end
 
-function rand(gp::GP, x::Matrix{Float64}, n::Int)
-    nobsv=size(x,2)
+function rand(gp::GP, X::Matrix{Float64}, n::Int)
+    nobsv=size(X,2)
     A = Array(Float64, nobsv, n)
-    return rand!(gp, x, A)
+    return rand!(gp, X, A)
 end
 
 # Sample from 1D GP
 rand(gp::GP, x::Vector{Float64}, n::Int) = rand(gp, x', n)
 
-#Generate only one sample from the GP and returns a vector
-rand(gp::GP,x::Matrix{Float64}) = vec(rand(gp,x,1))
+# Generate only one sample from the GP and returns a vector
+rand(gp::GP,X::Matrix{Float64}) = vec(rand(gp,X,1))
 rand(gp::GP,x::Vector{Float64}) = vec(rand(gp,x',1))
 
 

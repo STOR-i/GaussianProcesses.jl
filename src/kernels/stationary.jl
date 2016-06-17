@@ -5,8 +5,8 @@
 
 abstract Stationary <: Kernel
 
-distance(k::Stationary, x::Matrix{Float64}) = pairwise(metric(k), x)
-distance(k::Stationary, x1::Matrix{Float64}, x2::Matrix{Float64}) = pairwise(metric(k), x1, x2)
+distance(k::Stationary, X::Matrix{Float64}) = pairwise(metric(k), X)
+distance(k::Stationary, X::Matrix{Float64}, Y::Matrix{Float64}) = pairwise(metric(k), X, Y)
 distance(k::Stationary, x::Vector{Float64}, y::Vector{Float64}) = evaluate(metric(k), x, y)
 
 cov(k::Stationary, x::Vector{Float64}, y::Vector{Float64}) = cov(k, distance(k, x, y))

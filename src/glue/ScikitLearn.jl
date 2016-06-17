@@ -5,9 +5,10 @@ import ScikitLearnBase
 ScikitLearnBase.is_classifier(::GP) = false
 
 function ScikitLearnBase.fit!(gp::GP, X::Matrix{Float64}, y::Vector{Float64})
-    gp.x = X' # ScikitLearn's X is (n_samples, n_features)
+    gp.X = X' # ScikitLearn's X is (n_samples, n_features)
     gp.y = y
-    gp.dim, gp.nobsv = size(gp.x)
+    gp.data = KernelData(gp.k, X')
+    gp.dim, gp.nobsv = size(gp.X)
     length(y) == gp.nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
     update_mll!(gp)
     return gp
