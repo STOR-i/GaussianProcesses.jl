@@ -81,7 +81,7 @@ fit!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 # Update auxiliarly data in GP object after changes have been made
 function update_mll!(gp::GP)
     m = mean(gp.m,gp.X)
-    gp.cK = PDMat(cov(gp.k, gp.data) + exp(2*gp.logNoise)*eye(gp.nobsv) + 1e-8*eye(gp.nobsv))
+    gp.cK = PDMat(cov(gp.k, gp.X, gp.data) + exp(2*gp.logNoise)*eye(gp.nobsv) + 1e-8*eye(gp.nobsv))
     gp.alpha = gp.cK \ (gp.y - m)
     gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end

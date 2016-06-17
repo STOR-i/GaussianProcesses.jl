@@ -9,21 +9,17 @@ Data to be used with a kernel object to
 calculate a covariance matrix, which is independent of kernel hyperparameters.
 
 # See also
-`FullData`
+`EmptyData`
 """
 abstract KernelData
 
 """
-Default KernelData type consisting of
-full input observation matrix.
+Default KernelData type which is empty.
 """
-type FullData <: KernelData
-    X::Matrix{Float64}
+type EmptyData <: KernelData
 end
 
-nobsv(data::FullData) = size(data, 2)
-
-KernelData(k::Kernel, X::Matrix{Float64}) = FullData(X)
+KernelData(k::Kernel, X::Matrix{Float64}) = EmptyData()
 
 """
 # Description
@@ -47,7 +43,8 @@ end
 Constructs covariance matrix from kernel and kernel data
 
 # Arguments
-# `k::Kernel`: kernel for calculating covariance between pairs of points
+* `k::Kernel`: kernel for calculating covariance between pairs of points
+* `X::Matrix{Float64}`: matrix of input observations (each column is an observation)    
 * `data::KernelData`: data, constructed from input observations, used for calculating covariance matrix
 
 # Return
@@ -56,36 +53,35 @@ Constructs covariance matrix from kernel and kernel data
 # See also
 Kernel, KernelData
 """
-function cov(k::Kernel, data::FullData)
+function cov(k::Kernel, X::Matrix{Float64}, data::EmptyData)
     d(x,y) = cov(k, x, y)
-    return map_column_pairs(d, data.X)
+    return map_column_pairs(d, X)
 end
 
-cov(k::Kernel, X::Matrix{Float64}) = cov(k, KernelData(k, X))
+cov(k::Kernel, X::Matrix{Float64}) = cov(k, X, KernelData(k, X))
 
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients
-function grad_stack!(stack::AbstractArray, data::FullData, k::Kernel)
-    d, nobsv = size(data.X)
+function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, data::EmptyData, k::Kernel)
+    d, nobsv = size(X)
     for j in 1:nobsv, i in 1:nobsv
-        @inbounds stack[i,j,:] = grad_kern(k, data.X[:,i], data.X[:,j])
+        @inbounds stack[i,j,:] = grad_kern(k, X[:,i], X[:,j])
     end
     return stack
 end
 
-function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, k::Kernel)
-    grad_stack!(stack, KernelData(k, X), k)
-end
-
-function grad_stack(data::KernelData, k::Kernel)
+function grad_stack(X::Matrix{Float64}, data::KernelData, k::Kernel)
     n = num_params(k)
     n_obsv = nobsv(data)
     stack = Array(Float64, n_obsv, n_obsv, n)
-    grad_stack!(stack, data, k)
+    grad_stack!(stack, X, data, k)
     return stack
 end
 
-grad_stack(X::Matrix{Float64}, k::Kernel) = grad_stack(KernelData(X), k::Kernel)
-    
+function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, k::Kernel)
+    grad_stack!(stack, X, KernelData(k, X), k)
+end
+
+grad_stack(X::Matrix{Float64}, k::Kernel) = grad_stack(X, KernelData(k, X), k::Kernel)    
 
 ##############################
 # Parameter name definitions #

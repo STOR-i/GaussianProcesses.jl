@@ -1,5 +1,5 @@
 using GaussianProcesses, Base.Test
-using GaussianProcesses: get_params, get_param_names, num_params, KernelData, FullData
+using GaussianProcesses: get_params, get_param_names, num_params, KernelData, EmptyData
 
 function test_cov(kern::Kernel, X::Matrix{Float64})
     spec = GaussianProcesses.cov(kern, X)
@@ -7,14 +7,15 @@ function test_cov(kern::Kernel, X::Matrix{Float64})
     @test_approx_eq spec gen
 end
 
-function test_grad_stack(kern::Kernel, x::Matrix{Float64})
+function test_grad_stack(kern::Kernel, X::Matrix{Float64})
     n = GaussianProcesses.num_params(kern)
-    d, nobsv = size(x)
+    data = KernelData(kern, X)
+    d, nobsv = size(X)
     stack1 = Array(Float64, nobsv, nobsv, n)
     stack2 = Array(Float64, nobsv, nobsv, n)
     
-    GaussianProcesses.grad_stack!(stack1, x, kern)
-    invoke(GaussianProcesses.grad_stack!, (AbstractArray, FullData, Kernel), stack2, KernelData(kern, x), kern)
+    GaussianProcesses.grad_stack!(stack1, X, data, kern)
+    invoke(GaussianProcesses.grad_stack!, (AbstractArray, Matrix{Float64}, EmptyData, Kernel), stack2, X, data, kern)
     @test_approx_eq stack1 stack2
 end
 
