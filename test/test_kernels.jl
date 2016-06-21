@@ -14,8 +14,8 @@ function test_grad_stack(kern::Kernel, X::Matrix{Float64})
     stack1 = Array(Float64, nobsv, nobsv, n)
     stack2 = Array(Float64, nobsv, nobsv, n)
     
-    GaussianProcesses.grad_stack!(stack1, X, data, kern)
-    invoke(GaussianProcesses.grad_stack!, (AbstractArray, Matrix{Float64}, EmptyData, Kernel), stack2, X, data, kern)
+    GaussianProcesses.grad_stack!(stack1, kern, X, data)
+    invoke(GaussianProcesses.grad_stack!, (AbstractArray, Kernel, Matrix{Float64}, EmptyData), stack2, kern, X, data)
     @test_approx_eq stack1 stack2
 end
 

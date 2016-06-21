@@ -109,7 +109,7 @@ function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::B
 
     # Derivative of marginal log-likelihood with respect to kernel hyperparameters
     if kern
-        Kgrads = grad_stack(gp.x, gp.k)   # [dK/dθᵢ]
+        Kgrads = grad_stack(gp.k, gp.x, gp.data)   # [dK/dθᵢ]
         for i in 1:num_params(gp.k)
             gp.dmLL[i+mean*num_params(gp.m)+noise] = trace((gp.alpha*gp.alpha' - gp.cK \ eye(gp.nobsv))*Kgrads[:,:,i])/2
         end

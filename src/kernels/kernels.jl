@@ -61,7 +61,7 @@ end
 cov(k::Kernel, X::Matrix{Float64}) = cov(k, X, KernelData(k, X))
 
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients
-function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, data::EmptyData, k::Kernel)
+function grad_stack!(stack::AbstractArray, k::Kernel, X::Matrix{Float64}, data::EmptyData)
     d, nobsv = size(X)
     for j in 1:nobsv, i in 1:nobsv
         @inbounds stack[i,j,:] = grad_kern(k, X[:,i], X[:,j])
@@ -69,19 +69,19 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, data::EmptyData, 
     return stack
 end
 
-function grad_stack(X::Matrix{Float64}, data::KernelData, k::Kernel)
+function grad_stack(k::Kernel, X::Matrix{Float64}, data::KernelData)
     n = num_params(k)
     n_obsv = nobsv(data)
     stack = Array(Float64, n_obsv, n_obsv, n)
-    grad_stack!(stack, X, data, k)
+    grad_stack!(stack, k, X, data)
     return stack
 end
 
-function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, k::Kernel)
-    grad_stack!(stack, X, KernelData(k, X), k)
+function grad_stack!(stack::AbstractArray, k::Kernel, X::Matrix{Float64})
+    grad_stack!(stack, k, X, KernelData(k, X))
 end
 
-grad_stack(X::Matrix{Float64}, k::Kernel) = grad_stack(X, KernelData(k, X), k::Kernel)    
+grad_stack(k::Kernel, X::Matrix{Float64}) = grad_stack(k, X, KernelData(k, X))
 
 ##############################
 # Parameter name definitions #
