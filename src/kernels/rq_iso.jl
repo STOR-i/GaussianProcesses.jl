@@ -41,19 +41,21 @@ function grad_kern(rq::RQIso, x::Vector{Float64}, y::Vector{Float64})
 end
 
 
-function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, rq::RQIso)
+function grad_stack!(stack::AbstractArray, rq::RQIso, X::Matrix{Float64}, data::IsotropicData)
     nobsv = size(X,2)
-    R = distance(rq, X)
+    R = distance(data)
     
     for i in 1:nobsv, j in 1:i
         # Check these derivatives!
         @inbounds stack[i,j,1] = rq.σ2*((R[i,j])/rq.ℓ2)*(1.0+(R[i,j])/(2*rq.α*rq.ℓ2))^(-rq.α-1.0)  # dK_d(log ℓ)dK_dℓ
-        @inbounds stack[j,i,1] = stack[i,j,1]
         @inbounds stack[i,j,2] = 2.0*rq.σ2*(1+(R[i,j])/(2*rq.α*rq.ℓ2))^(-rq.α) # dK_d(log σ)
-        @inbounds stack[j,i,2] = stack[i,j,2]
+
         part = (1.0+R[i,j]/(2*rq.α*rq.ℓ2))
         @inbounds stack[i,j,3] = rq.σ2*part^(-rq.α)*((R[i,j])/(2*rq.ℓ2*part)-rq.α*log(part))*rq.α  # dK_d(log α)
-        @inbounds stack[j,i,3] = stack[i,j,3]        
+        
+        @inbounds stack[j,i,1] = stack[i,j,1]
+        @inbounds stack[j,i,3] = stack[i,j,3]
+        @inbounds stack[j,i,2] = stack[i,j,2]
     end
     return stack
 end

@@ -4,10 +4,39 @@
 # grad_kern!
 
 abstract Stationary <: Kernel
+abstract Isotropic <: Stationary
+abstract StationaryARD <: Stationary
+
+abstract StationaryData <: KernelData
+
+type IsotropicData <: StationaryData
+    R::Matrix{Float64}
+end
+
+type StationaryARDData <: StationaryData
+    dist_stack::Array{Float64, 3}
+end
 
 distance(k::Stationary, X::Matrix{Float64}) = pairwise(metric(k), X)
 distance(k::Stationary, X::Matrix{Float64}, Y::Matrix{Float64}) = pairwise(metric(k), X, Y)
 distance(k::Stationary, x::Vector{Float64}, y::Vector{Float64}) = evaluate(metric(k), x, y)
+
+distance(k::Isotropic, data::IsotropicData) = data.R
+
+function KernelData(k::Isotropic, X::Matrix{Float64})
+     IsotropicData(distance(k, X))
+end
+
+# May need to customized in subtypes
+function KernelData(k::StationaryARD, X::Matrix{Float64})
+    d, nobsv = size(X)
+    dist_stack = Array(Float64, nobsv, nobsv, d)
+    for i in 1:d
+        grad_ls = view(stack, :, :, i)
+        pairwise!(grad_ls, SqEuclidean(), view(X, i, :))
+    end
+    StationaryARDData(R, dist_stack)
+end
 
 cov(k::Stationary, x::Vector{Float64}, y::Vector{Float64}) = cov(k, distance(k, x, y))
 
@@ -22,9 +51,9 @@ function cov(k::Stationary, x1::Matrix{Float64}, x2::Matrix{Float64})
     return R
 end
 
-function cov(k::Stationary, x::Matrix{Float64})
+function cov(k::Stationary, X::Matrix{Float64}, data::StationaryData)
     nobsv = size(x, 2)
-    R = distance(k, x)
+    R = distance(data)
     for i in 1:nobsv, j in 1:i
         @inbounds R[i,j] = cov(k, R[i,j])
         @inbounds R[j,i] = R[i,j]

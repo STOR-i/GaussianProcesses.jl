@@ -35,9 +35,9 @@ function grad_kern(mat::Mat52Iso, x::Vector{Float64}, y::Vector{Float64})
     return [g1,g2]
 end
 
-function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, mat::Mat52Iso)
+function grad_stack!(stack::AbstractArray, mat::Mat52Iso, X::Matrix{Float64}, data::IsotropicData)
     nobsv = size(X,2)
-    R = distance(mat, X)
+    R = distance(data)
     exp_R = exp(-sqrt(5)*R/mat.ℓ)
 
     for i in 1:nobsv, j in 1:i

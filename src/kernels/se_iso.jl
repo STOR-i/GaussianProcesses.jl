@@ -1,4 +1,4 @@
-@doc """
+"""
 # Description
 Constructor for the isotropic Squared Exponential kernel (covariance)
 
@@ -6,7 +6,7 @@ k(x,x') = σ²exp(-(x-x')ᵀ(x-x')/2ℓ²)
 # Arguments:
 * `ll::Float64`: Log of the length scale ℓ
 * `lσ::Float64`: Log of the signal standard deviation σ
-""" ->
+"""
 type SEIso <: Stationary
     ℓ2::Float64      # Length scale
     σ2::Float64      # Signal std
@@ -33,9 +33,9 @@ function grad_kern(se::SEIso, x::Vector{Float64}, y::Vector{Float64})
     return [g1,g2]
 end
 
-function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, se::SEIso)
+function grad_stack!(stack::AbstractArray, se::SEIso, X::Matrix{Float64}, data::IsotropicData)
     nobsv = size(X, 2)
-    R = distance(se, X)
+    R = distance(data)
     exp_R = exp(-0.5*R/se.ℓ2)
     for i in 1:nobsv, j in 1:i
         @inbounds stack[i,j,1] = se.σ2*R[i,j]/se.ℓ2*exp_R[i,j] # dK_dℓ
@@ -46,5 +46,3 @@ function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, se::SEIso)
 
     return stack
 end
-
-
