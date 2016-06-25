@@ -9,7 +9,7 @@ k(x,x') = σ²exp(-(x-x')ᵀL⁻²(x-x')/2), where L = diag(ℓ₁,ℓ₂,...)
 * `ll::Vector{Float64}`: Log of the length scale ℓ
 * `lσ::Float64`: Log of the signal standard deviation σ
 """ ->
-type SEArd <: Stationary
+type SEArd <: StationaryARD
     ℓ2::Vector{Float64}      # Log of Length scale
     σ2::Float64              # Log of Signal std
     dim::Int                 # Number of hyperparameters
@@ -40,15 +40,10 @@ function grad_kern(se::SEArd, x::Vector{Float64}, y::Vector{Float64})
     return [g1; g2]
 end
 
-function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, se::SEArd)
+function grad_stack!(stack::AbstractArray, se::SEArd, X::Matrix{Float64}, data::StationaryARDData)
     d = size(X,1)
-    stack[:,:,d+1] = cov(se, X)
-    ck = view(stack, :, :, d+1)
-    for i in 1:d
-        grad_ls = view(stack, :, :, i)
-        pairwise!(grad_ls, WeightedSqEuclidean([1.0/se.ℓ2[i]]), view(X, i, :))
-        map!(*, grad_ls, grad_ls, ck)
-    end
+    ck = cov(se, X)
+    broadcast!(*, view(stack, :, :, 1:d), data.dist_stack, reshape(1.0./se.ℓ2, (1,1,d)), ck)
     stack[:,:, d+1] = 2.0 * ck
     return stack
 end
