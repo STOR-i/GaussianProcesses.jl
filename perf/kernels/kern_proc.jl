@@ -20,7 +20,7 @@ function Base.start(proc::KernelTest, cfg)
 end
 
 function Base.run(proc::KernelTest, cfg, s)
-    proc.op(s, proc.k)
+    proc.op(proc.k, s)
 end
 
 Base.done(proc::KernelTest, cfg, s) = nothing

@@ -71,7 +71,7 @@ end
 
 function grad_stack(k::Kernel, X::Matrix{Float64}, data::KernelData)
     n = num_params(k)
-    n_obsv = nobsv(data)
+    n_obsv = size(X, 2)
     stack = Array(Float64, n_obsv, n_obsv, n)
     grad_stack!(stack, k, X, data)
     return stack
