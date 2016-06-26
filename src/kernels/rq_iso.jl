@@ -10,7 +10,7 @@ k(x,x') = σ²(1+(x-x')ᵀ(x-x')/2αℓ²)^{-α}
 * `lσ::Float64`: Log of the signal standard deviation σ
 * `lα::Float64`: Log of shape parameter α
 """ ->
-type RQIso <: Stationary
+type RQIso <: Isotropic
     ℓ2::Float64      # Length scale 
     σ2::Float64      # Signal std
     α::Float64       # shape parameter
@@ -43,7 +43,7 @@ end
 
 function grad_stack!(stack::AbstractArray, rq::RQIso, X::Matrix{Float64}, data::IsotropicData)
     nobsv = size(X,2)
-    R = distance(data)
+    R = distance(rq, data)
     
     for i in 1:nobsv, j in 1:i
         # Check these derivatives!

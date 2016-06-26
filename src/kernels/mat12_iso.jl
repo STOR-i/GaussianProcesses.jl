@@ -9,7 +9,7 @@ k(x,x') = σ²exp(-d/ℓ), where d=|x-x'|
 * `ll::Float64`: Log of the length scale ℓ
 * `lσ::Float64`: Log of the signal standard deviation σ
 """ ->
-type Mat12Iso <: Stationary
+type Mat12Iso <: Isotropic
     ℓ::Float64     # Length scale
     σ2::Float64    # Signal std
     Mat12Iso(ll::Float64, lσ::Float64) = new(exp(ll),exp(2*lσ))
@@ -39,7 +39,7 @@ end
 
 function grad_stack!(stack::AbstractArray, mat::Mat12Iso, X::Matrix{Float64}, data::IsotropicData)
     nobsv = size(X,2)
-    R = distance(data)
+    R = distance(mat, data)
     exp_R = exp(-R/mat.ℓ)
 
     for i in 1:nobsv, j in 1:i
