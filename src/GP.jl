@@ -69,7 +69,7 @@ function fit!(gp::GP, X::Matrix{Float64}, y::Vector{Float64})
     length(y) == size(X,2) || throw(ArgumentError("Input and output observations must have consistent dimensions."))
     gp.X = X
     gp.y = y
-    gp.data = KernelData(X)
+    gp.data = KernelData(gp.k, X)
     gp.dim, gp.nobsv = size(X)
     update_mll!(gp)
     return gp
@@ -80,13 +80,15 @@ fit!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 
 # Update auxiliarly data in GP object after changes have been made
 function update_mll!(gp::GP)
-    m = mean(gp.m,gp.X)
-    gp.cK = PDMat(cov(gp.k, gp.X, gp.data) + exp(2*gp.logNoise)*eye(gp.nobsv) + 1e-8*eye(gp.nobsv))
-    gp.alpha = gp.cK \ (gp.y - m)
-    gp.mLL = -dot((gp.y-m),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
+    μ = mean(gp.m,gp.X)
+    Σ = cov(gp.k, gp.X, gp.data)
+    gp.cK = PDMat(Σ + exp(2*gp.logNoise)*eye(gp.nobsv) + 1e-8*eye(gp.nobsv))
+    gp.alpha = gp.cK \ (gp.y - μ)
+    gp.mLL = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
 
 # Update gradient of marginal log likelihood
+
 function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     update_mll!(gp::GP)
     gp.dmLL = Array(Float64, noise + mean*num_params(gp.m) + kern*num_params(gp.k))
@@ -101,7 +103,7 @@ function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::B
 
     #Derivative wrt to mean hyperparameters, need to loop over as same with kernel hyperparameters
     if mean
-        Mgrads = grad_stack(gp.x, gp.m)
+        Mgrads = grad_stack(gp.X, gp.m)
         for i in 1:num_params(gp.m)
             gp.dmLL[i+noise] = -dot(Mgrads[:,i],gp.alpha)
         end
@@ -109,7 +111,7 @@ function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::B
 
     # Derivative of marginal log-likelihood with respect to kernel hyperparameters
     if kern
-        Kgrads = grad_stack(gp.k, gp.x, gp.data)   # [dK/dθᵢ]
+        Kgrads = grad_stack(gp.k, gp.X, gp.data)   # [dK/dθᵢ]
         for i in 1:num_params(gp.k)
             gp.dmLL[i+mean*num_params(gp.m)+noise] = trace((gp.alpha*gp.alpha' - gp.cK \ eye(gp.nobsv))*Kgrads[:,:,i])/2
         end
@@ -222,7 +224,7 @@ function show(io::IO, gp::GP)
     println(io, "  Kernel:")
     show(io, gp.k, 2)
     println(io, "  Input observations = ")
-    show(io, gp.x)
+    show(io, gp.X)
     print(io,"\n  Output observations = ")
     show(io, gp.y)
     print(io,"\n  Variance of observation noise = $(exp(gp.logNoise))")
