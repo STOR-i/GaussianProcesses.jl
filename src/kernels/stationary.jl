@@ -20,8 +20,7 @@ end
 distance(k::Stationary, X::Matrix{Float64}) = pairwise(metric(k), X)
 distance(k::Stationary, X::Matrix{Float64}, Y::Matrix{Float64}) = pairwise(metric(k), X, Y)
 distance(k::Stationary, x::Vector{Float64}, y::Vector{Float64}) = evaluate(metric(k), x, y)
-
-distance(k::Isotropic, data::IsotropicData) = data.R
+distance(k::Isotropic, data::IsotropicData) = copy(data.R)
 
 function distance(k::StationaryARD, data::StationaryARDData)
     nobsv = size(data.dist_stack,1)
