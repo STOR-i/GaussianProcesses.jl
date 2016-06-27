@@ -69,10 +69,10 @@ GaussianProcesses.GP
 
 ## 1-dimensional regression example
 
-The first step in modelling with Gaussian Processes is to choose mean functions and kernels which describe the process. GaussianProcesses can be optionally used with a plotting package. Currently the packages [Gadfly] (https://github.com/dcjones/Gadfly.jl) and [Winston] (https://github.com/nolta/Winston.jl) are supported.
+The first step in modelling with Gaussian Processes is to choose mean functions and kernels which describe the process. GaussianProcesses can be optionally used with a plotting package. Currently the packages [Gadfly] (https://github.com/dcjones/Gadfly.jl) and [PyPlot] (https://github.com/stevengj/PyPlot.jl) are supported.
 
 ```julia
-using Winston, GaussianProcesses
+using PyPlot, GaussianProcesses
 
 # Training data
 n = 10
@@ -107,7 +107,7 @@ gp = GP(x,y,mZero,kern, logObsNoise)      # Fit the GP
   Marginal Log-Likelihood = -9.056
 ```
 
-Plotting is straightforward to apply, but the display will depend on the package loaded at the start of the session (e.g. Winston or Gadfly). It's possible to modify the confidence bands (CI) in the 1D plot, which are set to 95% by default. 
+Plotting is straightforward to apply, but the display will depend on the package loaded at the start of the session (e.g. PyPlot or Gadfly). It's possible to modify the confidence bands (CI) in the 1D plot, which are set to 95% by default. 
 ```julia
 plot(gp)
 ```
@@ -169,7 +169,7 @@ Results of Optimization Algorithm
  * Objective Function Calls: 83
  * Gradient Call: 80
 ```
-Notice that the syntax for plotting the GP is the same for Gadfly as for Winston.
+Notice that the syntax for plotting the GP is the same for Gadfly as for PyPlot.
 ```julia
 plot(gp; clim=(-10.0, 10.0,-10.0,10.0)) # Plot the GP over range clim
 ```
