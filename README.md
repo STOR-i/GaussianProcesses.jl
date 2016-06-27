@@ -111,7 +111,7 @@ Plotting is straightforward to apply, but the display will depend on the package
 ```julia
 plot(gp)
 ```
-![1-D Gaussian Process](/docs/regression_1d.png?raw=true "1-D Gaussian Process pre-optimization")
+![1-D Gaussian Process](/docs/regression_1d.png "1-D Gaussian Process pre-optimization")
 
 The hyperparameters are optimized using the [Optim](https://github.com/JuliaOpt/Optim.jl) package. This offers users a range of optimization algorithms which can be applied to estimate the hyperparameters using type II maximum likelihood estimation. Gradients are available for all mean and kernel functions used in the package and therefore it is recommended that the user utilizes gradient based optimization techniques. As a default, the `optimize!` function uses the `bfgs` solver, however, alternative solvers can be applied (see 2D example below). 
 ```julia
