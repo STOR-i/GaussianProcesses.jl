@@ -37,7 +37,7 @@ function set_params!(mPoly::MeanPoly, hyp::Vector{Float64})
 end
 
 
-function grad_meanf(mPoly::MeanPoly, x::Vector{Float64})
+function grad_mean(mPoly::MeanPoly, x::Vector{Float64})
     dM_theta = Array(Float64,mPoly.dim,mPoly.deg)
     
     for i in 1:mPoly.dim

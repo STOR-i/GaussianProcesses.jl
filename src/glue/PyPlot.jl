@@ -43,6 +43,7 @@ end
 
 function PyPlot.plot(gp::GP; kwargs...)
     d, n = size(gp.x)
+    PyPlot.close()
     if d>2
         error("Only 1D and 2D plots are permitted")
     elseif d==1

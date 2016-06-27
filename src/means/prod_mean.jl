@@ -55,14 +55,14 @@ function set_params!(prodmean::ProdMean, hyp::Vector{Float64})
 end
 
 
-function grad_meanf(prodmean::ProdMean, x::Vector{Float64})
+function grad_mean(prodmean::ProdMean, x::Vector{Float64})
      dm = Array(Float64, 0)
       for m in prodmean.means
           p = 1.0
           for j in prodkern.means[find(k.!=prodkern.means)]
               p = p.*mean(j, x)
           end
-        append!(dm,grad_meanf(m, x).*p)
+        append!(dm,grad_mean(m, x).*p)
       end
     dm
 end
