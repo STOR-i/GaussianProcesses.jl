@@ -1,7 +1,7 @@
 import PyPlot
 
 
-function plot1D(gp::GP; clim::Tuple{Float64, Float64}=(minimum(gp.x), maximum(gp.x)), CI::Float64=1.96, res::Int=1000, fname::String="")
+function plot1D(gp::GP; clim::Tuple{Float64, Float64}=(minimum(gp.x), maximum(gp.x)), CI::Float64=1.96, res::Int=1000, fname::AbstractString="")
 
     sx = (clim[2]-clim[1])/(res-1)
     x=collect(clim[1]:sx:clim[2])
@@ -27,7 +27,7 @@ function plot1D(gp::GP; clim::Tuple{Float64, Float64}=(minimum(gp.x), maximum(gp
 end
 
 
-function plot2D(gp::GP; clim::Tuple{Float64, Float64, Float64, Float64} = (minimum(gp.x[1,:]), maximum(gp.x[1,:]), minimum(gp.x[2,:]), maximum(gp.x[2,:])), res::Int=50, fname::String="")
+function plot2D(gp::GP; clim::Tuple{Float64, Float64, Float64, Float64} = (minimum(gp.x[1,:]), maximum(gp.x[1,:]), minimum(gp.x[2,:]), maximum(gp.x[2,:])), res::Int=50, fname::AbstractString="")
     
     x = linspace(clim[1], clim[2], res)
     y = linspace(clim[3], clim[4], res)
