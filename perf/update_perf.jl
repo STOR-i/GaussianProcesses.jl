@@ -9,7 +9,7 @@ type GP_UpdateBenchmark <: Proc
     GP_UpdateBenchmark(d::Int, op::Function) = new(d, op)
 end
 
-Base.string(proc::GP_UpdateBenchmark) = "Dim: $(proc.d)"
+AbstractString(proc::GP_UpdateBenchmark) = "Dim: $(proc.d)"
 Base.length(proc::GP_UpdateBenchmark, cfg) = cfg
 Base.isvalid(proc::GP_UpdateBenchmark, cfg) = (isa(cfg, Int) && cfg > 0)
 function Base.start(proc::GP_UpdateBenchmark, cfg)

@@ -10,7 +10,7 @@ type KernelTest <: Proc
     KernelTest(k::Kernel, d::Int, op::Function) = new(k, d, op)
 end
 
-Base.string(proc::KernelTest) = "$(typeof(proc.k)), d=$(proc.d)"
+AbstractString(proc::KernelTest) = "$(typeof(proc.k)), d=$(proc.d)"
 Base.length(proc::KernelTest, cfg) = cfg
 Base.isvalid(proc::KernelTest, cfg) = (isa(cfg, Int) && cfg > 0)
 
