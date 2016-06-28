@@ -208,6 +208,38 @@ function set_params!(gp::GP, hyp::Vector{Float64}; noise::Bool=true, mean::Bool=
     if kern; set_params!(gp.k, hyp[end-num_params(gp.k)+1:end]); end
 end
 
+function push!(gp::GP, x::Array{Float64}, y::Array{Float64})
+    # get size info
+    x_size = collect(size(x))
+    gpx_size = collect(size(gp.x))
+    y_size = collect(size(y))
+    gpy_size = collect(size(gp.y))
+
+    # Check that we are adding one x for one y 
+    if maximum(x_size) != maximum(y_size)
+        error("The number of x's and y's need to be the same")
+    end
+
+    # Concatenate x, try to do some adjustment of inputs if necessary
+    if length(x_size) != length(gpx_size)
+        error("data types don't match")
+    end
+    if x_size[1] != gpx_size[1] && x_size[2] == gpx_size[2]
+        gp.x = cat(1,x,gp.x)
+    elseif x_size[2] != gpx_size[2] && x_size[1] == gpx_size[1]
+        gp.x = cat(2,x,gp.x)
+    else
+        # We aren't going to try anything smart here, just try to concatenate on the 1st dim
+        gp.x = cat(1,x,gp.x)
+    end
+
+    # Concatenate y
+    if length(y_size) != length(gpy_size)
+        error("y dimensions don't match")
+    end
+    gp.y = cat(1,y,gp.y)
+end
+
 function show(io::IO, gp::GP)
     println(io, "GP object:")
     println(io, "  Dim = $(gp.dim)")
