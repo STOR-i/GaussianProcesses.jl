@@ -55,7 +55,7 @@ function set_params!(prodmean::ProdMean, hyp::Vector{Float64})
 end
 
 
-function grad_meanf(prodmean::ProdMean, x::Vector{Float64})
+function grad_mean(prodmean::ProdMean, x::Vector{Float64})
      dm = Array(Float64, 0)
       for m in prodmean.means
           p = 1.0
