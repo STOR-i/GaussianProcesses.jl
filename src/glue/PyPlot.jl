@@ -1,7 +1,7 @@
 import PyPlot
 
 
-function plot1D(gp::GP; clim::Tuple{Float64, Float64}=(minimum(gp.x), maximum(gp.x)), CI::Float64=1.96, res::Int=1000)
+function plot1D(gp::GP; clim::Tuple{Float64, Float64}=(minimum(gp.x), maximum(gp.x)), CI::Float64=1.96, res::Int=1000, fname::AbstractString="")
 
     sx = (clim[2]-clim[1])/(res-1)
     x=collect(clim[1]:sx:clim[2])
@@ -19,11 +19,15 @@ function plot1D(gp::GP; clim::Tuple{Float64, Float64}=(minimum(gp.x), maximum(gp
     ax[:scatter](gp.x,gp.y,marker="o",label="Observations",color="black")  #plot the observations
     ax[:plot](x,l,label="Confidence Region",color="red")            # plot the confidence region
     ax[:plot](x,u,color="red")
+    ax[:fill_between](x,u,l, facecolor="blue", alpha=0.25)
     PyPlot.legend(loc = "best", fontsize=15);
+    if fname != ""
+        PyPlot.savefig(fname)
+    end
 end
 
 
-function plot2D(gp::GP; clim::Tuple{Float64, Float64, Float64, Float64} = (minimum(gp.x[1,:]), maximum(gp.x[1,:]), minimum(gp.x[2,:]), maximum(gp.x[2,:])), res::Int=50)
+function plot2D(gp::GP; clim::Tuple{Float64, Float64, Float64, Float64} = (minimum(gp.x[1,:]), maximum(gp.x[1,:]), minimum(gp.x[2,:]), maximum(gp.x[2,:])), res::Int=50, fname::AbstractString="")
     
     x = linspace(clim[1], clim[2], res)
     y = linspace(clim[3], clim[4], res)
@@ -39,6 +43,9 @@ function plot2D(gp::GP; clim::Tuple{Float64, Float64, Float64, Float64} = (minim
     ax[:set_ylim](ymin=clim[3], ymax=clim[4])
     ax[:contour](xgrid,ygrid,zgrid)
     ax[:scatter](gp.x[1,:],gp.x[2,:],marker="o",label="Observations",color="black")  #plot the observations
+    if fname != ""
+        PyPlot.savefig(fname)
+    end
 end
 
 function PyPlot.plot(gp::GP; kwargs...)
