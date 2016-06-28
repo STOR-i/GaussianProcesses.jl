@@ -9,11 +9,6 @@ y = Float64[sum(sin(x[:,i])) for i in 1:n]/d
 mZero = MeanZero()
 kern = SE(0.0,0.0)
 
-data = KernelData(kern, x)
-distance(kern, x)
-distance(kern, data)
-cov(kern, x, data)
-
 gp = GP(x, y, mZero, kern)
 
 # Function verifies that predictive mean at input observations
