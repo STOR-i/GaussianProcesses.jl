@@ -7,11 +7,11 @@ import Base.show
 Fits a Gaussian process to a set of training points. The Gaussian process is defined in terms of its mean and covaiance (kernel) functions, which are user defined. As a default it is assumed that the observations are noise free.
 
 # Constructors:
-    GP(x, y, m, k, logNoise)
+    GP(X, y, m, k, logNoise)
     GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8) # observation-free constructor
 
 # Arguments:
-* `x::Matrix{Float64}`: Input observations
+* `X::Matrix{Float64}`: Input observations
 * `y::Vector{Float64}`: Output observations
 * `m::Mean`           : Mean function
 * `k::kernel`         : Covariance function
@@ -59,7 +59,7 @@ Fits an existing Gaussian process to a set of training points.
 
 # Arguments:
 * `gp::GP`: Exiting Gaussian process object
-* `x::Matrix{Float64}`: Input observations
+* `X::Matrix{Float64}`: Input observations
 * `y::Vector{Float64}`: Output observations
 
 # Returns:
@@ -103,7 +103,7 @@ function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::B
 
     #Derivative wrt to mean hyperparameters, need to loop over as same with kernel hyperparameters
     if mean
-        Mgrads = grad_stack(gp.X, gp.m)
+        Mgrads = grad_stack(gp.m, gp.X)
         for i in 1:num_params(gp.m)
             gp.dmLL[i+noise] = -dot(Mgrads[:,i],gp.alpha)
         end
@@ -125,7 +125,7 @@ Calculates the posterior mean and variance of Gaussian Process at specified poin
 
 # Arguments:
 * `gp::GP`: Gaussian Process object
-* `x::Matrix{Float64}`:  matrix of points for which one would would like to predict the value of the process.
+* `X::Matrix{Float64}`:  matrix of points for which one would would like to predict the value of the process.
                        (each column of the matrix is a point)
 
 # Keyword Arguments
