@@ -43,7 +43,7 @@ end
 
 function grad_stack!(stack::AbstractArray,  pe::Periodic, X::Matrix{Float64}, data::IsotropicData)
     d, nobsv = size(X)
-    R = distance(pe, data)
+    R = distance(pe, X, data)
     
     for i in 1:nobsv, j in 1:i
         @inbounds stack[i,j,1] = 4.0*pe.σ2*(sin(π*R[i,j]/pe.p)^2/pe.ℓ2)*exp(-2/pe.ℓ2*sin(π*R[i,j]/pe.p)^2)  # dK_dlogℓ

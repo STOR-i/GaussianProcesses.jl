@@ -43,7 +43,7 @@ end
 
 function grad_stack!(stack::AbstractArray, rq::RQIso, X::Matrix{Float64}, data::IsotropicData)
     nobsv = size(X,2)
-    R = distance(rq, data)
+    R = distance(rq, X, data)
     
     for i in 1:nobsv, j in 1:i
         # Check these derivatives!

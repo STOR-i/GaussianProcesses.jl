@@ -42,7 +42,7 @@ end
 
 function grad_stack!(stack::AbstractArray, se::SEArd, X::Matrix{Float64}, data::StationaryARDData)
     d = size(X,1)
-    ck = cov(se, X)
+    ck = cov(se, X, data)
     broadcast!(*, view(stack, :, :, 1:d), data.dist_stack, reshape(1.0./se.ℓ2, (1,1,d)), ck)
     stack[:,:, d+1] = 2.0 * ck
     return stack

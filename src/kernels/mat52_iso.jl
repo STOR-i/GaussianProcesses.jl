@@ -37,7 +37,7 @@ end
 
 function grad_stack!(stack::AbstractArray, mat::Mat52Iso, X::Matrix{Float64}, data::IsotropicData)
     nobsv = size(X,2)
-    R = distance(mat, data)
+    R = distance(mat, X, data)
     exp_R = exp(-sqrt(5)*R/mat.ℓ)
 
     for i in 1:nobsv, j in 1:i

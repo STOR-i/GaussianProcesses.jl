@@ -33,4 +33,3 @@ gp.k.ℓ2 = 4.0
 x_pred = 2π * rand(d, n)
 GaussianProcesses.update_mll!(gp)
 y_pred, sig = predict(gp, x_pred)
-
