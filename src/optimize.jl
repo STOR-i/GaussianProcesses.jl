@@ -30,5 +30,5 @@ function optimize!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true, m
     func = DifferentiableFunction(mll, dmll!, mll_and_dmll!)
     init = get_params(gp;  noise=noise, mean=mean, kern=kern)  # Initial hyperparameter values
     results=optimize(func,init; method=method, kwargs...)                     # Run optimizer
-    print(results)
+    println(results)
 end
