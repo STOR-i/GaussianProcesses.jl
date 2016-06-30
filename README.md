@@ -69,10 +69,10 @@ GaussianProcesses.GP
 
 ## 1-dimensional regression example
 
-The first step in modelling with Gaussian Processes is to choose mean functions and kernels which describe the process. GaussianProcesses can be optionally used with a plotting package. Currently the packages [Gadfly] (https://github.com/dcjones/Gadfly.jl) and [Winston] (https://github.com/nolta/Winston.jl) are supported.
+The first step in modelling with Gaussian Processes is to choose mean functions and kernels which describe the process. GaussianProcesses can be optionally used with a plotting package. Currently the packages [Gadfly] (https://github.com/dcjones/Gadfly.jl) and [PyPlot] (https://github.com/stevengj/PyPlot.jl) are supported.
 
 ```julia
-using Winston, GaussianProcesses
+using PyPlot, GaussianProcesses
 
 # Training data
 n = 10
@@ -107,11 +107,11 @@ gp = GP(x,y,mZero,kern, logObsNoise)      # Fit the GP
   Marginal Log-Likelihood = -9.056
 ```
 
-Plotting is straightforward to apply, but the display will depend on the package loaded at the start of the session (e.g. Winston or Gadfly). It's possible to modify the confidence bands (CI) in the 1D plot, which are set to 95% by default. 
+Plotting is straightforward to apply, but the display will depend on the package loaded at the start of the session (e.g. PyPlot or Gadfly). It's possible to modify the confidence bands (CI) in the 1D plot, which are set to 95% by default. 
 ```julia
 plot(gp)
 ```
-![1-D Gaussian Process](/docs/regression_1d.png?raw=true "1-D Gaussian Process pre-optimization")
+![1-D Gaussian Process](/docs/regression_1d.png "1-D Gaussian Process pre-optimization")
 
 The hyperparameters are optimized using the [Optim](https://github.com/JuliaOpt/Optim.jl) package. This offers users a range of optimization algorithms which can be applied to estimate the hyperparameters using type II maximum likelihood estimation. Gradients are available for all mean and kernel functions used in the package and therefore it is recommended that the user utilizes gradient based optimization techniques. As a default, the `optimize!` function uses the `bfgs` solver, however, alternative solvers can be applied (see 2D example below). 
 ```julia
@@ -169,7 +169,7 @@ Results of Optimization Algorithm
  * Objective Function Calls: 83
  * Gradient Call: 80
 ```
-Notice that the syntax for plotting the GP is the same for Gadfly as for Winston.
+Notice that the syntax for plotting the GP is the same for Gadfly as for PyPlot.
 ```julia
 plot(gp; clim=(-10.0, 10.0,-10.0,10.0)) # Plot the GP over range clim
 ```

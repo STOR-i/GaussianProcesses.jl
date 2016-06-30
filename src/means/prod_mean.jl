@@ -62,7 +62,7 @@ function grad_mean(prodmean::ProdMean, x::Vector{Float64})
           for j in prodkern.means[find(k.!=prodkern.means)]
               p = p.*mean(j, x)
           end
-        append!(dm,grad_meanf(m, x).*p)
+        append!(dm,grad_mean(m, x).*p)
       end
     dm
 end

@@ -1,6 +1,6 @@
 # Plot basic Gaussian Process
 
-using Winston, GaussianProcesses
+using PyPlot, GaussianProcesses
 
 srand(13579)
 # Training data
@@ -18,6 +18,9 @@ plot(gp)                          #Plot the GP
 optimize!(gp)   #Optimise the hyperparameters
 
 plot(gp)   #Plot the GP after the hyperparameters have been optimised 
+
+
+
 
 
 
