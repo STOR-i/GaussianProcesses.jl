@@ -10,7 +10,7 @@ k(x,x') = σ²(1+(x-x')ᵀL⁻²(x-x')/2α)^{-α}, where L = diag(ℓ₁,ℓ₂,
 * `lσ::Float64`        : Log of the signal standard deviation σ
 * `lα::Float64`        : Log of shape parameter α
 """ ->
-type RQArd <: Stationary
+type RQArd <: StationaryARD
     ℓ2::Vector{Float64}      # Length scale 
     σ2::Float64              # Signal std
     α::Float64               # Shape parameter
@@ -44,20 +44,17 @@ function grad_kern(rq::RQArd, x::Vector{Float64}, y::Vector{Float64})
     return [g1; g2; g3]
 end
 
-function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, rq::RQArd)
+function grad_stack!(stack::AbstractArray, rq::RQArd, X::Matrix{Float64}, data::StationaryARDData)
     d = size(X,1)
-    R = distance(rq,X)
+    R = distance(rq, X, data)
     part  = (1+0.5*R/rq.α)
     
     stack[:,:,d+2] = cov(rq, X)
     ck = view(stack, :, :, d+2)
     part2 = ck./part
 
-    for i in 1:d
-        grad_ls = view(stack, :, :, i)
-        pairwise!(grad_ls, WeightedSqEuclidean([1.0/rq.ℓ2[i]]), view(X, i, :))
-        map!(*, grad_ls, grad_ls, part2)
-    end
+    broadcast!(*, view(stack, :, :, 1:d), rq.σ2, data.dist_stack, reshape(1.0./rq.ℓ2, (1,1,d)), part.^(-rq.α - 1))
+
     stack[:,:, d+1] = 2.0 * ck
     stack[:,:, d+2] = ck.*(0.5*R./part-rq.α*log(part))
     return stack
