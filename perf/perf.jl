@@ -14,7 +14,7 @@ type GP_Benchmark <: Proc
     end
 end
 
-function Base.string(proc::GP_Benchmark)
+function AbstractString(proc::GP_Benchmark)
     dim = proc.gp.dim
     n = proc.gp.nobsv 
     "Dim: $(dim), Nobsv: $(n)"

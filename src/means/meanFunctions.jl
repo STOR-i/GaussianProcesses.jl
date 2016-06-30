@@ -12,7 +12,7 @@ function show(io::IO, m::Mean, depth::Int = 0)
 end
 
 # Calculates the stack [dm / dθᵢ] of mean matrix gradients
-function grad_stack(X::Matrix{Float64}, m::Mean)
+function grad_stack(m::Mean, X::Matrix{Float64})
     n = num_params(m)
     d, nobsv = size(X)
     mat = Array(Float64, nobsv, n)
