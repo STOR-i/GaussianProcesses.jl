@@ -12,20 +12,13 @@ For an extensive review of Gaussian Processes there is an excellent book [Gaussi
 
 ## Installation
 
-GaussianProcesses requires Julia version 0.3 or above. To install GaussianProcesses run the following command inside a Julia session:
+GaussianProcesses requires Julia version 0.4 or above. To install GaussianProcesses run the following command inside a Julia session:
 
 ```julia
 julia> Pkg.add("GaussianProcesses")
 ```
 
 ## Documentation
-
-Most of the functionality of GaussianProcesses has been documented using the [Docile](https://github.com/MichaelHatherly/Docile.jl) package. From Julia version 0.4 this functionality will form part of the Julia base. To view the documentation the user must install the [Lexicon](https://github.com/MichaelHatherly/Lexicon.jl) package and load it.
-
-```julia
-julia> Pkg.add("Lexicon")
-julia> using Lexicon
-```
 
 Documentation is accessible in the Julia REPL in help mode. Help mode can be started by typing '?' at the prompt.
 
@@ -48,7 +41,7 @@ GaussianProcesses.GP
                                    Arguments:
                                   -––––––––––-
 
-    • `x::Matrix{Float64}`: Training inputs
+    • `X::Matrix{Float64}`: Training inputs
     • `y::Vector{Float64}`: Observations
     • `m::Mean`           : Mean function
     • `k::kernel`         : Covariance function
@@ -62,7 +55,7 @@ GaussianProcesses.GP
 
  Details:
 
-	source: (16,"/home/jamie/.julia/v0.3/GaussianProcesses/src/GP.jl")
+	source: (16,"/home/jamie/.julia/v0.4/GaussianProcesses/src/GP.jl")
 ```
 
 
