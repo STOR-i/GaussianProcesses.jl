@@ -1,4 +1,4 @@
-#Sample from the GP
+# Sample from the GP
 
 using Gadfly, GaussianProcesses
 import Gadfly.plot
@@ -9,7 +9,7 @@ srand(13579)
 mZero = MeanZero()                   # Zero mean function
 kern = SE(0.0,0.0)                   # Sqaured exponential kernel (note that hyperparameters are on the log scale)
 
-#First sample from GP prior
+# First sample from GP prior
 gp = GP(m=mZero,k=kern)     
 
 range = collect(linspace(-5,5));
