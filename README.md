@@ -55,7 +55,7 @@ GaussianProcesses.GP
 
  Details:
 
-	source: (16,"/home/jamie/.julia/v0.3/GaussianProcesses/src/GP.jl")
+	source: (16,"/home/jamie/.julia/v0.4/GaussianProcesses/src/GP.jl")
 ```
 
 
