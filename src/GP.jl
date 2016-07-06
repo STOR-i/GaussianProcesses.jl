@@ -33,8 +33,8 @@ type GP
     dim::Int                # Dimension of inputs
     
     # Auxiliary data
-    cK::AbstractPDMat       # (k + obsNoise)
-    alpha::Vector{Float64}  # (k + obsNoise)⁻¹y
+    cK::AbstractPDMat       # (k + exp(2*obsNoise))
+    alpha::Vector{Float64}  # (k + exp(2*obsNoise))⁻¹y
     mLL::Float64            # Marginal log-likelihood
     dmLL::Vector{Float64}   # Gradient marginal log-likelihood
     
