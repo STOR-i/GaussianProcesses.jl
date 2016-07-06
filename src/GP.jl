@@ -15,7 +15,7 @@ Fits a Gaussian process to a set of training points. The Gaussian process is def
 * `y::Vector{Float64}`: Output observations
 * `m::Mean`           : Mean function
 * `k::kernel`         : Covariance function
-* `logNoise::Float64` : Log of the observation noise. The default is -1e8, which is equivalent to assuming no observation noise.
+* `logNoise::Float64` : Log of the standard deviation for the observation noise. The default is -1e8, which is equivalent to assuming no observation noise.
 
 # Returns:
 * `gp::GP`            : Gaussian process object, fitted to the training data if provided
@@ -23,7 +23,7 @@ Fits a Gaussian process to a set of training points. The Gaussian process is def
 type GP
     m:: Mean                # Mean object
     k::Kernel               # Kernel object
-    logNoise::Float64       # log variance of observation noise
+    logNoise::Float64       # log standard deviation of observation noise
     
     # Observation data
     nobsv::Int              # Number of observations
@@ -230,7 +230,7 @@ function show(io::IO, gp::GP)
         show(io, gp.X)
         print(io,"\n  Output observations = ")
         show(io, gp.y)
-        print(io,"\n  Variance of observation noise = $(exp(gp.logNoise))")
+        print(io,"\n  Variance of observation noise = $(exp(2*gp.logNoise))")
         print(io,"\n  Marginal Log-Likelihood = ")
         show(io, round(gp.mLL,3))
     end
