@@ -146,7 +146,7 @@ gp = GP(x,y,mZero,kern,logObsNoise)   # Fit the GP
 Using the [Optim](https://github.com/JuliaOpt/Optim.jl) package we have the option to choose from a range of optimize functions including conjugate gradients. It is also possible to fix the hyperparameters in either the mean, kernel or observation noise, by settting them to false in `optimize!` (e.g. `optimize!(...,mean=false)`).
 
 ```julia
-optimize!(gp,method=:cg)                   # Optimize the hyperparameters
+optimize!(gp; method=Optim.ConjugateGradient())                   # Optimize the hyperparameters
 
 Results of Optimization Algorithm
  * Algorithm: Conjugate Gradient

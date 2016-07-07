@@ -1,4 +1,4 @@
-#Sample from the GP
+# Sample from the GP
 
 using Gadfly, GaussianProcesses
 
