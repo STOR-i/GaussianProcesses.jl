@@ -1,5 +1,3 @@
-
-
 using ScikitLearn
 using ScikitLearn.GridSearch
 using PyPlot
