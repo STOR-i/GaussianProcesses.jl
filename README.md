@@ -189,7 +189,7 @@ prior=rand(gp,x_path, 10)
 ![Gaussian Process Prior](/docs/prior_samples.png?raw=true "Gaussian Process Prior")
 
 
-Once we have some data we then update the GP and to give the GP posterior, and again using the `rand` function, we can sample from the GP posterior
+Once we have some data we can then update the GP to give the posterior distribution, and again using the `rand` function, we can sample from the GP.
 
 ```
 # Training data
