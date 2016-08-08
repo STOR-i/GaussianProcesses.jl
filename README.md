@@ -34,7 +34,7 @@ GaussianProcesses.GP
                                  -–––––––––––-
 
   Fits a Gaussian process to a set of training points. The Gaussian process is
-  defined in terms of its mean and covaiance (kernel) functions, which are
+  defined in terms of its mean and covariance (kernel) functions, which are
   user defined. As a default it is assumed that the observations are noise
   free.
 
@@ -106,7 +106,7 @@ plot(gp)
 ```
 ![1-D Gaussian Process](/docs/regression_1d.png "1-D Gaussian Process pre-optimization")
 
-The hyperparameters are optimized using the [Optim](https://github.com/JuliaOpt/Optim.jl) package. This offers users a range of optimization algorithms which can be applied to estimate the hyperparameters using type II maximum likelihood estimation. Gradients are available for all mean and kernel functions used in the package and therefore it is recommended that the user utilizes gradient based optimization techniques. As a default, the `optimize!` function uses the `bfgs` solver, however, alternative solvers can be applied (see 2D example below). 
+The hyperparameters are optimized using the [Optim](https://github.com/JuliaOpt/Optim.jl) package. This offers users a range of optimization algorithms which can be applied to estimate the hyperparameters using type II maximum likelihood estimation. Gradients are available for all mean and kernel functions used in the package and therefore it is recommended that the user utilizes gradient based optimization techniques. As a default, the `optimize!` function uses the `Conjugate Gradients` solver, however, alternative solvers can be applied. 
 ```julia
 optimize!(gp)   #Optimise the hyperparameters
 plot(gp)       #Plot the GP after the hyperparameters have been optimised 
@@ -168,6 +168,39 @@ plot(gp; clim=(-10.0, 10.0,-10.0,10.0)) # Plot the GP over range clim
 ```
 
 ![2-D Gaussian Process](/docs/regression_2d.png?raw=true "2-D Gaussian Process")
+
+## Sampling from the GP
+
+After specifying a mean and covariance function it's straightforward to sample from the GP prior using the `rand` function.
+
+```
+# Select mean and covariance function
+mZero = MeanZero()
+kern = SE(0.0,0.0)
+
+# Specify the GP prior
+gp = GP(m=mZero,k=kern)     
+
+x_path = collect(linspace(-5,5)) #Range to sample over
+
+prior=rand(gp,x_path, 10)  
+```
+
+![Gaussian Process Prior](/docs/prior_samples.png?raw=true "Gaussian Process Prior")
+
+
+Once we have some data we can then update the GP to give the posterior distribution, and again using the `rand` function, we can sample from the GP.
+
+```
+# Training data
+x=[-4.0,-3.0,-1.0,0.0,2.0];
+y=[-2.0,0.0,1.0,2.0,-1.0];
+
+# Fit data to GP object
+GaussianProcesses.fit!(gp, x, y)
+post=rand(gp,x_path, 10)
+```
+![Gaussian Process Prior](/docs/posterior_samples.png?raw=true "Gaussian Process Posterior")
 
 ## ScikitLearn
 
