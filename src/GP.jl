@@ -75,7 +75,7 @@ function fit!(gp::GP, X::Matrix{Float64}, y::Vector{Float64})
     return gp
 end
 
-fit!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, X', y)
+fit!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 
 
 # Update auxiliarly data in GP object after changes have been made
