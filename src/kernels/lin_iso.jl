@@ -19,6 +19,11 @@ function cov(lin::LinIso, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
+function cov(lin::LinIso, X::Matrix{Float64}, data::EmptyData)
+    ell = exp(lin.ll)
+    return ((1/ell^2).*X') * X
+end
+
 get_params(lin::LinIso) = Float64[lin.ll]
 get_param_names(lin::LinIso) = [:ll]
 num_params(lin::LinIso) = 1
@@ -34,4 +39,9 @@ function grad_kern(lin::LinIso, x::Vector{Float64}, y::Vector{Float64})
     dK_ell = -2.0*dot(x,y)/ell^2
     dK_theta = [dK_ell]
     return dK_theta
+end
+
+function grad_stack!(stack::AbstractArray, lin::LinIso, X::Matrix{Float64}, data::EmptyData)
+    ell = exp(lin.ll)
+    stack[:,:,1] = ((-2.0/ell^2).*X') * X
 end
