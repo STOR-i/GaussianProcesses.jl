@@ -14,9 +14,10 @@ type MeanLin <: Mean
     MeanLin(β::Vector{Float64}) = new(β, length(β))
 end
     
-meanf(mLin::MeanLin,x::Matrix{Float64}) =  x'mLin.β
+mean(mLin::MeanLin,x::Matrix{Float64}) =  x'mLin.β
 
 get_params(mLin::MeanLin) = mLin.β
+get_param_names(::MeanLin) = [:β]
 num_params(mLin::MeanLin) = mLin.dim
 
 function set_params!(mLin::MeanLin, hyp::Vector{Float64})
@@ -24,7 +25,7 @@ function set_params!(mLin::MeanLin, hyp::Vector{Float64})
     mLin.β = hyp
 end
 
-function grad_meanf(mLin::MeanLin, x::Vector{Float64})
+function grad_mean(mLin::MeanLin, x::Vector{Float64})
     dM_theta = x
     return dM_theta
 end

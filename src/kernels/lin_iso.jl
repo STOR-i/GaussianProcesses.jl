@@ -13,13 +13,14 @@ type LinIso <: Kernel
     LinIso(ll::Float64) = new(ll)
 end
 
-function kern(lin::LinIso, x::Vector{Float64}, y::Vector{Float64})
+function cov(lin::LinIso, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(lin.ll)
     K = dot(x,y)/ell^2
     return K
 end
 
 get_params(lin::LinIso) = Float64[lin.ll]
+get_param_names(lin::LinIso) = [:ll]
 num_params(lin::LinIso) = 1
 
 function set_params!(lin::LinIso, hyp::Vector{Float64})

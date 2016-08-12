@@ -18,26 +18,43 @@ function show(io::IO, sumkern::SumKernel, depth::Int = 0)
     end
 end
 
-function kern(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
+function cov(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
     s = 0.0
     for k in sumkern.kerns
-        s += kern(k, x, y)
+        s += cov(k, x, y)
     end
     return s
 end
 
-# This slows down crossKern...
+# This slows down cov...
 
-## function crossKern(X::Matrix{Float64}, sumkern::SumKernel)
+## function cov(X::Matrix{Float64}, sumkern::SumKernel)
 ##     d, nobsv = size(X)
 ##     s = zeros(nobsv, nobsv)
 ##     for k in sumkern.kerns
-##         BLAS.axpy!(nobsv*nobsv, 1.0, crossKern(X,k), 1, s, 1)
-##         #s += crossKern(X, k)
+##         BLAS.axpy!(nobsv*nobsv, 1.0, cov(X,k), 1, s, 1)
+##         #s += cov(X, k)
 ##     end
 ##     return s
 ## end
 
+## function add_matrices!(X::AbstractMatrix, Y::AbstractMatrix)
+##     m,n = size(X)
+##     for i in 1:m, j in 1:n
+##         X[i,j] += Y[i,j]
+##     end
+## end
+
+function cov(sumkern::SumKernel, X::Matrix{Float64})
+    d, nobsv = size(X)
+    s = zeros(nobsv, nobsv)
+    for k in sumkern.kerns
+        #add_matrices!(s, cov(X,k))
+        s[:,:] = s + cov(k, X)
+    end
+    return s
+end
+    
 function get_params(sumkern::SumKernel)
     p = Array(Float64, 0)
     for k in sumkern.kerns
@@ -45,6 +62,8 @@ function get_params(sumkern::SumKernel)
     end
     p
 end
+
+get_param_names(sumkern::SumKernel) = composite_param_names(sumkern.kerns, :sk)
 
 function num_params(sumkern::SumKernel)
     n = 0
@@ -72,6 +91,16 @@ function grad_kern(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
     dk
 end
 
+function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, sumkern::SumKernel)
+    s = 1
+    for kern in sumkern.kerns
+        np = num_params(kern)
+        grad_stack!(view(stack,:, :, s:(s+np-1)), X, kern)
+        s += np
+    end
+    return stack
+end
+        
 # Addition operators
 function +(k1::SumKernel, k2::Kernel)
     kerns = [k1.kerns, k2]

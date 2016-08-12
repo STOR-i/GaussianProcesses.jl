@@ -18,10 +18,10 @@ function show(io::IO, pm::ProdMean, depth::Int = 0)
     end
 end
 
-function meanf(prodmean::ProdMean, x::Matrix{Float64})
+function mean(prodmean::ProdMean, x::Matrix{Float64})
     p = 1.0
     for m in prodmean.means
-        p = p.*meanf(m, x)
+        p = p.*mean(m, x)
     end
     return p
 end
@@ -33,6 +33,8 @@ function get_params(prodmean::ProdMean)
     end
     p
 end
+
+get_param_names(prodmean::ProdMean) = composite_param_names(prodmean.means, :pm)
 
 function num_params(prodmean::ProdMean)
     n = 0
@@ -53,14 +55,14 @@ function set_params!(prodmean::ProdMean, hyp::Vector{Float64})
 end
 
 
-function grad_meanf(prodmean::ProdMean, x::Vector{Float64})
+function grad_mean(prodmean::ProdMean, x::Vector{Float64})
      dm = Array(Float64, 0)
       for m in prodmean.means
           p = 1.0
           for j in prodkern.means[find(k.!=prodkern.means)]
-              p = p.*meanf(j, x)
+              p = p.*mean(j, x)
           end
-        append!(dm,grad_meanf(m, x).*p)
+        append!(dm,grad_mean(m, x).*p)
       end
     dm
 end

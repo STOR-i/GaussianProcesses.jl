@@ -9,39 +9,41 @@ k(x,x') = σ²exp(-(x-x')ᵀL⁻²(x-x')/2), where L = diag(ℓ₁,ℓ₂,...)
 * `ll::Vector{Float64}`: Log of the length scale ℓ
 * `lσ::Float64`: Log of the signal standard deviation σ
 """ ->
-type SEArd <: Kernel
-    ll::Vector{Float64}      # Log of Length scale
-    lσ::Float64              # Log of Signal std
+type SEArd <: StationaryARD
+    ℓ2::Vector{Float64}      # Log of Length scale
+    σ2::Float64              # Log of Signal std
     dim::Int                 # Number of hyperparameters
-    SEArd(ll::Vector{Float64}, lσ::Float64) = new(ll,lσ, size(ll,1)+1)
+    SEArd(ll::Vector{Float64}, lσ::Float64) = new(exp(2.0*ll),exp(2.0*lσ), size(ll,1)+1)
 end
-
-function kern(se::SEArd, x::Vector{Float64}, y::Vector{Float64})
-    ℓ    = exp(se.ll)
-    σ2 = exp(2*se.lσ)
-    K = σ2*exp(-0.5*wsqeuclidean(x,y,1.0./(ℓ.^2)))
-    return K
-end
-
-get_params(se::SEArd) = [se.ll, se.lσ]
-num_params(se::SEArd) = se.dim
 
 function set_params!(se::SEArd, hyp::Vector{Float64})
     length(hyp) == se.dim || throw(ArgumentError("Squared exponential ARD only has $(se.dim) parameters"))
-    se.ll = hyp[1:(se.dim-1)]
-    se.lσ = hyp[se.dim]
+    se.ℓ2 = exp(2.0*hyp[1:(se.dim-1)])
+    se.σ2 = exp(2.0*hyp[se.dim])
 end
 
-function grad_kern(se::SEArd, x::Vector{Float64}, y::Vector{Float64})
-    ℓ = exp(se.ll)
-    σ2 = exp(2*se.lσ)
+get_params(se::SEArd) = [log(se.ℓ2)/2.0; log(se.σ2)/2.0]
+get_param_names(k::SEArd) = [get_param_names(k.ℓ2, :ll); :lσ]
+num_params(se::SEArd) = se.dim
 
-    wdiff = ((x-y)./ℓ).^2
-    dxy2 = sum(wdiff)
+metric(se::SEArd) = WeightedSqEuclidean(1.0./(se.ℓ2))
+cov(se::SEArd, r::Float64) = se.σ2*exp(-0.5*r)
+
+function grad_kern(se::SEArd, x::Vector{Float64}, y::Vector{Float64})
+    r = distance(se, x, y)
+    exp_r = exp(-0.5*r)
+    wdiff = ((x-y).^2)./se.ℓ2
     
-    dK_dℓ   = σ2.*wdiff*exp(-0.5*dxy2)
-    dK_dσ = 2.0*σ2*exp(-0.5*dxy2)
+    g1   = se.σ2.*wdiff*exp_r   #dK_d(log ℓ)
+    g2 = 2.0*se.σ2*exp_r        #dK_d(log σ)
     
-    dK_theta = [dK_dℓ,dK_dσ]
-    return dK_theta
+    return [g1; g2]
+end
+
+function grad_stack!(stack::AbstractArray, se::SEArd, X::Matrix{Float64}, data::StationaryARDData)
+    d = size(X,1)
+    ck = cov(se, X, data)
+    broadcast!(*, view(stack, :, :, 1:d), data.dist_stack, reshape(1.0./se.ℓ2, (1,1,d)), ck)
+    stack[:,:, d+1] = 2.0 * ck
+    return stack
 end

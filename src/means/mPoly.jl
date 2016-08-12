@@ -15,7 +15,7 @@ type MeanPoly <: Mean
     MeanPoly(β::Matrix{Float64}) = new(β,size(β, 1), size(β, 2))
 end
 
-function meanf(mPoly::MeanPoly,x::Matrix{Float64})
+function mean(mPoly::MeanPoly,x::Matrix{Float64})
     dim, nobsv = size(x)
     dim == mPoly.dim || throw(ArgumentError("Observations and mean function have inconsistent dimensions"))
     z = zeros(nobsv)
@@ -28,6 +28,7 @@ function meanf(mPoly::MeanPoly,x::Matrix{Float64})
 end
 
 get_params(mPoly::MeanPoly) = vec(mPoly.β)
+get_param_names(mPoly::MeanPoly) = get_param_names(mPoly.β, :β)
 num_params(mPoly::MeanPoly) = mPoly.dim * mPoly.deg
 function set_params!(mPoly::MeanPoly, hyp::Vector{Float64})
     num_param = mPoly.dim * mPoly.deg
@@ -36,7 +37,7 @@ function set_params!(mPoly::MeanPoly, hyp::Vector{Float64})
 end
 
 
-function grad_meanf(mPoly::MeanPoly, x::Vector{Float64})
+function grad_mean(mPoly::MeanPoly, x::Vector{Float64})
     dM_theta = Array(Float64,mPoly.dim,mPoly.deg)
     
     for i in 1:mPoly.dim

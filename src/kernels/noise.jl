@@ -13,15 +13,16 @@ type Noise <: Kernel
     Noise(lσ::Float64) = new(lσ)
 end
 
-function kern(noise::Noise, x::Vector{Float64}, y::Vector{Float64})
+function cov(noise::Noise, x::Vector{Float64}, y::Vector{Float64})
     sigma2 = exp(2*noise.lσ)
     prec   = eps()            #machine precision
     
-    K =  norm(x-y)<prec
+    K =  sigma2*(norm(x-y)<prec)
     return K
 end
 
 get_params(noise::Noise) = Float64[noise.lσ]
+get_param_names(noise::Noise) = [:lσ]
 num_params(noise::Noise) = 1
 
 function set_params!(noise::Noise, hyp::Vector{Float64})
@@ -33,7 +34,7 @@ function grad_kern(noise::Noise, x::Vector{Float64}, y::Vector{Float64})
     sigma2 = exp(2*noise.lσ)
     prec   = eps()            #machine precision
     
-    dK_sigma = 2.0*sigma2*norm(x-y)<prec
+    dK_sigma = 2.0*sigma2*(norm(x-y)<prec)
     
     dK_theta = [dK_sigma]
     return dK_theta
