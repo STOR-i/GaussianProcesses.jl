@@ -45,6 +45,6 @@ function grad_stack!(stack::AbstractArray, lin::LinArd, X::Matrix{Float64}, data
     ell = exp(lin.ll)
     d, nobsv = size(X)
     for j in 1:d
-        stack[:,:,j] = ((-2.0/ell[j]^2).*X[j,:]) * X[j,:]'
+        stack[:,:,j] = ((-2.0/ell[j]^2).*vec(X[j,:])) * vec(X[j,:])'
     end
 end
