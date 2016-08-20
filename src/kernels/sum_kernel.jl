@@ -103,11 +103,11 @@ end
         
 # Addition operators
 function +(k1::SumKernel, k2::Kernel)
-    kerns = [k1.kerns, k2]
+    kerns = [k1.kerns; k2]
     SumKernel(kerns...)
 end
 function +(k1::SumKernel, k2::SumKernel)
-    kerns = [k1.kerns, k2.kerns]
+    kerns = [k1.kerns; k2.kerns]
     SumKernel(kerns...)
 end
 +(k1::Kernel, k2::Kernel) = SumKernel(k1,k2)
