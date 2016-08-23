@@ -87,5 +87,11 @@ test_Kernel(lin_ard, x)
 sum_kern = se + mat12
 test_Kernel(sum_kern, x)
 
+sum_kern_3 = sum_kern + lin
+test_Kernel(sum_kern_3, x)
+
 prod_kern = se * mat12
 test_Kernel(prod_kern, x)
+
+prod_kern_3 = prod_kern * lin
+test_Kernel(prod_kern_3, x)
