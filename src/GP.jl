@@ -208,27 +208,33 @@ function set_params!(gp::GP, hyp::Vector{Float64}; noise::Bool=true, mean::Bool=
 end
 
 function pushGP!(gp::GP, x::Array{Float64}, y::Array{Float64})
-    # get size info
-    x_size = collect(size(x))
-    gpx_size = collect(size(gp.x))
-    y_size = collect(size(y))
-    gpy_size = collect(size(gp.y))
+    if typeof(x) == Array{Float64,1}
+        # Attempt to fix badly dimensioned x data
+        x = x'
+    elseif typeof(x) == Array{Float64,2}
+        # do nothing, we are happy
+    else
+        error("There is a problem with the type of x")
+    end
 
     # Check that we are adding one x for one y 
-    if maximum(x_size) != maximum(y_size)
+    if size(x,1) != size(y,1)
         error("The number of x's and y's need to be the same")
     end
 
-    if typeof(x) == Array{Float64,1}
-        gp.x = cat(2,x',gp.x)
-    end
+    # add x ot the gp
+    gp.x = cat(2,x,gp.x)
+
     # Concatenate y
     if typeof(y) == typeof(gp.y)
         gp.y = cat(1,y,gp.y)
+    else
+        error("There is a problem with the type of y")
     end
 
     # update number of observations
     gp.nobsv = gp.nobsv + x_size[1]
+    # re-train
     update_mll!(gp)
 end
 
