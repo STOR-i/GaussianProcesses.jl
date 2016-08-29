@@ -1,5 +1,4 @@
 import Base.show
-
 # Main GaussianProcess type
 
 @doc """
@@ -220,22 +219,8 @@ function pushGP!(gp::GP, x::Array{Float64}, y::Array{Float64})
         error("The number of x's and y's need to be the same")
     end
 
-    if typeof(x) == Array{Float64,1} && length(x) == 1
+    if typeof(x) == Array{Float64,1}
         gp.x = cat(2,x',gp.x)
-        println("made it")
-    else
-        # Concatenate x, try to do some adjustment of inputs if necessary
-        if typeof(x) != typeof(gp.x)
-            error("data types don't match")
-        end
-        if x_size[1] != gpx_size[1] && x_size[2] == gpx_size[2]
-            gp.x = cat(1,x,gp.x)
-        elseif x_size[2] != gpx_size[2] && x_size[1] == gpx_size[1]
-            gp.x = cat(2,x,gp.x)
-        else
-            # We aren't going to try anything smart here, just try to concatenate on the 1st dim
-            gp.x = cat(1,x,gp.x)
-        end
     end
     # Concatenate y
     if typeof(y) == typeof(gp.y)
@@ -244,7 +229,7 @@ function pushGP!(gp::GP, x::Array{Float64}, y::Array{Float64})
 
     # update number of observations
     gp.nobsv = gp.nobsv + x_size[1]
-    println("done")
+    update_mll!(gp)
 end
 
 function show(io::IO, gp::GP)
