@@ -1,5 +1,4 @@
 import Base.show
-
 # Main GaussianProcess type
 
 @doc """
@@ -75,7 +74,7 @@ function fit!(gp::GP, X::Matrix{Float64}, y::Vector{Float64})
     return gp
 end
 
-fit!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, X', y)
+fit!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 
 
 # Update auxiliarly data in GP object after changes have been made
@@ -214,6 +213,21 @@ function set_params!(gp::GP, hyp::Vector{Float64}; noise::Bool=true, mean::Bool=
     if mean; set_params!(gp.m, hyp[1+noise:noise+num_params(gp.m)]); end
     if kern; set_params!(gp.k, hyp[end-num_params(gp.k)+1:end]); end
 end
+    
+function push!(gp::GP, X::Matrix{Float64}, y::Vector{Float64})
+    warn("push! method is currently inefficient as it refits all observations")
+    if gp.nobsv == 0
+        GaussianProcesses.fit!(gp, X, y)
+    elseif size(X,1) != size(gp.X,1)
+        error("New input observations must have dimensions consistent with existing observations")
+    else
+        GaussianProcesses.fit!(gp, cat(2, gp.X, X), cat(1, gp.y, y))
+    end
+end
+
+push!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = push!(gp, x', y)
+push!(gp::GP, x::Float64, y::Float64) = push!(gp, [x], [y])
+push!(gp::GP, x::Vector{Float64}, y::Float64) = push!(gp, reshape(x, length(x), 1), [y])
 
 function show(io::IO, gp::GP)
     println(io, "GP object:")

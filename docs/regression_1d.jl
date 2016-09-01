@@ -19,6 +19,9 @@ optimize!(gp; method=Optim.BFGS())   #Optimise the hyperparameters
 
 plot(gp)   #Plot the GP after the hyperparameters have been optimised 
 
+# Add observation
+push!(gp, [1.0], [2.0])
+
 
 
 
