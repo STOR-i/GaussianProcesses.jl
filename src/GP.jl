@@ -74,7 +74,7 @@ function fit!(gp::GP, X::Matrix{Float64}, y::Vector{Float64})
     return gp
 end
 
-fit!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, X', y)
+fit!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 
 
 # Update auxiliarly data in GP object after changes have been made
@@ -213,37 +213,21 @@ function set_params!(gp::GP, hyp::Vector{Float64}; noise::Bool=true, mean::Bool=
     if mean; set_params!(gp.m, hyp[1+noise:noise+num_params(gp.m)]); end
     if kern; set_params!(gp.k, hyp[end-num_params(gp.k)+1:end]); end
 end
-
-function pushGP!(gp::GP, x::Array{Float64}, y::Array{Float64})
-    if typeof(x) == Array{Float64,1}
-        # Attempt to fix badly dimensioned x data
-        x = x'
-    elseif typeof(x) == Array{Float64,2}
-        # do nothing, we are happy
+    
+function push!(gp::GP, X::Matrix{Float64}, y::Vector{Float64})
+    warn("push! method is currently inefficient as it refits all observations")
+    if gp.nobsv == 0
+        GaussianProcesses.fit!(gp, X, y)
+    elseif size(X,1) != size(gp.X,1)
+        error("New input observations must have dimensions consistent with existing observations")
     else
-        error("There is a problem with the type of x")
+        GaussianProcesses.fit!(gp, cat(2, gp.X, X), cat(1, gp.y, y))
     end
-
-    # Check that we are adding one x for one y 
-    if size(x,1) != size(y,1)
-        error("The number of x's and y's need to be the same")
-    end
-
-    # add x ot the gp
-    gp.x = cat(2,x,gp.x)
-
-    # Concatenate y
-    if typeof(y) == typeof(gp.y)
-        gp.y = cat(1,y,gp.y)
-    else
-        error("There is a problem with the type of y")
-    end
-
-    # update number of observations
-    gp.nobsv = gp.nobsv + x_size[1]
-    # re-train
-    update_mll!(gp)
 end
+
+push!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = push!(gp, x', y)
+push!(gp::GP, x::Float64, y::Float64) = push!(gp, [x], [y])
+push!(gp::GP, x::Vector{Float64}, y::Float64) = push!(gp, reshape(x, length(x), 1), [y])
 
 function show(io::IO, gp::GP)
     println(io, "GP object:")

@@ -16,7 +16,7 @@ kern = SE(0.0, 0.0)
 gp = GP(x,y,mZero,kern,-2.0)          # Fit the GP
 optimize!(gp)                         # Optimize the hyperparameters
 
+push!(gp, [[2.0; 3.0] [3.0, 4.0]], [2.0, 3.0])
+push!(gp, [2.0; 3.0], 2.0)
 plot(gp; clim=(-10.0, 10.0,-10.0,10.0)) #Plot the GP over range clim
-
-
 
