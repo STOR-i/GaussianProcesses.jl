@@ -21,6 +21,11 @@ function cov(lin::LinArd, x::Vector{Float64}, y::Vector{Float64})
     return K
 end
 
+function cov(lin::LinArd, X::Matrix{Float64}, data::EmptyData)
+    ell = exp(lin.ll)
+    return (X./ell)' * (X./ell)
+end
+
 get_params(lin::LinArd) = lin.ll
 get_param_names(lin::LinArd) = get_param_names(lin.ll, :ll)
 num_params(lin::LinArd) = lin.dim
@@ -34,4 +39,12 @@ function grad_kern(lin::LinArd, x::Vector{Float64}, y::Vector{Float64})
     ell = exp(lin.ll)
     dK_ell = -2.0*(x./ell).*(y./ell)
     return dK_ell
+end
+
+function grad_stack!(stack::AbstractArray, lin::LinArd, X::Matrix{Float64}, data::EmptyData)
+    ell = exp(lin.ll)
+    d, nobsv = size(X)
+    for j in 1:d
+        stack[:,:,j] = ((-2.0/ell[j]^2).*vec(X[j,:])) * vec(X[j,:])'
+    end
 end

@@ -18,7 +18,7 @@ end
 
 function set_params!(mat::Mat52Ard, hyp::Vector{Float64})
     length(hyp) == mat.dim || throw(ArgumentError("Matern 5/2 only has $(mat.dim) parameters"))
-    mat.ℓ = exp(hyp[1:(mat.dim-1)])
+    mat.ℓ2 = exp(2.0*hyp[1:(mat.dim-1)])
     mat.σ2 = exp(2.0*hyp[mat.dim])
 end
 

@@ -101,11 +101,11 @@ end
 
 # Multiplication operators
 function *(k1::ProdKernel, k2::Kernel)
-    kerns = [k1.kerns, k2]
+    kerns = [k1.kerns; k2]
     ProdKernel(kerns...)
 end
 function *(k1::ProdKernel, k2::ProdKernel)
-    kerns = [k1.kerns, k2.kerns]
+    kerns = [k1.kerns; k2.kerns]
     ProdKernel(kerns...)
 end
 *(k1::Kernel, k2::Kernel) = ProdKernel(k1,k2)

@@ -96,7 +96,6 @@ function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::B
 
     #Derivative wrt the observation noise
     if noise
-        #gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.L'\(gp.L\eye(gp.nobsv))))
         gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.cK \ eye(gp.nobsv)))
     end
 
@@ -104,7 +103,7 @@ function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::B
     if mean
         Mgrads = grad_stack(gp.m, gp.X)
         for i in 1:num_params(gp.m)
-            gp.dmLL[i+noise] = -dot(Mgrads[:,i],gp.alpha)
+            gp.dmLL[i+noise] = dot(Mgrads[:,i],gp.alpha)
         end
     end
 
