@@ -8,6 +8,9 @@ A function for optimising the GP hyperparameters based on type II maximum likeli
 * `mean::Bool`: Mean function hyperparameters should be optmized
 * `kern::Bool`: Kernel function hyperparameters should be optmized
 * `kwargs`: Keyword arguments for the optimize function from the Optim package
+
+# Return:
+* `::Optim.MultivariateOptimizationResults{Float64,1}`: optimization results object
 """ ->
 function optimize!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true, method::Optim.Optimizer=ConjugateGradient(), kwargs...)
     function mll(hyp::Vector{Float64})
@@ -29,6 +32,5 @@ function optimize!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true, m
 
     func = DifferentiableFunction(mll, dmll!, mll_and_dmll!)
     init = get_params(gp;  noise=noise, mean=mean, kern=kern)  # Initial hyperparameter values
-    results=optimize(func, init, method, kwargs...)                     # Run optimizer
-    print(results)
+    optimize(func, init, method, kwargs...)                    # Run optimizer
 end

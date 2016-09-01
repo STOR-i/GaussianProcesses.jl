@@ -1,5 +1,4 @@
 import Base.show
-
 # Main GaussianProcess type
 
 @doc """
@@ -213,6 +212,37 @@ function set_params!(gp::GP, hyp::Vector{Float64}; noise::Bool=true, mean::Bool=
     if noise; gp.logNoise = hyp[1]; end
     if mean; set_params!(gp.m, hyp[1+noise:noise+num_params(gp.m)]); end
     if kern; set_params!(gp.k, hyp[end-num_params(gp.k)+1:end]); end
+end
+
+function pushGP!(gp::GP, x::Array{Float64}, y::Array{Float64})
+    if typeof(x) == Array{Float64,1}
+        # Attempt to fix badly dimensioned x data
+        x = x'
+    elseif typeof(x) == Array{Float64,2}
+        # do nothing, we are happy
+    else
+        error("There is a problem with the type of x")
+    end
+
+    # Check that we are adding one x for one y 
+    if size(x,1) != size(y,1)
+        error("The number of x's and y's need to be the same")
+    end
+
+    # add x ot the gp
+    gp.x = cat(2,x,gp.x)
+
+    # Concatenate y
+    if typeof(y) == typeof(gp.y)
+        gp.y = cat(1,y,gp.y)
+    else
+        error("There is a problem with the type of y")
+    end
+
+    # update number of observations
+    gp.nobsv = gp.nobsv + x_size[1]
+    # re-train
+    update_mll!(gp)
 end
 
 function show(io::IO, gp::GP)
