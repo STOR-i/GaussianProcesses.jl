@@ -12,19 +12,19 @@ k(x,x') = σ²exp(-d/L^2), where d = |x-x'| and L = diag(ℓ₁,ℓ₂,...)
 type Mat12Ard <: StationaryARD
     ℓ2::Vector{Float64}      # Log of length scale
     σ2::Float64              # Log of signal std
-    dim::Int                 # Number of hyperparameters
-    Mat12Ard(ll::Vector{Float64}, lσ::Float64) = new(2.0*exp(ll),exp(2.0*lσ), size(ll,1)+1)
+    Mat12Ard(ll::Vector{Float64}, lσ::Float64) = new(2.0*exp(ll),exp(2.0*lσ))
 end
 
 function set_params!(mat::Mat12Ard, hyp::Vector{Float64})
-    length(hyp) == mat.dim || throw(ArgumentError("Matern 1/2 covariance function only has $(mat.dim) parameters"))
-    mat.ℓ2  = exp(2.0*hyp[1:(mat.dim-1)])
-    mat.σ2 = exp(2.0*hyp[mat.dim])
+    length(hyp) == num_params(mat) || throw(ArgumentError("Mat12 kernel only has $(num_params(mat)) parameters"))
+    d = length(mat.ℓ2)
+    mat.ℓ2  = exp(2.0*hyp[1:d])
+    mat.σ2 = exp(2.0*hyp[d+1])
 end
 
 get_params(mat::Mat12Ard) = [log(mat.ℓ2)/2.0; log(mat.σ2)/2.0]
 get_param_names(mat::Mat12Ard) = [get_param_names(mat.ℓ2, :ll); :lσ]
-num_params(mat::Mat12Ard) = mat.dim
+num_params(mat::Mat12Ard) = length(mat.ℓ2) + 1
 
 metric(mat::Mat12Ard) = WeightedEuclidean(1.0./(mat.ℓ2))
 cov(mat::Mat12Ard, r::Float64) = mat.σ2*exp(-r)

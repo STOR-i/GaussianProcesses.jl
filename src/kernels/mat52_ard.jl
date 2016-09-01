@@ -12,19 +12,19 @@ k(x,x') = σ²(1+√3*d/L + 5d²/3L²)exp(-√5*d/L), where d = |x-x'| and L = d
 type Mat52Ard <: StationaryARD
     ℓ2::Vector{Float64}   # Log of Length scale 
     σ2::Float64           # Log of signal std
-    dim::Int              # Number of hyperparameters
-    Mat52Ard(ll::Vector{Float64}, lσ::Float64) = new(exp(2.0*ll), exp(2.0*lσ), size(ll,1)+1)
+    Mat52Ard(ll::Vector{Float64}, lσ::Float64) = new(exp(2.0*ll), exp(2.0*lσ))
 end
 
 function set_params!(mat::Mat52Ard, hyp::Vector{Float64})
-    length(hyp) == mat.dim || throw(ArgumentError("Matern 5/2 only has $(mat.dim) parameters"))
-    mat.ℓ2 = exp(2.0*hyp[1:(mat.dim-1)])
-    mat.σ2 = exp(2.0*hyp[mat.dim])
+    length(hyp) == num_params(mat) || throw(ArgumentError("Mat52 kernel only has $(num_params(mat)) parameters"))
+    d = length(mat.ℓ2)
+    mat.ℓ2 = exp(2.0*hyp[1:d])
+    mat.σ2 = exp(2.0*hyp[d+1])
 end
 
 get_params(mat::Mat52Ard) = [log(mat.ℓ2)/2.0; log(mat.σ2)/2.0]
 get_param_names(mat::Mat52Ard) = [get_param_names(mat.ℓ2, :ll); :lσ]
-num_params(mat::Mat52Ard) = mat.dim
+num_params(mat::Mat52Ard) = length(mat.ℓ2) + 1
 
 metric(mat::Mat52Ard) = WeightedEuclidean(1.0./(mat.ℓ2))
 cov(mat::Mat52Ard, r::Float64) = mat.σ2*(1+sqrt(5)*r+5/3*r^2)*exp(-sqrt(5)*r)

@@ -12,19 +12,19 @@ k(x,x') = σ²exp(-(x-x')ᵀL⁻²(x-x')/2), where L = diag(ℓ₁,ℓ₂,...)
 type SEArd <: StationaryARD
     ℓ2::Vector{Float64}      # Log of Length scale
     σ2::Float64              # Log of Signal std
-    dim::Int                 # Number of hyperparameters
-    SEArd(ll::Vector{Float64}, lσ::Float64) = new(exp(2.0*ll),exp(2.0*lσ), size(ll,1)+1)
+    SEArd(ll::Vector{Float64}, lσ::Float64) = new(exp(2.0*ll),exp(2.0*lσ))
 end
 
 function set_params!(se::SEArd, hyp::Vector{Float64})
-    length(hyp) == se.dim || throw(ArgumentError("Squared exponential ARD only has $(se.dim) parameters"))
-    se.ℓ2 = exp(2.0*hyp[1:(se.dim-1)])
-    se.σ2 = exp(2.0*hyp[se.dim])
+    length(hyp) == num_params(se) || throw(ArgumentError("SEArd only has $(num_params(se)) parameters"))
+    d = length(se.ℓ2)
+    se.ℓ2 = exp(2.0*hyp[1:d])
+    se.σ2 = exp(2.0*hyp[d+1])
 end
 
 get_params(se::SEArd) = [log(se.ℓ2)/2.0; log(se.σ2)/2.0]
 get_param_names(k::SEArd) = [get_param_names(k.ℓ2, :ll); :lσ]
-num_params(se::SEArd) = se.dim
+num_params(se::SEArd) = length(se.ℓ2) + 1
 
 metric(se::SEArd) = WeightedSqEuclidean(1.0./(se.ℓ2))
 cov(se::SEArd, r::Float64) = se.σ2*exp(-0.5*r)
