@@ -37,6 +37,10 @@ function cov(k::Kernel, X::Matrix{Float64}, Y::Matrix{Float64})
     d(x,y) = cov(k, x, y)
     return map_column_pairs(d, X, Y)
 end
+function cov!(cK::AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64}, Y::Matrix{Float64})
+    d(x,y) = cov(k, x, y)
+    return map_column_pairs!(cK, d, X, Y)
+end
 
 """
 # Description
@@ -57,18 +61,58 @@ function cov(k::Kernel, X::Matrix{Float64}, data::EmptyData)
     d(x,y) = cov(k, x, y)
     return map_column_pairs(d, X)
 end
+function cov!(cK::AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64}, data::EmptyData)
+    d(x,y) = cov(k, x, y)
+    return map_column_pairs!(cK, d, X)
+end
 
 cov(k::Kernel, X::Matrix{Float64}) = cov(k, X, KernelData(k, X))
+cov!(cK:: AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64}) = cov!(cK, k, X, KernelData(k, X))
+#=function cov!(cK::Matrix{Float64}, k::Kernel, X::Matrix{Float64}, data::KernelData)=#
+#=    cK[:,:] = cov(k,X,data)=#
+#=end=#
+function addcov!(cK::AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64})
+    cK[:,:] .+= cov(k, X, KernelData(k, X))
+    return cK
+end
+function addcov!(cK::AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64}, data::KernelData)
+    cK[:,:] .+= cov(k, X, data)
+    return cK
+end
+function multcov!(cK::AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64})
+    cK[:,:] .*= cov(k, X, KernelData(k, X))
+    return cK
+end
+function multcov!(cK::AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64}, data::KernelData)
+    cK[:,:] .*= cov(k, X, data)
+    return cK
+end
 
+
+function grad_slice!(dK::AbstractMatrix, k::Kernel, X::Matrix{Float64}, data::KernelData, p::Int)
+    dim = size(X,1)
+    nobsv = size(X,2)
+    npars = num_params(k)
+    @inbounds for j in 1:nobsv
+        @simd for i in 1:j
+            dK[i,j] = dKij_dθp(k,X,data,i,j,p,dim)
+            dK[j,i] = dK[i,j]
+        end
+    end
+    return dK
+end
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients
-function grad_stack!(stack::AbstractArray, k::Kernel, X::Matrix{Float64}, data::EmptyData)
-    d, nobsv = size(X)
-    for j in 1:nobsv, i in 1:nobsv
-        @inbounds stack[i,j,:] = grad_kern(k, X[:,i], X[:,j])
+function grad_stack!(stack::AbstractArray, k::Kernel, X::Matrix{Float64}, data::KernelData)
+    npars = num_params(k)
+    for p in 1:npars
+        grad_slice!(Base.view(stack,:,:,p),k,X,data,p)
     end
     return stack
 end
-
+function grad_stack!(stack::AbstractArray, k::Kernel, X::Matrix{Float64})
+    grad_stack!(stack, k, X, KernelData(k, X))
+end
+grad_stack(k::Kernel, X::Matrix{Float64}) = grad_stack(k, X, KernelData(k, X))
 function grad_stack(k::Kernel, X::Matrix{Float64}, data::KernelData)
     n = num_params(k)
     n_obsv = size(X, 2)
@@ -77,25 +121,33 @@ function grad_stack(k::Kernel, X::Matrix{Float64}, data::KernelData)
     return stack
 end
 
-function grad_stack!(stack::AbstractArray, k::Kernel, X::Matrix{Float64})
-    grad_stack!(stack, k, X, KernelData(k, X))
+function grad_stack!(stack::AbstractArray, k::Kernel, X::Matrix{Float64}, data::EmptyData)
+    dim = size(X,1)
+    nobsv = size(X,2)
+    for p in 1:num_params(k)
+        @inbounds for j in 1:nobsv
+            @simd for i in 1:j
+                stack[i,j,p] = dKij_dθp(k,X,i,j,p,dim)
+                stack[j,i,p] = stack[i,j,p]
+            end
+        end
+    end
+    return stack
 end
-
-grad_stack(k::Kernel, X::Matrix{Float64}) = grad_stack(k, X, KernelData(k, X))
 
 ##############################
 # Parameter name definitions #
 ##############################
 
 # This generates names like [:ll_1, :ll_2, ...] for parameter vectors
-get_param_names(n::Int, prefix::Symbol) = [symbol(prefix, :_, i) for i in 1:n]
+get_param_names(n::Int, prefix::Symbol) = [Symbol(prefix, :_, i) for i in 1:n]
 get_param_names(v::Vector, prefix::Symbol) = get_param_names(length(v), prefix)
 
 # Fallback. Yields names like :Matl2Iso_param_1 => 0.5
 # Ideally this is never used, because the names are uninformative.
 get_param_names(obj::Union{Kernel, Mean}) =
     get_param_names(num_params(obj),
-                    symbol(typeof(obj).name.name, :_param_))
+                    Symbol(typeof(obj).name.name, :_param_))
 
 """ `composite_param_names(objects, prefix)`, where `objects` is a
 vector of kernels/means, calls `get_param_names` on each object and prefixes the
@@ -114,7 +166,7 @@ yields
 function composite_param_names(objects, prefix)
     p = Symbol[]
     for (i, obj) in enumerate(objects)
-        append!(p, [symbol(prefix, i, :_, sym) for sym in get_param_names(obj)])
+        append!(p, [Symbol(prefix, i, :_, sym) for sym in get_param_names(obj)])
     end
     p
 end
@@ -129,6 +181,8 @@ function show(io::IO, k::Kernel, depth::Int = 0)
     show(io, get_params(k))
     print(io, "\n")
 end
+
+num_params(k::Kernel)=throw(ArgumentError, "Undefined number of parameters")
 
 include("stationary.jl")
 

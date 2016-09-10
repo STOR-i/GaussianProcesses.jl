@@ -11,35 +11,55 @@ k(x,x') = σ²(xᵀx'+c)ᵈ
 * `d::Int64`   : Degree of the Polynomial
 """ ->
 type Poly <: Kernel
-    lc::Float64      # Log of constant
-    lσ::Float64      # Log of signal std
+    c::Float64      # constant
+    σ2::Float64      # Signal variance
     deg::Int64       # degree of polynomial
-    Poly(lc::Float64, lσ::Float64, deg::Int64) = new(lc, lσ, deg)
+    Poly(lc::Float64, lσ::Float64, deg::Int64) = new(exp(lc), exp(2.0*lσ), deg)
 end
 
-function cov(poly::Poly, x::Vector{Float64}, y::Vector{Float64})
-    c = exp(poly.lc)
-    sigma2 = exp(2*poly.lσ)
+function KernelData(k::Poly, X::Matrix{Float64})
+    XtX=X'*X
+    Base.LinAlg.copytri!(XtX, 'U')
+    LinIsoData(XtX)
+end
+kernel_data_key(k::Poly, X::Matrix{Float64}) = :LinIsoData
 
-    K = sigma2*(c+dot(x,y)).^poly.deg
+_cov(poly::Poly, xTy) = poly.σ2*(poly.c.+xTy).^poly.deg
+function cov(poly::Poly, x::Vector{Float64}, y::Vector{Float64})
+    K = _cov(poly, dot(x,y))
+end
+function cov!(cK::AbstractMatrix, poly::Poly, X::Matrix{Float64}, data::LinIsoData)
+    cK[:,:] = _cov(poly, data.XtX)
+    return cK
+end
+function cov(poly::Poly, X::Matrix{Float64}, data::LinIsoData)
+    K = _cov(poly, data.XtX)
     return K
 end
 
-get_params(poly::Poly) = Float64[poly.lc, poly.lσ]
+get_params(poly::Poly) = Float64[log(poly.c), log(poly.σ2)/2.0]
 get_param_names(poly::Poly) = [:lc, :lσ]
 num_params(poly::Poly) = 2
 
 function set_params!(poly::Poly, hyp::Vector{Float64})
     length(hyp) == 2 || throw(ArgumentError("Polynomial function has two parameters"))
-    poly.lc, poly.lσ = hyp
+    poly.c = exp(hyp[1])
+    poly.σ2 = exp(2.0*hyp[2])
 end
 
-function grad_kern(poly::Poly, x::Vector{Float64}, y::Vector{Float64})
-    c = exp(poly.lc)
-    sigma2 = exp(2*poly.lσ)
-    
-    dK_c   = c*poly.deg*sigma2*(c+dot(x,y)).^(poly.deg-1)
-    dK_sigma = 2.0*sigma2*(c+dot(x,y)).^poly.deg
-    dK_theta = [dK_c,dK_sigma]
-    return dK_theta
+@inline dk_dlc(poly::Poly, xTy::Float64) = poly.c*poly.deg*poly.σ2*(poly.c+xTy).^(poly.deg-1)
+@inline dk_dlσ(poly::Poly, xTy::Float64) = 2.0*_cov(poly,xTy)
+@inline function dKij_dθp(poly::Poly, X::Matrix{Float64}, i::Int, j::Int, p::Int, dim::Int)
+    if p==1
+        return dk_dlc(poly, dotij(X,i,j,dim))
+    else
+        return dk_dlσ(poly, dotij(X,i,j,dim))
+    end
+end
+@inline function dKij_dθp(poly::Poly, X::Matrix{Float64}, data::LinIsoData, i::Int, j::Int, p::Int, dim::Int)
+    if p==1
+        return dk_dlc(poly, data.XtX[i,j])
+    else
+        return dk_dlσ(poly, data.XtX[i,j])
+    end
 end

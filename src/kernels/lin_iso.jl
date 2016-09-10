@@ -9,39 +9,58 @@ k(x,x') = xᵀx'/ℓ²
 * `ll::Float64`: Log of the length scale ℓ
 """ ->
 type LinIso <: Kernel
-    ll::Float64      # Log of Length scale 
-    LinIso(ll::Float64) = new(ll)
+    ℓ2::Float64      # Log of Length scale 
+    LinIso(ll::Float64) = new(exp(2.0*ll))
 end
 
+type LinIsoData <: KernelData
+    XtX::Matrix{Float64}
+end
+
+function KernelData(k::LinIso, X::Matrix{Float64})
+    XtX=X'*X
+    Base.LinAlg.copytri!(XtX, 'U') # make sure it's symmetric
+    LinIsoData(XtX)
+end
+kernel_data_key(k::LinIso, X::Matrix{Float64}) = :LinIsoData
+
+_cov(lin::LinIso, xTy) = xTy ./ lin.ℓ2
 function cov(lin::LinIso, x::Vector{Float64}, y::Vector{Float64})
-    ell = exp(lin.ll)
-    K = dot(x,y)/ell^2
+    K = _cov(lin, dot(x,y))
     return K
 end
 
-function cov(lin::LinIso, X::Matrix{Float64}, data::EmptyData)
-    ell = exp(lin.ll)
-    return ((1/ell^2).*X') * X
+function cov(lin::LinIso, X::Matrix{Float64}, data::LinIsoData)
+    K = _cov(lin, data.XtX)
+    return K
+end
+function cov!(cK::AbstractMatrix, lin::LinIso, X::Matrix{Float64}, data::LinIsoData)
+    copy!(cK, data.XtX)
+    cK[:,:] ./= lin.ℓ2
+    return cK
 end
 
-get_params(lin::LinIso) = Float64[lin.ll]
+get_params(lin::LinIso) = Float64[log(lin.ℓ2)/2.0]
 get_param_names(lin::LinIso) = [:ll]
 num_params(lin::LinIso) = 1
 
 function set_params!(lin::LinIso, hyp::Vector{Float64})
     length(hyp) == 1 || throw(ArgumentError("Linear isotropic kernel only has one parameter"))
-    lin.ll = hyp[1]
+    lin.ℓ2 = exp(2.0*hyp[1])
 end
 
-function grad_kern(lin::LinIso, x::Vector{Float64}, y::Vector{Float64})
-    ell = exp(lin.ll)
-    
-    dK_ell = -2.0*dot(x,y)/ell^2
-    dK_theta = [dK_ell]
-    return dK_theta
+@inline dk_dll(lin::LinIso, xTy::Float64) = -2.0*_cov(lin,xTy)
+@inline function dKij_dθp(lin::LinIso, X::Matrix{Float64}, i::Int, j::Int, p::Int, dim::Int)
+    if p==1
+        return dk_dll(lin, dotij(X,i,j,dim))
+    else
+        return NaN
+    end
 end
-
-function grad_stack!(stack::AbstractArray, lin::LinIso, X::Matrix{Float64}, data::EmptyData)
-    ell = exp(lin.ll)
-    stack[:,:,1] = ((-2.0/ell^2).*X') * X
+@inline function dKij_dθp(lin::LinIso, X::Matrix{Float64}, data::LinIsoData, i::Int, j::Int, p::Int, dim::Int)
+    if p==1
+        return dk_dll(lin, data.XtX[i,j])
+    else
+        return NaN
+    end
 end

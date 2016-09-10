@@ -81,41 +81,103 @@ fit!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 function update_mll!(gp::GP)
     μ = mean(gp.m,gp.X)
     Σ = cov(gp.k, gp.X, gp.data)
-    gp.cK = PDMat(Σ + exp(2*gp.logNoise)*eye(gp.nobsv) + 1e-8*eye(gp.nobsv))
+    for i in 1:gp.nobsv
+        ## add observation noise
+        Σ[i,i] += exp(2*gp.logNoise) + 1e-8
+    end
+    gp.cK = PDMat(Σ)
     gp.alpha = gp.cK \ (gp.y - μ)
     gp.mLL = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
 
-# Update gradient of marginal log likelihood
-
-function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
-    update_mll!(gp::GP)
-    gp.dmLL = Array(Float64, noise + mean*num_params(gp.m) + kern*num_params(gp.k))
-
-    # Calculate Gradient with respect to hyperparameters
-
-    #Derivative wrt the observation noise
-    if noise
-        gp.dmLL[1] = exp(2*gp.logNoise)*trace((gp.alpha*gp.alpha' - gp.cK \ eye(gp.nobsv)))
+# modification of update_mll! that reuses existing matrices to avoid
+# unnecessary memory allocations, which speeds things up significantly
+function update_mll!!(gp::GP)
+    Σbuffer = gp.cK.mat
+    μ = mean(gp.m,gp.X)
+    cov!(Σbuffer, gp.k, gp.X, gp.data)
+    for i in 1:gp.nobsv
+        Σbuffer[i,i] += exp(2*gp.logNoise) + 1e-8
     end
+    chol_buffer = gp.cK.chol.factors
+    copy!(chol_buffer, Σbuffer)
+    chol = cholfact!(Symmetric(chol_buffer))
+    gp.cK = PDMats.PDMat(Σbuffer, chol)
+    gp.alpha = gp.cK \ (gp.y - μ)
+    gp.mLL = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
+end
 
-    #Derivative wrt to mean hyperparameters, need to loop over as same with kernel hyperparameters
+@doc """
+get_ααinvcKI!(ααinvcKI::Matrix, cK::AbstractPDMat, α::Vector)
+
+# Description
+Computes α*α'-cK\eye(nobsv) in-place, avoiding any memory allocation
+
+# Arguments:
+* `ααinvcKI::Matrix` the matrix to be overwritten
+* `cK::AbstractPDMat` the covariance matrix of the GP (supplied by gp.cK)
+* `α::Vector` the alpha vector of the GP (defined as cK \ (Y-μ), and supplied by gp.alpha)
+* nobsv
+"""
+function get_ααinvcKI!(ααinvcKI::Matrix, cK::AbstractPDMat, α::Vector)
+    nobsv = length(α)
+    size(ααinvcKI) == (nobsv, nobsv) || throw(ArgumentError, 
+                @sprintf("Buffer for ααinvcKI should be a %dx%d matrix, not %dx%d",
+                         nobsv, nobsv,
+                         size(ααinvcKI,1), size(ααinvcKI,2)))
+    ααinvcKI[:,:] = 0.0
+    @inbounds for i in 1:nobsv
+        ααinvcKI[i,i] = -1.0
+    end
+    A_ldiv_B!(cK.chol, ααinvcKI)
+    LinAlg.BLAS.ger!(1.0, α, α, ααinvcKI)
+end
+""" Update gradient of marginal log-likelihood """
+function update_mll_and_dmll!(gp::GP,
+    Kgrad::Matrix{Float64},
+    ααinvcKI::Matrix{Float64}
+    ; 
+    noise::Bool=true, # include gradient component for the logNoise term
+    mean::Bool=true, # include gradient components for the mean parameters
+    kern::Bool=true, # include gradient components for the spatial kernel parameters
+    )
+    size(Kgrad) == (gp.nobsv, gp.nobsv) || throw(ArgumentError, 
+                @sprintf("Buffer for Kgrad should be a %dx%d matrix, not %dx%d",
+                         gp.nobsv, gp.nobsv,
+                         size(Kgrad,1), size(Kgrad,2)))
+    update_mll!!(gp)
+    n_mean_params = num_params(gp.m)
+    n_kern_params = num_params(gp.k)
+    gp.dmLL = Array(Float64, noise + mean*n_mean_params + kern*n_kern_params)
+    logNoise = gp.logNoise
+    get_ααinvcKI!(ααinvcKI, gp.cK, gp.alpha)
+    
+    i=1
+    if noise
+        gp.dmLL[i] = exp(2.0*logNoise)*trace(ααinvcKI)
+        i+=1
+    end
     if mean
         Mgrads = grad_stack(gp.m, gp.X)
-        for i in 1:num_params(gp.m)
-            gp.dmLL[i+noise] = dot(Mgrads[:,i],gp.alpha)
+        for j in 1:n_mean_params
+            gp.dmLL[i] = dot(Mgrads[:,j],gp.alpha)
+            i += 1
         end
     end
-
-    # Derivative of marginal log-likelihood with respect to kernel hyperparameters
     if kern
-        Kgrads = grad_stack(gp.k, gp.X, gp.data)   # [dK/dθᵢ]
-        for i in 1:num_params(gp.k)
-            gp.dmLL[i+mean*num_params(gp.m)+noise] = trace((gp.alpha*gp.alpha' - gp.cK \ eye(gp.nobsv))*Kgrads[:,:,i])/2
+        for iparam in 1:n_kern_params
+            grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
+            gp.dmLL[i] = vecdot(Kgrad,ααinvcKI)/2.0
+            i+=1
         end
     end
 end
 
+function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
+    Kgrad = Array(Float64, gp.nobsv, gp.nobsv)
+    ααinvcKI = Array(Float64, gp.nobsv, gp.nobsv)
+    update_mll_and_dmll!(gp, Kgrad, ααinvcKI, noise=noise,mean=mean,kern=kern)
+end
 
 @doc """
 # Description

@@ -19,7 +19,7 @@ include("optimize.jl")
 # This approach to loading supported plotting packages is taken from the "KernelDensity" package
 macro glue(pkg)
     path = joinpath(dirname(@__FILE__),"glue",string(pkg,".jl"))
-    init = symbol(string(pkg,"_init"))
+    init = Symbol(string(pkg,"_init"))
     quote
         $(esc(init))() = Base.include($path)
         isdefined(Main,$(QuoteNode(pkg))) && $(esc(init))()

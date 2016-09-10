@@ -9,6 +9,19 @@ type ProdKernel <: Kernel
         return new(kerns)
     end
 end
+function KernelData(prodkern::ProdKernel, X::Matrix{Float64})
+    datadict = Dict{Symbol, KernelData}()
+    datakeys = Symbol[]
+    for k in prodkern.kerns
+        data_type = kernel_data_key(k, X)
+        if !haskey(datadict, data_type)
+            datadict[data_type] = KernelData(k, X)
+        end
+        push!(datakeys, data_type)
+    end
+    SumData(datadict, datakeys)
+end
+kernel_data_key(prodkern::ProdKernel, X::Matrix{Float64}) = :SumData
 
 function show(io::IO, prodkern::ProdKernel, depth::Int = 0)
     pad = repeat(" ", 2 * depth)
@@ -21,7 +34,7 @@ end
 function cov(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
     p = 1.0
     for k in prodkern.kerns
-        p = p.*cov(k, x, y)
+        p *= cov(k, x, y)
     end
     return p
 end
@@ -30,9 +43,22 @@ function cov(prodkern::ProdKernel, X::Matrix{Float64})
     d, nobsv = size(X)
     p = ones(nobsv, nobsv)
     for k in prodkern.kerns
-        p[:,:] = p .* cov(k, X)
+        p[:,:] .*= cov(k, X)
     end
     return p
+end
+
+function cov!(s::Matrix{Float64}, prodkern::ProdKernel, X::Matrix{Float64}, data::SumData)
+    s[:,:] = 1.0
+    for (ikern,kern) in enumerate(prodkern.kerns)
+        multcov!(s, kern, X, data.datadict[data.keys[ikern]])
+    end
+    return s
+end
+function cov(prodkern::ProdKernel, X::Matrix{Float64}, data::SumData)
+    d, nobsv = size(X)
+    s = Array(Float64, nobsv, nobsv)
+    cov!(s, prodkern, X, data)
 end
 
 function get_params(prodkern::ProdKernel)
@@ -63,40 +89,42 @@ function set_params!(prodkern::ProdKernel, hyp::Vector{Float64})
     end
 end
 
-# This function is extremely inefficient
-function grad_kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
-     dk = Array(Float64, 0)
-      for k in prodkern.kerns
-          p = 1.0
-          for j in prodkern.kerns[find(k.!=prodkern.kerns)]
-              p = p.*cov(j, x, y)
-          end
-        append!(dk,grad_kern(k, x, y).*p) 
-      end
-    dk
-end
+#=# This function is extremely inefficient=#
+#=function grad_kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})=#
+#=     dk = Array(Float64, 0)=#
+#=      for k in prodkern.kerns=#
+#=          p = 1.0=#
+#=          for j in prodkern.kerns[find(k.!=prodkern.kerns)]=#
+#=              p = p.*cov(j, x, y)=#
+#=          end=#
+#=        append!(dk,grad_kern(k, x, y).*p) =#
+#=      end=#
+#=    dk=#
+#=end=#
 
-function grad_stack!(stack::AbstractArray, X::Matrix{Float64}, prodkern::ProdKernel)
-    d, nobsv = size(X)
-    num_kerns = length(prodkern.kerns)
-    
-    cross_kerns = Array(Float64, nobsv, nobsv, num_kerns)
-    for (i,kern) in enumerate(prodkern.kerns)
-        cross_kerns[:,:,i] = cov(kern, X)
-    end
-
-    s = 1
-    for (i,kern) in enumerate(prodkern.kerns)
-        np = num_params(kern)
-        grad_stack!(view(stack,:,:,s:(s+np-1)), X, kern)
-        for j in 1:num_kerns
-            if j != i
-                broadcast!(.*, view(stack,:,:,s:(s+np-1)), view(stack,:,:,s:(s+np-1)), view(cross_kerns, :,:,j))
-            end
+@inline function dKij_dθp(prodkern::ProdKernel, X::Matrix{Float64}, i::Int, j::Int, p::Int, dim::Int)
+    cKij = cov(prodkern, X[:,i], X[:,j])
+    s=0
+    for k in prodkern.kerns
+        np = num_params(k)
+        if p<=np+s
+            cKk = cov(k, X[:,i], X[:,j])
+            return dKij_dθp(k,X,i,j,p-s,dim)*cKij/cKk
         end
         s += np
     end
-    stack
+end
+@inline function dKij_dθp(prodkern::ProdKernel, X::Matrix{Float64}, data::SumData, i::Int, j::Int, p::Int, dim::Int)
+    cKij = cov(prodkern, X[:,i], X[:,j])
+    s=0
+    for (ikern,kern) in enumerate(prodkern.kerns)
+        np = num_params(kern)
+        if p<=np+s
+            cKk = cov(kern, X[:,i], X[:,j])
+            return dKij_dθp(kern, X, data.datadict[data.keys[ikern]],i,j,p-s,dim)*cKij/cKk
+        end
+        s += np
+    end
 end
 
 # Multiplication operators

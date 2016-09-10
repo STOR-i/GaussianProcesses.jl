@@ -25,24 +25,13 @@ num_params(se::SEIso) = 2
 metric(se::SEIso) = SqEuclidean()
 cov(se::SEIso, r::Float64) = se.σ2*exp(-0.5*r/se.ℓ2)
 
-function grad_kern(se::SEIso, x::Vector{Float64}, y::Vector{Float64})
-    r = distance(se, x, y)
-    exp_r = exp(-0.5*r/se.ℓ2)
-    g1 = se.σ2*r/se.ℓ2*exp_r # dK_d(log ℓ)
-    g2 = 2.0*se.σ2*exp_r     # dK_d(log σ)
-    return [g1,g2]
-end
-
-function grad_stack!(stack::AbstractArray, se::SEIso, X::Matrix{Float64}, data::IsotropicData)
-    nobsv = size(X, 2)
-    R = distance(se, X, data)
-    exp_R = exp(-0.5*R/se.ℓ2)
-    for i in 1:nobsv, j in 1:i
-        @inbounds stack[i,j,1] = se.σ2*R[i,j]/se.ℓ2*exp_R[i,j] # dK_dℓ
-        @inbounds stack[j,i,1] = stack[i,j,1]
-        @inbounds stack[i,j,2] = 2.0*se.σ2*exp_R[i,j]
-        @inbounds stack[j,i,2] = stack[i,j,2]
+@inline dk_dll(se::SEIso, r::Float64) = r/se.ℓ2*cov(se,r)
+@inline function dk_dθp(se::SEIso, r::Float64, p::Int)
+    if p==1
+        return dk_dll(se, r)
+    elseif p==2
+        return dk_dlσ(se, r)
+    else
+        return NaN
     end
-
-    return stack
 end

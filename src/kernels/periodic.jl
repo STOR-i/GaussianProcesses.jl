@@ -31,14 +31,18 @@ end
 cov(pe::Periodic, r::Float64) = pe.σ2*exp(-2.0/pe.ℓ2*sin(π*r/pe.p)^2)
 
 
-function grad_kern(pe::Periodic, x::Vector{Float64}, y::Vector{Float64})
-    r = distance(pe, x, y)
-    
-    dK_dlℓ   = 4.0*pe.σ2*(sin(π*r/pe.p)^2/pe.ℓ2)*exp(-2/pe.ℓ2*sin(π*r/pe.p)^2)
-    dK_dlσ = 2.0*pe.σ2*exp(-2/pe.ℓ2*sin(π*r/pe.p)^2)
-    dK_dlp     = 4.0/pe.ℓ2*pe.σ2*(π*r/pe.p)*sin(π*r/pe.p)*cos(π*r/pe.p)*exp(-2/pe.ℓ2*sin(π*r/pe.p)^2)
-    dK_theta = [dK_dlℓ, dK_dlσ, dK_dlp]
-    return dK_theta
+@inline dk_dll(pe::Periodic, r::Float64) = 4.0*pe.σ2*(sin(π*r/pe.p)^2/pe.ℓ2)*exp(-2.0/pe.ℓ2*sin(π*r/pe.p)^2)  # dK_dlogℓ
+@inline dk_dlp(pe::Periodic, r::Float64) = 4.0/pe.ℓ2*pe.σ2*(π*r/pe.p)*sin(π*r/pe.p)*cos(π*r/pe.p)*exp(-2/pe.ℓ2*sin(π*r/pe.p)^2)    # dK_dlogp
+@inline function dk_dθp(pe::Periodic, r::Float64, p::Int)
+    if p==1
+        dk_dll(pe, r)
+    elseif p==2
+        dk_dlσ(pe, r)
+    elseif p==3
+        dk_dlp(pe, r)
+    else
+        return NaN
+    end
 end
 
 function grad_stack!(stack::AbstractArray,  pe::Periodic, X::Matrix{Float64}, data::IsotropicData)

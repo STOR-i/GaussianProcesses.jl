@@ -48,7 +48,7 @@ ScikitLearnBase.clone(k::Kernel) = deepcopy(k)
 
 function ScikitLearnBase.get_params(gp::GP)
     add_prefix(pref, di) =
-        Dict([symbol(pref, param)=>value for (param, value) in di])
+        Dict(Symbol(pref, param)=>value for (param, value) in di)
     merge(add_prefix(:m_, ScikitLearnBase.get_params(gp.m)),
           add_prefix(:k_, ScikitLearnBase.get_params(gp.k)),
           Dict(:logNoise=>gp.logNoise))
@@ -68,9 +68,9 @@ function ScikitLearnBase.set_params!(gp::GP; params...)
     for (name, value) in params
         sname = string(name)
         if startswith(sname, "m_")
-            m_params[symbol(sname[3:end])] = value
+            m_params[Symbol(sname[3:end])] = value
         elseif startswith(sname, "k_")
-            k_params[symbol(sname[3:end])] = value
+            k_params[Symbol(sname[3:end])] = value
         else
             @assert name == :logNoise "Unknown parameter passed to set_params!: $name"
             gp.logNoise = value
