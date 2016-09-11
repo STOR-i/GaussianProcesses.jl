@@ -114,8 +114,8 @@ function KernelData(k::StationaryARD, X::Matrix{Float64})
     dim, nobsv = size(X)
     dist_stack = Array(Float64, nobsv, nobsv, dim)
     for d in 1:dim
-        grad_ls = Base.view(dist_stack, :, :, d)
-        pairwise!(grad_ls, SqEuclidean(), Base.view(X, d:d,:))
+        grad_ls = view(dist_stack, :, :, d)
+        pairwise!(grad_ls, SqEuclidean(), view(X, d:d,:))
     end
     StationaryARDData(dist_stack)
 end

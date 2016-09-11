@@ -1,7 +1,13 @@
 # Linear covariance function
 
-@inline dotij(X::Matrix{Float64}, i::Int, j::Int, dim::Int) = sum((X[d,i]*X[d,j]) for d in 1:dim)
 @inline dotijp(X::Matrix{Float64}, i::Int, j::Int, p::Int) = X[p,i]*X[p,j]
+@inline function dotij(X::Matrix, i::Int, j::Int, dim::Int)
+	s=zero(eltype(X))
+	@inbounds @simd for p in 1:dim
+		s+=dotijp(X,i,j,p)
+	end
+	return s
+end
 include("lin_iso.jl")
 include("lin_ard.jl")
 

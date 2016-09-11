@@ -46,9 +46,14 @@ ScikitLearnBase.clone(k::Kernel) = deepcopy(k)
 ## Vector{Float64}. We use it to implement ScikitLearnBase.get_params, which
 ## must return a Symbol => value dictionary. Likewise for set_params!
 
+function add_prefix(pref, di)
+    newdi = typeof(di)()
+    for (param,value) in di
+        newdi[Symbol(pref, param)] = value
+    end
+    return newdi
+end
 function ScikitLearnBase.get_params(gp::GP)
-    add_prefix(pref, di) =
-        Dict(Symbol(pref, param)=>value for (param, value) in di)
     merge(add_prefix(:m_, ScikitLearnBase.get_params(gp.m)),
           add_prefix(:k_, ScikitLearnBase.get_params(gp.k)),
           Dict(:logNoise=>gp.logNoise))

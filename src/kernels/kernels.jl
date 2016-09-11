@@ -105,7 +105,7 @@ end
 function grad_stack!(stack::AbstractArray, k::Kernel, X::Matrix{Float64}, data::KernelData)
     npars = num_params(k)
     for p in 1:npars
-        grad_slice!(Base.view(stack,:,:,p),k,X,data,p)
+        grad_slice!(view(stack,:,:,p),k,X,data,p)
     end
     return stack
 end

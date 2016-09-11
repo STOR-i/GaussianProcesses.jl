@@ -1,5 +1,7 @@
 module GaussianProcesses
-using Optim, PDMats, Distances, ArrayViews
+using Optim, PDMats, Distances
+using Compat
+import Compat: view
 
 import Base: +, *
 import Base: rand, rand!, mean, cov, push!

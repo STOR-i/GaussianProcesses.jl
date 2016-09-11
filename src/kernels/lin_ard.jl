@@ -28,8 +28,8 @@ function KernelData(k::LinArd, X::Matrix{Float64})
     dim,n=size(X)
     XtX_d = Array(Float64,n,n,dim)
     for d in 1:dim
-        XtX_d[:,:,d] = Base.view(X,d,:) * Base.view(X,d,:)'
-        Base.LinAlg.copytri!(Base.view(XtX_d,:,:,d), 'U')
+        XtX_d[:,:,d] = view(X,d,:) * view(X,d,:)'
+        Base.LinAlg.copytri!(view(XtX_d,:,:,d), 'U')
     end
     LinArdData(XtX_d)
 end
@@ -43,7 +43,7 @@ function cov!(cK::AbstractMatrix, lin::LinArd, X::Matrix{Float64}, data::LinArdD
     dim,n=size(X)
     cK[:,:] = 0.0
     for d in 1:dim
-        Base.LinAlg.axpy!(1/lin.ℓ[d]^2, Base.view(data.XtX_d,:,:,d), cK)
+        Base.LinAlg.axpy!(1/lin.ℓ[d]^2, view(data.XtX_d,:,:,d), cK)
     end
     return cK
 end
