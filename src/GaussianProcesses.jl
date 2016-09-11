@@ -1,7 +1,7 @@
 module GaussianProcesses
 using Optim, PDMats, Distances
 using Compat
-import Compat: view
+import Compat: view, cholfact!
 
 import Base: +, *
 import Base: rand, rand!, mean, cov, push!
