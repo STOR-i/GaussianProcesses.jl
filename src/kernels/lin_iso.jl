@@ -35,8 +35,10 @@ function cov(lin::LinIso, X::Matrix{Float64}, data::LinIsoData)
     return K
 end
 function cov!(cK::AbstractMatrix, lin::LinIso, X::Matrix{Float64}, data::LinIsoData)
-    copy!(cK, data.XtX)
-    cK[:,:] ./= lin.ℓ2
+    iℓ2 = 1/lin.ℓ2
+    @inbounds @simd for I in eachindex(cK,data.XtX)
+        cK[I] = data.XtX[I]*iℓ2
+    end
     return cK
 end
 
