@@ -29,18 +29,6 @@ num_params(rq::RQIso) = 3
 metric(rq::RQIso) = SqEuclidean()
 cov(rq::RQIso, r::Float64) = rq.σ2*(1.0+r/(2.0*rq.α*rq.ℓ2))^(-rq.α)
 
-function addcov!(s::AbstractMatrix{Float64}, rq::RQIso, X::Matrix{Float64}, data::IsotropicData)
-    nobsv = size(X, 2)
-    R = distance(rq, X, data)
-    for j in 1:nobsv
-        @inbounds @simd for i in 1:j
-            s[i,j] += cov(rq, R[i,j])
-            s[j,i] = s[i,j]
-        end
-    end
-    return R
-end
-
 @inline dk_dll(rq::RQIso, r::Float64) = rq.σ2*(r/rq.ℓ2)*(1.0+r/(2.0*rq.α*rq.ℓ2))^(-rq.α-1.0) # dK_d(log ℓ)dK_dℓ
 @inline function dk_dlα(rq::RQIso, r::Float64)
     part = (1.0+r/(2.0*rq.α*rq.ℓ2))
