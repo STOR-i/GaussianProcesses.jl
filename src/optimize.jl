@@ -18,7 +18,7 @@ function optimize!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true,
     init = get_params(gp;  noise=noise, mean=mean, kern=kern)  # Initial hyperparameter values
     results=optimize(func,init; method=method, kwargs...)                     # Run optimizer
     set_params!(gp, results.minimum, noise=noise,mean=mean,kern=kern)
-    update_mll!!(gp)
+    update_mll!(gp)
     return results
 end
 
@@ -28,7 +28,7 @@ function get_optim_target(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=
     function mll(hyp::Vector{Float64})
         try
             set_params!(gp, hyp; noise=noise, mean=mean, kern=kern)
-            update_mll!!(gp)
+            update_mll!(gp)
             return -gp.mLL
         catch err
              if !all(isfinite(hyp))

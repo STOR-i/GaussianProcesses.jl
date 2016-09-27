@@ -9,7 +9,7 @@
 * `f::Function`          : Testing function. In this case a function of distance between X and Y
     
 # Return:
-* `D::Matrix{Float64}`: Symmetric matrix D such that `D[i,j] = f(X[:,i], Y[:,j])`
+* `D::Matrix{Float64}`: Matrix D such that `D[i,j] = f(X[:,i], Y[:,j])`
 """ ->
 function map_column_pairs!(D::Matrix{Float64}, f::Function, X::Matrix{Float64}, Y::Matrix{Float64})
     dim, nobs1 = size(X)
@@ -24,6 +24,7 @@ function map_column_pairs!(D::Matrix{Float64}, f::Function, X::Matrix{Float64}, 
     end
     return D
 end
+
 @doc """
 # Description
  Creates a matrix by applying a function to each pair of columns of input matrices.

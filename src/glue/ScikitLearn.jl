@@ -4,15 +4,7 @@ import ScikitLearnBase
 
 ScikitLearnBase.is_classifier(::GP) = false
 
-function ScikitLearnBase.fit!(gp::GP, X::Matrix{Float64}, y::Vector{Float64})
-    gp.X = X' # ScikitLearn's X is (n_samples, n_features)
-    gp.y = y
-    gp.data = KernelData(gp.k, X')
-    gp.dim, gp.nobsv = size(gp.X)
-    length(y) == gp.nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-    update_mll!(gp)
-    return gp
-end
+ScikitLearnBase.fit!(gp::GP, X::Matrix{Float64}, y::Vector{Float64}) = fit!(gp, X', y)
 
 function ScikitLearnBase.predict(gp::GP, X::Matrix{Float64}; eval_MSE::Bool=false)
     mu, Sigma = predict(gp, X'; full_cov=false)
@@ -32,8 +24,7 @@ function ScikitLearnBase.score(gp::GP, x, y)
     return -mean((ScikitLearnBase.predict(gp, x) - y) .^ 2)
 end
 
-ScikitLearnBase.clone(gp::GP) = GP(; m=ScikitLearnBase.clone(gp.m),
-                                   k=ScikitLearnBase.clone(gp.k),
+ScikitLearnBase.clone(gp::GP) = GP(; m=ScikitLearnBase.clone(gp.m),                                   k=ScikitLearnBase.clone(gp.k),
                                    logNoise=gp.logNoise)
 
 # Means and Kernels are small objects, and they are not fit to the data (except
@@ -53,6 +44,7 @@ function add_prefix(pref, di)
     end
     return newdi
 end
+
 function ScikitLearnBase.get_params(gp::GP)
     merge(add_prefix(:m_, ScikitLearnBase.get_params(gp.m)),
           add_prefix(:k_, ScikitLearnBase.get_params(gp.k)),
@@ -65,7 +57,6 @@ function ScikitLearnBase.get_params(obj::Union{Mean, Kernel})
     @assert length(params) == length(names) # sanity check
     return Dict(zip(names, params))
 end
-
 
 function ScikitLearnBase.set_params!(gp::GP; params...)
     m_params = Dict()
@@ -81,6 +72,7 @@ function ScikitLearnBase.set_params!(gp::GP; params...)
             gp.logNoise = value
         end
     end
+    
     ScikitLearnBase.set_params!(gp.m; m_params...)
     ScikitLearnBase.set_params!(gp.k; k_params...)
     gp
@@ -101,4 +93,3 @@ function ScikitLearnBase.set_params!(obj::Union{Mean, Kernel}; params...)
     set_params!(obj, hyp)
     obj
 end
-

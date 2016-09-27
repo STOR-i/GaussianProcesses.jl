@@ -41,7 +41,7 @@ type GP
         dim, nobsv = size(X)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         gp = new(m, k, logNoise, nobsv, X, y, KernelData(k, X), dim)
-        update_mll!(gp)
+        initialise_mll!(gp)
         return gp
     end
     
@@ -70,7 +70,7 @@ function fit!(gp::GP, X::Matrix{Float64}, y::Vector{Float64})
     gp.y = y
     gp.data = KernelData(gp.k, X)
     gp.dim, gp.nobsv = size(X)
-    update_mll!(gp)
+    initialise_mll!(gp)
     return gp
 end
 
@@ -78,7 +78,7 @@ fit!(gp::GP, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 
 
 # Update auxiliarly data in GP object after changes have been made
-function update_mll!(gp::GP)
+function initialise_mll!(gp::GP)
     μ = mean(gp.m,gp.X)
     Σ = cov(gp.k, gp.X, gp.data)
     for i in 1:gp.nobsv
@@ -90,9 +90,9 @@ function update_mll!(gp::GP)
     gp.mLL = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
 
-# modification of update_mll! that reuses existing matrices to avoid
+# modification of initialise_mll! that reuses existing matrices to avoid
 # unnecessary memory allocations, which speeds things up significantly
-function update_mll!!(gp::GP)
+function update_mll!(gp::GP)
     Σbuffer = gp.cK.mat
     μ = mean(gp.m,gp.X)
     cov!(Σbuffer, gp.k, gp.X, gp.data)
@@ -132,6 +132,7 @@ function get_ααinvcKI!(ααinvcKI::Matrix, cK::AbstractPDMat, α::Vector)
     A_ldiv_B!(cK.chol, ααinvcKI)
     LinAlg.BLAS.ger!(1.0, α, α, ααinvcKI)
 end
+
 """ Update gradient of marginal log-likelihood """
 function update_mll_and_dmll!(gp::GP,
     Kgrad::Matrix{Float64},
@@ -145,7 +146,7 @@ function update_mll_and_dmll!(gp::GP,
                 @sprintf("Buffer for Kgrad should be a %dx%d matrix, not %dx%d",
                          gp.nobsv, gp.nobsv,
                          size(Kgrad,1), size(Kgrad,2)))
-    update_mll!!(gp)
+    update_mll!(gp)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
     gp.dmLL = Array(Float64, noise + mean*n_mean_params + kern*n_kern_params)
@@ -157,6 +158,7 @@ function update_mll_and_dmll!(gp::GP,
         gp.dmLL[i] = exp(2.0*logNoise)*trace(ααinvcKI)
         i+=1
     end
+
     if mean
         Mgrads = grad_stack(gp.m, gp.X)
         for j in 1:n_mean_params
