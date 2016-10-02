@@ -45,19 +45,3 @@ cov(pe::Periodic, r::Float64) = pe.σ2*exp(-2.0/pe.ℓ2*sin(π*r/pe.p)^2)
     end
 end
 
-function grad_stack!(stack::AbstractArray,  pe::Periodic, X::Matrix{Float64}, data::IsotropicData)
-    d, nobsv = size(X)
-    R = distance(pe, X, data)
-    
-    for i in 1:nobsv, j in 1:i
-        @inbounds stack[i,j,1] = 4.0*pe.σ2*(sin(π*R[i,j]/pe.p)^2/pe.ℓ2)*exp(-2/pe.ℓ2*sin(π*R[i,j]/pe.p)^2)  # dK_dlogℓ
-        @inbounds stack[j,i,1] = stack[i,j,1]
-        
-        @inbounds stack[i,j,2] = 2.0*pe.σ2*exp(-2/pe.ℓ2*sin(π*R[i,j]/pe.p)^2)        # dK_dlogσ
-        @inbounds stack[j,i,2] = stack[i,j,2]
-        
-        @inbounds stack[i,j,3] = 4.0/pe.ℓ2*pe.σ2*(π*R[i,j]/pe.p)*sin(π*R[i,j]/pe.p)*cos(π*R[i,j]/pe.p)*exp(-2/pe.ℓ2*sin(π*R[i,j]/pe.p)^2)    # dK_dlogp
-        @inbounds stack[j,i,3] = stack[i,j,3]
-    end
-    return stack
-end

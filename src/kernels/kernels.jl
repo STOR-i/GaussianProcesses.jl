@@ -19,27 +19,27 @@ Default KernelData type which is empty.
 type EmptyData <: KernelData
 end
 
-KernelData(k::Kernel, X::Matrix{Float64}) = EmptyData()
+KernelData{M<:MatF64}(k::Kernel, X::M) = EmptyData()
 
 """
 # Description
 Constructs covariance matrix from kernel and input observations
 
 # Arguments
-# `k::Kernel`: kernel for calculating covariance between pairs of points
-* `X::Matrix{Float64}`: matrix of observations (each column is an observation)
-# `Y::Matrix{Float64}`: another matrix of observations
+* `k::Kernel`: kernel for calculating covariance between pairs of points
+* `X₁::Matrix{Float64}`: matrix of observations (each column is an observation)
+* `X₂::Matrix{Float64}`: another matrix of observations
 
 # Return
 `Σ::Matrix{Float64}`: covariance matrix where `Σ[i,j]` is the covariance of the Gaussian process between points `X[:,i]` and `Y[:,j]`.
 """
-function cov(k::Kernel, X::Matrix{Float64}, Y::Matrix{Float64})
-    d(x,y) = cov(k, x, y)
-    return map_column_pairs(d, X, Y)
+function cov{M1<:MatF64,M2<:MatF64}(k::Kernel, X₁::M1, X₂::M2)
+    d(x1,x2) = cov(k, x1, x2)
+    return map_column_pairs(d, X₁, X₂)
 end
-function cov!(cK::AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64}, Y::Matrix{Float64})
-    d(x,y) = cov(k, x, y)
-    return map_column_pairs!(cK, d, X, Y)
+function cov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Kernel, X₁::M1, X₂::M2)
+    d(x1,x2) = cov(k, x1, x2)
+    return map_column_pairs!(cK, d, X₁, X₂)
 end
 
 """
@@ -57,42 +57,41 @@ Constructs covariance matrix from kernel and kernel data
 # See also
 Kernel, KernelData
 """
-function cov(k::Kernel, X::Matrix{Float64}, data::EmptyData)
+function cov{M<:MatF64}(k::Kernel, X::M, data::EmptyData)
     d(x,y) = cov(k, x, y)
     return map_column_pairs(d, X)
 end
-function cov!(cK::AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64}, data::EmptyData)
+function cov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::EmptyData)
     d(x,y) = cov(k, x, y)
     return map_column_pairs!(cK, d, X)
 end
 
-cov(k::Kernel, X::Matrix{Float64}) = cov(k, X, KernelData(k, X))
-cov!(cK:: AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64}) = cov!(cK, k, X, KernelData(k, X))
+cov{M<:MatF64}(k::Kernel, X::M) = cov(k, X, KernelData(k, X))
+cov!{M<:MatF64}(cK:: MatF64, k::Kernel, X::M) = cov!(cK, k, X, KernelData(k, X))
 #=function cov!(cK::Matrix{Float64}, k::Kernel, X::Matrix{Float64}, data::KernelData)=#
 #=    cK[:,:] = cov(k,X,data)=#
 #=end=#
-function addcov!(cK::AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64})
+function addcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M)
     cK[:,:] .+= cov(k, X, KernelData(k, X))
     return cK
 end
-function addcov!(cK::AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64}, data::KernelData)
+function addcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::KernelData)
     cK[:,:] .+= cov(k, X, data)
     return cK
 end
-function multcov!(cK::AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64})
+function multcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M)
     cK[:,:] .*= cov(k, X, KernelData(k, X))
     return cK
 end
-function multcov!(cK::AbstractMatrix{Float64}, k::Kernel, X::Matrix{Float64}, data::KernelData)
+function multcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::KernelData)
     cK[:,:] .*= cov(k, X, data)
     return cK
 end
 
 
-function grad_slice!(dK::AbstractMatrix, k::Kernel, X::Matrix{Float64}, data::KernelData, p::Int)
+function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::KernelData, p::Int)
     dim = size(X,1)
     nobsv = size(X,2)
-    npars = num_params(k)
     @inbounds for j in 1:nobsv
         @simd for i in 1:j
             dK[i,j] = dKij_dθp(k,X,data,i,j,p,dim)
@@ -101,19 +100,30 @@ function grad_slice!(dK::AbstractMatrix, k::Kernel, X::Matrix{Float64}, data::Ke
     end
     return dK
 end
+function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::EmptyData, p::Int)
+    dim = size(X,1)
+    nobsv = size(X,2)
+    @inbounds for j in 1:nobsv
+        @simd for i in 1:j
+            dK[i,j] = dKij_dθp(k,X,i,j,p,dim)
+            dK[j,i] = dK[i,j]
+        end
+    end
+    return dK
+end
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients
-function grad_stack!(stack::AbstractArray, k::Kernel, X::Matrix{Float64}, data::KernelData)
+function grad_stack!{M<:MatF64}(stack::AbstractArray, k::Kernel, X::M, data::KernelData)
     npars = num_params(k)
     for p in 1:npars
         grad_slice!(view(stack,:,:,p),k,X,data,p)
     end
     return stack
 end
-function grad_stack!(stack::AbstractArray, k::Kernel, X::Matrix{Float64})
+function grad_stack!{M<:MatF64}(stack::AbstractArray, k::Kernel, X::M)
     grad_stack!(stack, k, X, KernelData(k, X))
 end
-grad_stack(k::Kernel, X::Matrix{Float64}) = grad_stack(k, X, KernelData(k, X))
-function grad_stack(k::Kernel, X::Matrix{Float64}, data::KernelData)
+grad_stack{M<:MatF64}(k::Kernel, X::M) = grad_stack(k, X, KernelData(k, X))
+function grad_stack{M<:MatF64}(k::Kernel, X::M, data::KernelData)
     n = num_params(k)
     n_obsv = size(X, 2)
     stack = Array(Float64, n_obsv, n_obsv, n)
@@ -121,19 +131,6 @@ function grad_stack(k::Kernel, X::Matrix{Float64}, data::KernelData)
     return stack
 end
 
-function grad_stack!(stack::AbstractArray, k::Kernel, X::Matrix{Float64}, data::EmptyData)
-    dim = size(X,1)
-    nobsv = size(X,2)
-    for p in 1:num_params(k)
-        @inbounds for j in 1:nobsv
-            @simd for i in 1:j
-                stack[i,j,p] = dKij_dθp(k,X,i,j,p,dim)
-                stack[j,i,p] = stack[i,j,p]
-            end
-        end
-    end
-    return stack
-end
 
 ##############################
 # Parameter name definitions #

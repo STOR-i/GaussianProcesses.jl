@@ -9,7 +9,7 @@ type ProdKernel <: Kernel
         return new(kerns)
     end
 end
-function KernelData(prodkern::ProdKernel, X::Matrix{Float64})
+function KernelData{M<:MatF64}(prodkern::ProdKernel, X::M)
     datadict = Dict{Symbol, KernelData}()
     datakeys = Symbol[]
     for k in prodkern.kerns
@@ -21,7 +21,7 @@ function KernelData(prodkern::ProdKernel, X::Matrix{Float64})
     end
     SumData(datadict, datakeys)
 end
-kernel_data_key(prodkern::ProdKernel, X::Matrix{Float64}) = :SumData
+kernel_data_key{M<:MatF64}(prodkern::ProdKernel, X::M) = :SumData
 
 function show(io::IO, prodkern::ProdKernel, depth::Int = 0)
     pad = repeat(" ", 2 * depth)
@@ -31,7 +31,7 @@ function show(io::IO, prodkern::ProdKernel, depth::Int = 0)
     end
 end
 
-function cov(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
+function cov{V1<:VecF64,V2<:VecF64}(prodkern::ProdKernel, x::V1, y::V2)
     p = 1.0
     for k in prodkern.kerns
         p *= cov(k, x, y)
@@ -39,7 +39,7 @@ function cov(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})
     return p
 end
 
-function cov(prodkern::ProdKernel, X::Matrix{Float64})
+function cov{M<:MatF64}(prodkern::ProdKernel, X::M)
     d, nobsv = size(X)
     p = ones(nobsv, nobsv)
     for k in prodkern.kerns
@@ -48,14 +48,14 @@ function cov(prodkern::ProdKernel, X::Matrix{Float64})
     return p
 end
 
-function cov!(s::Matrix{Float64}, prodkern::ProdKernel, X::Matrix{Float64}, data::SumData)
+function cov!{M<:MatF64}(s::MatF64, prodkern::ProdKernel, X::M, data::SumData)
     s[:,:] = 1.0
     for (ikern,kern) in enumerate(prodkern.kerns)
         multcov!(s, kern, X, data.datadict[data.keys[ikern]])
     end
     return s
 end
-function cov(prodkern::ProdKernel, X::Matrix{Float64}, data::SumData)
+function cov{M<:MatF64}(prodkern::ProdKernel, X::M, data::SumData)
     d, nobsv = size(X)
     s = Array(Float64, nobsv, nobsv)
     cov!(s, prodkern, X, data)
@@ -102,7 +102,7 @@ end
 #=    dk=#
 #=end=#
 
-@inline function dKij_dθp(prodkern::ProdKernel, X::Matrix{Float64}, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(prodkern::ProdKernel, X::M, i::Int, j::Int, p::Int, dim::Int)
     cKij = cov(prodkern, X[:,i], X[:,j])
     s=0
     for k in prodkern.kerns
@@ -114,7 +114,7 @@ end
         s += np
     end
 end
-@inline function dKij_dθp(prodkern::ProdKernel, X::Matrix{Float64}, data::SumData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(prodkern::ProdKernel, X::M, data::SumData, i::Int, j::Int, p::Int, dim::Int)
     cKij = cov(prodkern, X[:,i], X[:,j])
     s=0
     for (ikern,kern) in enumerate(prodkern.kerns)

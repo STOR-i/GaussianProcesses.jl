@@ -37,7 +37,7 @@ cov(rq::RQArd,r::Float64) = rq.σ2*(1+0.5*r/rq.α)^(-rq.α)
     part  = (1+0.5*r/rq.α)
     return rq.σ2*part^(-rq.α)*(0.5*r/part-rq.α*log(part))
 end
-@inline function dKij_dθp(rq::RQArd, X::Matrix{Float64}, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(rq::RQArd, X::M, i::Int, j::Int, p::Int, dim::Int)
     if p <= dim
         return dk_dll(rq, distij(metric(rq),X,i,j,dim), distijk(metric(rq),X,i,j,p))
     elseif p==dim+1
@@ -46,6 +46,6 @@ end
         return dk_dlα(rq, distij(metric(rq),X,i,j,dim))
     end
 end
-@inline function dKij_dθp(rq::RQArd, X::Matrix{Float64}, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(rq::RQArd, X::M, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
     return dKij_dθp(rq,X,i,j,p,dim)
 end

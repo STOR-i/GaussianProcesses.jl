@@ -2,7 +2,7 @@
 abstract MaternIso <: Isotropic
 abstract MaternARD <: StationaryARD
 
-@inline function dKij_dθp(mat::MaternARD, X::Matrix{Float64}, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(mat::MaternARD, X::M, i::Int, j::Int, p::Int, dim::Int)
     r=distij(metric(mat),X,i,j,dim)
     if p <= dim
         wdiffp=dist2ijk(metric(mat),X,i,j,p)
@@ -13,7 +13,7 @@ abstract MaternARD <: StationaryARD
         return NaN
     end
 end
-@inline function dKij_dθp(mat::MaternARD, X::Matrix{Float64}, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(mat::MaternARD, X::M, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
     return dKij_dθp(mat,X,i,j,p,dim)
 end
 

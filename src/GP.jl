@@ -119,7 +119,7 @@ Computes α*α'-cK\eye(nobsv) in-place, avoiding any memory allocation
 * `α::Vector` the alpha vector of the GP (defined as cK \ (Y-μ), and supplied by gp.alpha)
 * nobsv
 """
-function get_ααinvcKI!(ααinvcKI::Matrix, cK::AbstractPDMat, α::Vector)
+function get_ααinvcKI!{M<:MatF64}(ααinvcKI::M, cK::AbstractPDMat, α::Vector)
     nobsv = length(α)
     size(ααinvcKI) == (nobsv, nobsv) || throw(ArgumentError, 
                 @sprintf("Buffer for ααinvcKI should be a %dx%d matrix, not %dx%d",
@@ -135,8 +135,8 @@ end
 
 """ Update gradient of marginal log-likelihood """
 function update_mll_and_dmll!(gp::GP,
-    Kgrad::Matrix{Float64},
-    ααinvcKI::Matrix{Float64}
+    Kgrad::MatF64,
+    ααinvcKI::MatF64
     ; 
     noise::Bool=true, # include gradient component for the logNoise term
     mean::Bool=true, # include gradient components for the mean parameters
@@ -197,7 +197,7 @@ Calculates the posterior mean and variance of Gaussian Process at specified poin
 * `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
                                                     process at the specified points
 """ ->
-function predict(gp::GP, x::Matrix{Float64}; full_cov::Bool=false)
+function predict{M<:MatF64}(gp::GP, x::M; full_cov::Bool=false)
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
     if full_cov
         return _predict(gp, x)
@@ -215,10 +215,10 @@ function predict(gp::GP, x::Matrix{Float64}; full_cov::Bool=false)
 end
 
 # 1D Case for prediction
-predict(gp::GP, x::Vector{Float64}; full_cov::Bool=false) = predict(gp, x'; full_cov=full_cov)
+predict{V<:VecF64}(gp::GP, x::V; full_cov::Bool=false) = predict(gp, x'; full_cov=full_cov)
 
 ## compute predictions
-function _predict(gp::GP, X::Array{Float64})
+function _predict{M<:MatF64}(gp::GP, X::M)
     n = size(X, 2)
     cK = cov(gp.k, X, gp.X)
     Lck = whiten(gp.cK, cK')
@@ -231,7 +231,7 @@ end
 
 
 # Sample from the GP 
-function rand!(gp::GP, X::Matrix{Float64}, A::DenseMatrix)
+function rand!{M<:MatF64}(gp::GP, X::M, A::DenseMatrix)
     nobsv = size(X,2)
     n_sample = size(A,2)
 
@@ -248,18 +248,18 @@ function rand!(gp::GP, X::Matrix{Float64}, A::DenseMatrix)
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobsv, n_sample)))
 end
 
-function rand(gp::GP, X::Matrix{Float64}, n::Int)
+function rand{M<:MatF64}(gp::GP, X::M, n::Int)
     nobsv=size(X,2)
     A = Array(Float64, nobsv, n)
     return rand!(gp, X, A)
 end
 
 # Sample from 1D GP
-rand(gp::GP, x::Vector{Float64}, n::Int) = rand(gp, x', n)
+rand{V<:VecF64}(gp::GP, x::V, n::Int) = rand(gp, x', n)
 
 # Generate only one sample from the GP and returns a vector
-rand(gp::GP,X::Matrix{Float64}) = vec(rand(gp,X,1))
-rand(gp::GP,x::Vector{Float64}) = vec(rand(gp,x',1))
+rand{M<:MatF64}(gp::GP,X::M) = vec(rand(gp,X,1))
+rand{V<:VecF64}(gp::GP,x::V) = vec(rand(gp,x',1))
 
 
 function get_params(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
