@@ -1,4 +1,4 @@
-julia 0.4
+julia 0.5
 Optim 0.5-
 PDMats 0.3-
 Distances 0.2-
