@@ -1,5 +1,11 @@
 # News
 
+## Version 0.4.0 (2016-10-04)
+* Julia requirement moved up to version 0.5
+* Major speed improvements for fitting of GP object, and for covariance and gradient calculations
+* New `Masked` kernel
+* Various bug fixes
+
 ## Version 0.3.0 (2016-07-11)
 * Introduced `KernelData` type to recycle calculations
 * Removed Winston plotting functions and implemented PyPlot as an alternative
