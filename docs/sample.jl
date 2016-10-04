@@ -6,7 +6,7 @@ srand(13579)
 
 # Select mean and covariance function
 mZero = MeanZero()
-kern = SE(0.0,0.0)
+kern = SE(0.0,0.0)*Mat(3/2,2.0,0.5) 
 
 # First sample from GP prior
 gp = GP(m=mZero,k=kern)     
@@ -42,5 +42,5 @@ end
 p2 = plot(layers...)
 
 # Write plots to PNGs
-draw(PNG("prior_samples.png", 800px, 600px), p1)
-draw(PNG("posterior_samples.png", 800px, 600px), p2)
+draw(PDF("prior_samples.png", 800px, 600px), p1)
+draw(PDF("posterior_samples.png", 800px, 600px), p2)
