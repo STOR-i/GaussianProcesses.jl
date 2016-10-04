@@ -176,7 +176,7 @@ After specifying a mean and covariance function it's straightforward to sample f
 ```
 # Select mean and covariance function
 mZero = MeanZero()
-kern = SE(0.0,0.0)
+kern = SE(0.0,0.0)*Mat(3/2,2.0,0.5) 
 
 # Specify the GP prior
 gp = GP(m=mZero,k=kern)     
