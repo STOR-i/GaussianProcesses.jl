@@ -9,7 +9,10 @@ import Base: rand, rand!, mean, cov, push!
 # Functions that should be available to package
 # users should be explicitly exported here
 
-export GP, predict, SumKernel, ProdKernel, Noise, Kernel, SE, SEIso, SEArd, Periodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Mat, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, optimize!
+export GP, predict, SumKernel, ProdKernel, Masked, Noise, Kernel, SE, SEIso, SEArd, Periodic, FixedPeriodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Mat, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, optimize!
+
+typealias MatF64 AbstractMatrix{Float64}
+typealias VecF64 AbstractVector{Float64}
 
 # all package code should be included here
 include("means/meanFunctions.jl")

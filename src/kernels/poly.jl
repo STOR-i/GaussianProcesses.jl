@@ -17,22 +17,22 @@ type Poly <: Kernel
     Poly(lc::Float64, lσ::Float64, deg::Int64) = new(exp(lc), exp(2.0*lσ), deg)
 end
 
-function KernelData(k::Poly, X::Matrix{Float64})
+function KernelData{M<:MatF64}(k::Poly, X::M)
     XtX=X'*X
     Base.LinAlg.copytri!(XtX, 'U')
     LinIsoData(XtX)
 end
-kernel_data_key(k::Poly, X::Matrix{Float64}) = :LinIsoData
+kernel_data_key{M<:MatF64}(k::Poly, X::M) = :LinIsoData
 
 _cov(poly::Poly, xTy) = poly.σ2*(poly.c.+xTy).^poly.deg
-function cov(poly::Poly, x::Vector{Float64}, y::Vector{Float64})
+function cov{V1<:VecF64,V2<:VecF64}(poly::Poly, x::V1, y::V2)
     K = _cov(poly, dot(x,y))
 end
-function cov!(cK::AbstractMatrix, poly::Poly, X::Matrix{Float64}, data::LinIsoData)
+function cov!{M<:MatF64}(cK::MatF64, poly::Poly, X::M, data::LinIsoData)
     cK[:,:] = _cov(poly, data.XtX)
     return cK
 end
-function cov(poly::Poly, X::Matrix{Float64}, data::LinIsoData)
+function cov{M<:MatF64}(poly::Poly, X::M, data::LinIsoData)
     K = _cov(poly, data.XtX)
     return K
 end
@@ -49,14 +49,14 @@ end
 
 @inline dk_dlc(poly::Poly, xTy::Float64) = poly.c*poly.deg*poly.σ2*(poly.c+xTy).^(poly.deg-1)
 @inline dk_dlσ(poly::Poly, xTy::Float64) = 2.0*_cov(poly,xTy)
-@inline function dKij_dθp(poly::Poly, X::Matrix{Float64}, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(poly::Poly, X::M, i::Int, j::Int, p::Int, dim::Int)
     if p==1
         return dk_dlc(poly, dotij(X,i,j,dim))
     else
         return dk_dlσ(poly, dotij(X,i,j,dim))
     end
 end
-@inline function dKij_dθp(poly::Poly, X::Matrix{Float64}, data::LinIsoData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(poly::Poly, X::M, data::LinIsoData, i::Int, j::Int, p::Int, dim::Int)
     if p==1
         return dk_dlc(poly, data.XtX[i,j])
     else

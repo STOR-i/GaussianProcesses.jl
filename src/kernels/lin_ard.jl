@@ -15,7 +15,7 @@ type LinArd <: Kernel
     LinArd(ll::Vector{Float64}) = new(exp(ll),size(ll,1))
 end
 
-function cov(lin::LinArd, x::Vector{Float64}, y::Vector{Float64})
+function cov{V1<:VecF64,V2<:VecF64}(lin::LinArd, x::V1, y::V2)
     K = dot(x./lin.ℓ,y./lin.ℓ)
     return K
 end
@@ -24,7 +24,7 @@ type LinArdData <: KernelData
     XtX_d::Array{Float64,3}
 end
 
-function KernelData(k::LinArd, X::Matrix{Float64})
+function KernelData{M<:MatF64}(k::LinArd, X::M)
     dim,n=size(X)
     XtX_d = Array(Float64,n,n,dim)
     for d in 1:dim
@@ -33,13 +33,13 @@ function KernelData(k::LinArd, X::Matrix{Float64})
     end
     LinArdData(XtX_d)
 end
-kernel_data_key(k::LinArd, X::Matrix{Float64}) = :LinArdData
-function cov(lin::LinArd, X::Matrix{Float64})
+kernel_data_key{M<:MatF64}(k::LinArd, X::M) = :LinArdData
+function cov{M<:MatF64}(lin::LinArd, X::M)
     K = (X./lin.ℓ)' * (X./lin.ℓ)
     Base.LinAlg.copytri!(K, 'U')
     return K
 end
-function cov!(cK::AbstractMatrix, lin::LinArd, X::Matrix{Float64}, data::LinArdData)
+function cov!{M<:MatF64}(cK::MatF64, lin::LinArd, X::M, data::LinArdData)
     dim,n=size(X)
     cK[:,:] = 0.0
     for d in 1:dim
@@ -47,7 +47,7 @@ function cov!(cK::AbstractMatrix, lin::LinArd, X::Matrix{Float64}, data::LinArdD
     end
     return cK
 end
-function cov(lin::LinArd, X::Matrix{Float64}, data::LinArdData)
+function cov{M<:MatF64}(lin::LinArd, X::M, data::LinArdData)
     nobsv=size(X,2)
     K = zeros(Float64,nobsv,nobsv)
     cov!(K,lin,X,data)
@@ -64,14 +64,14 @@ function set_params!(lin::LinArd, hyp::Vector{Float64})
 end
 
 @inline dk_dll(lin::LinArd, xy::Float64, d::Int) = -2.0*xy/lin.ℓ[d]^2
-@inline function dKij_dθp(lin::LinArd, X::Matrix{Float64}, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(lin::LinArd, X::M, i::Int, j::Int, p::Int, dim::Int)
     if p<=dim
         return dk_dll(lin, dotijp(X,i,j,p), p)
     else
         return NaN
     end
 end
-@inline function dKij_dθp(lin::LinArd, X::Matrix{Float64}, data::LinArdData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(lin::LinArd, X::M, data::LinArdData, i::Int, j::Int, p::Int, dim::Int)
     if p<=dim
         return dk_dll(lin, data.XtX_d[i,j,p],p)
     else

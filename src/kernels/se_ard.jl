@@ -29,19 +29,8 @@ num_params(se::SEArd) = length(se.iℓ2) + 1
 metric(se::SEArd) = WeightedSqEuclidean(se.iℓ2)
 cov(se::SEArd, r::Float64) = se.σ2*exp(-0.5*r)
 
-function grad_kern(se::SEArd, x::Vector{Float64}, y::Vector{Float64})
-    r = distance(se, x, y)
-    exp_r = exp(-0.5*r)
-    wdiff = ((x-y).^2).*se.iℓ2
-    
-    g1   = se.σ2.*wdiff*exp_r   #dK_d(log ℓ)
-    g2 = 2.0*se.σ2*exp_r        #dK_d(log σ)
-    
-    return [g1; g2]
-end
-
 @inline dk_dll(se::SEArd, r::Float64, wdiffp::Float64) = wdiffp*cov(se,r)
-@inline function dKij_dθp(se::SEArd, X::Matrix{Float64}, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(se::SEArd, X::M, i::Int, j::Int, p::Int, dim::Int)
     if p <= dim
         return dk_dll(se, distij(metric(se),X,i,j,dim), distijk(metric(se),X,i,j,p))
     elseif p==dim+1
@@ -50,6 +39,6 @@ end
         return NaN
     end
 end
-@inline function dKij_dθp(se::SEArd, X::Matrix{Float64}, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(se::SEArd, X::M, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
     return dKij_dθp(se,X,i,j,p,dim)
 end

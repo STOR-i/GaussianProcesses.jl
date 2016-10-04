@@ -2,6 +2,7 @@ using GaussianProcesses, Base.Test
 using GaussianProcesses: get_params, get_param_names, KernelData, EmptyData
 using GaussianProcesses: set_params!, num_params, grad_stack!
 using GaussianProcesses: GP, MeanConst, update_mll!, update_mll_and_dmll!
+using GaussianProcesses: StationaryARD
 import Calculus
 
 function test_cov(kern::Kernel, X::Matrix{Float64})
@@ -79,6 +80,27 @@ function test_dmLL(kern::Kernel, X::Matrix{Float64}, y::Vector{Float64})
     end
 end
 
+function test_masked(kern::Kernel, x::Matrix{Float64}, y::Vector{Float64})
+    masked = Masked(kern, [1])
+    test_cov(masked, x)
+    test_grad_stack(masked, x)
+    test_gradient(masked, x)
+    test_dmLL(masked, x, y)
+end
+
+# This is a bit of a hack, to remove one parameter
+# from an ARD kernel to make it have the right number
+# of parameters when masked
+function test_masked(kern::Union{StationaryARD,LinArd}, x::Matrix{Float64}, y::Vector{Float64})
+    par = get_params(kern)[2:end]
+    k_masked = typeof(kern)([par[1]], par[2:end]...)
+    masked = Masked(k_masked, [1])
+    test_cov(masked, x)
+    test_grad_stack(masked, x)
+    test_gradient(masked, x)
+    test_dmLL(masked, x, y)
+end
+
 function test_Kernel(kern::Kernel, x::Matrix{Float64}, y::Vector{Float64})
     t = typeof(kern)
     println("\tTesting $(t)...")
@@ -87,6 +109,7 @@ function test_Kernel(kern::Kernel, x::Matrix{Float64}, y::Vector{Float64})
     test_grad_stack(kern, x)
     test_gradient(kern, x)
     test_dmLL(kern, x, y)
+    test_masked(kern, x, y)
 end
     
 d, n = 2, 4

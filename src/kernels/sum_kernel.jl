@@ -15,7 +15,7 @@ type SumData <: KernelData
     keys::Vector{Symbol}
 end
 
-function KernelData(sumkern::SumKernel, X::Matrix{Float64})
+function KernelData{M<:MatF64}(sumkern::SumKernel, X::M)
     datadict = Dict{Symbol, KernelData}()
     datakeys = Symbol[]
     for k in sumkern.kerns
@@ -27,7 +27,7 @@ function KernelData(sumkern::SumKernel, X::Matrix{Float64})
     end
     SumData(datadict, datakeys)
 end
-kernel_data_key(sumkern::SumKernel, X::Matrix{Float64}) = :SumData
+kernel_data_key{M<:MatF64}(sumkern::SumKernel, X::M) = :SumData
 
 function show(io::IO, sumkern::SumKernel, depth::Int = 0)
     pad = repeat(" ", 2 * depth)
@@ -37,7 +37,7 @@ function show(io::IO, sumkern::SumKernel, depth::Int = 0)
     end
 end
 
-function cov(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
+function cov{V1<:VecF64,V2<:VecF64}(sumkern::SumKernel, x::V1, y::V2)
     s = 0.0
     for k in sumkern.kerns
         s += cov(k, x, y)
@@ -45,14 +45,14 @@ function cov(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
     return s
 end
 
-function cov!(s::Matrix{Float64}, sumkern::SumKernel, X::Matrix{Float64}, data::SumData)
+function cov!{M<:MatF64}(s::MatF64, sumkern::SumKernel, X::M, data::SumData)
     s[:,:] = 0.0
     for (ikern,kern) in enumerate(sumkern.kerns)
         addcov!(s, kern, X, data.datadict[data.keys[ikern]])
     end
     return s
 end
-function cov(sumkern::SumKernel, X::Matrix{Float64}, data::SumData)
+function cov{M<:MatF64}(sumkern::SumKernel, X::M, data::SumData)
     d, nobsv = size(X)
     s = zeros(nobsv, nobsv)
     cov!(s, sumkern, X, data)
@@ -86,7 +86,7 @@ function set_params!(sumkern::SumKernel, hyp::Vector{Float64})
     end
 end
 
-function grad_kern(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
+function grad_kern{V1<:VecF64,V2<:VecF64}(sumkern::SumKernel, x::V1, y::V2)
      dk = Array(Float64, 0)
       for k in sumkern.kerns
         append!(dk,grad_kern(k, x, y))
@@ -94,7 +94,7 @@ function grad_kern(sumkern::SumKernel, x::Vector{Float64}, y::Vector{Float64})
     dk
 end
 
-@inline function dKij_dθp(sumkern::SumKernel, X::Matrix{Float64}, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(sumkern::SumKernel, X::M, i::Int, j::Int, p::Int, dim::Int)
     s=0
     for k in sumkern.kerns
         np = num_params(k)
@@ -104,7 +104,7 @@ end
         s += np
     end
 end
-@inline function dKij_dθp(sumkern::SumKernel, X::Matrix{Float64}, data::SumData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(sumkern::SumKernel, X::M, data::SumData, i::Int, j::Int, p::Int, dim::Int)
     s=0
     for (ikern,kern) in enumerate(sumkern.kerns)
         np = num_params(kern)
@@ -114,7 +114,7 @@ end
         s += np
     end
 end
-function grad_slice!(dK::AbstractMatrix, sumkern::SumKernel, X::Matrix{Float64}, data::KernelData, p::Int)
+function grad_slice!{M<:MatF64}(dK::MatF64, sumkern::SumKernel, X::M, data::SumData, p::Int)
     s=0
     for (ikern,kern) in enumerate(sumkern.kerns)
         np = num_params(kern)

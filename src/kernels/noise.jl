@@ -14,7 +14,7 @@ type Noise <: Kernel
 end
 
 cov(noise::Noise, sameloc::Bool) = noise.σ2*sameloc
-function cov(noise::Noise, x::Vector{Float64}, y::Vector{Float64})
+function cov{V1<:VecF64,V2<:VecF64}(noise::Noise, x::V1, y::V2)
     return cov(noise, (norm(x-y)<eps()))
 end
 
@@ -28,9 +28,9 @@ function set_params!(noise::Noise, hyp::Vector{Float64})
 end
 
 @inline dk_dlσ(noise::Noise, sameloc=Bool) = 2.0*cov(noise,sameloc)
-@inline function dKij_dθp(noise::Noise, X::Matrix{Float64}, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(noise::Noise, X::M, i::Int, j::Int, p::Int, dim::Int)
     return dk_dlσ(noise, norm(X[:,i]-X[:,j])<eps())
 end
-@inline function dKij_dθp(noise::Noise, X::Matrix{Float64}, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(noise::Noise, X::M, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
     return dKij_dθp(noise, X, i, j, p, dim)
 end

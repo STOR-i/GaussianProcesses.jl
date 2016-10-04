@@ -11,7 +11,7 @@
 # Return:
 * `D::Matrix{Float64}`: Matrix D such that `D[i,j] = f(X[:,i], Y[:,j])`
 """ ->
-function map_column_pairs!(D::Matrix{Float64}, f::Function, X::Matrix{Float64}, Y::Matrix{Float64})
+function map_column_pairs!{M1<:MatF64,M2<:MatF64,M3<:MatF64}(D::M1, f::Function, X::M2, Y::M3)
     dim, nobs1 = size(X)
     nobs2 = size(Y,2)
     dim == size(Y,1) || throw(ArgumentError("Input observation matrices must have consistent dimensions"))
@@ -37,7 +37,7 @@ end
 # Return:
 * `D::Matrix{Float64}`: Symmetric matrix D such that `D[i,j] = f(X[:,i], Y[:,j])`
 """ ->
-function map_column_pairs(f::Function, X::Matrix{Float64}, Y::Matrix{Float64})
+function map_column_pairs{M1<:MatF64,M2<:MatF64}(f::Function, X::M1, Y::M2)
     nobs1 = size(X,2)
     nobs2 = size(Y,2)
     D= Array(Float64, nobs1, nobs2)
@@ -58,7 +58,7 @@ Populates D matrix by applying a function to each pair of columns of an input ma
 * `D::Matrix{Float64}`: Symmetric matrix D such that `D[i,j] = d(X[:,i], X[:,j])`
 
 """ ->
-function map_column_pairs!(D::AbstractMatrix{Float64}, f::Function, X::Matrix{Float64})
+function map_column_pairs!{M1<:MatF64,M2<:MatF64}(D::M1, f::Function, X::M2)
     dim, nobsv = size(X)
     size(D,1) == nobsv || throw(ArgumentError(@sprintf("D has %d rows, while X has %d columns (should be same)", 
                                                        size(D,1), nobsv)))
@@ -84,7 +84,7 @@ Constructs matrix by applying a function to each pair of columns of an input mat
 * `D::Matrix{Float64}`: Symmetric matrix D such that `D[i,j] = d(X[:,i], X[:,j])`
 
 """ ->
-function map_column_pairs(f::Function, X::Matrix{Float64})
+function map_column_pairs{M<:MatF64}(f::Function, X::M)
     dim, nobsv = size(X)
     D = Array(Float64, nobsv, nobsv)
     for i in 1:nobsv

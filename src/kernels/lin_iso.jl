@@ -17,24 +17,24 @@ type LinIsoData <: KernelData
     XtX::Matrix{Float64}
 end
 
-function KernelData(k::LinIso, X::Matrix{Float64})
+function KernelData{M<:MatF64}(k::LinIso, X::M)
     XtX=X'*X
     Base.LinAlg.copytri!(XtX, 'U') # make sure it's symmetric
     LinIsoData(XtX)
 end
-kernel_data_key(k::LinIso, X::Matrix{Float64}) = :LinIsoData
+kernel_data_key{M<:MatF64}(k::LinIso, X::M) = :LinIsoData
 
 _cov(lin::LinIso, xTy) = xTy ./ lin.ℓ2
-function cov(lin::LinIso, x::Vector{Float64}, y::Vector{Float64})
+function cov{V1<:VecF64,V2<:VecF64}(lin::LinIso, x::V1, y::V2)
     K = _cov(lin, dot(x,y))
     return K
 end
 
-function cov(lin::LinIso, X::Matrix{Float64}, data::LinIsoData)
+function cov{M<:MatF64}(lin::LinIso, X::M, data::LinIsoData)
     K = _cov(lin, data.XtX)
     return K
 end
-function cov!(cK::AbstractMatrix, lin::LinIso, X::Matrix{Float64}, data::LinIsoData)
+function cov!{M<:MatF64}(cK::MatF64, lin::LinIso, X::M, data::LinIsoData)
     iℓ2 = 1/lin.ℓ2
     @inbounds @simd for I in eachindex(cK,data.XtX)
         cK[I] = data.XtX[I]*iℓ2
@@ -52,14 +52,14 @@ function set_params!(lin::LinIso, hyp::Vector{Float64})
 end
 
 @inline dk_dll(lin::LinIso, xTy::Float64) = -2.0*_cov(lin,xTy)
-@inline function dKij_dθp(lin::LinIso, X::Matrix{Float64}, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(lin::LinIso, X::M, i::Int, j::Int, p::Int, dim::Int)
     if p==1
         return dk_dll(lin, dotij(X,i,j,dim))
     else
         return NaN
     end
 end
-@inline function dKij_dθp(lin::LinIso, X::Matrix{Float64}, data::LinIsoData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(lin::LinIso, X::M, data::LinIsoData, i::Int, j::Int, p::Int, dim::Int)
     if p==1
         return dk_dll(lin, data.XtX[i,j])
     else
