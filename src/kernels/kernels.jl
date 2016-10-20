@@ -88,7 +88,6 @@ function multcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::KernelData)
     return cK
 end
 
-
 function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::KernelData, p::Int)
     dim = size(X,1)
     nobsv = size(X,2)
@@ -195,3 +194,4 @@ include("noise.jl")             # White noise covariance function
 include("sum_kernel.jl")        # Sum of kernels
 include("prod_kernel.jl")       # Product of kernels
 include("masked_kernel.jl")     # Masked kernels (apply to subset of X dims)
+include("fixed_kernel.jl")      # Fixed kernels (fix some hyperparameters)
