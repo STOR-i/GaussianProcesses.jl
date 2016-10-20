@@ -29,4 +29,4 @@ end
 se = SEIso(1.0, 1.0)
 test_optim(se, x, y)
 rq = RQIso(1.0, 1.0, 1.0)
-test_fixed(se, x, y)
+test_fixed(rq, x, y)
