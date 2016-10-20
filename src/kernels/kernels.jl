@@ -179,7 +179,7 @@ function show(io::IO, k::Kernel, depth::Int = 0)
     print(io, "\n")
 end
 
-num_params(k::Kernel)=throw(ArgumentError, "Undefined number of parameters")
+num_params(k::Kernel)=throw(ArgumentError("Undefined number of parameters"))
 
 include("stationary.jl")
 
