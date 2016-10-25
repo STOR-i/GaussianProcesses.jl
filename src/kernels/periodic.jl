@@ -45,3 +45,34 @@ cov(pe::Periodic, r::Float64) = pe.σ2*exp(-2.0/pe.ℓ2*sin(π*r/pe.p)^2)
     end
 end
 
+
+type FixedPeriodic <: Isotropic
+    ℓ2::Float64
+    σ2::Float64
+    p::Float64      # Log of period
+    FixedPeriodic(ll::Float64, lσ::Float64, lp::Float64) = new(exp(2*ll), exp(2*lσ), exp(lp))
+end
+
+get_params(pe::FixedPeriodic) = Float64[log(pe.ℓ2)/2.0, log(pe.σ2)/2.0]
+get_param_names(pe::FixedPeriodic) = [:ll, :lσ]
+num_params(pe::FixedPeriodic) = 2
+metric(pe::FixedPeriodic) = Euclidean()
+
+function set_params!(pe::FixedPeriodic, hyp::Vector{Float64})
+    length(hyp) == 2 || throw(ArgumentError("FixedPeriodic function has only two parameters"))
+    pe.ℓ2, pe.σ2 = exp(2.0*hyp[1:2])
+end
+
+cov(pe::FixedPeriodic, r::Float64) = pe.σ2*exp(-2.0/pe.ℓ2*sin(π*r/pe.p)^2)
+
+
+@inline dk_dll(pe::FixedPeriodic, r::Float64) = 4.0*pe.σ2*(sin(π*r/pe.p)^2/pe.ℓ2)*exp(-2.0/pe.ℓ2*sin(π*r/pe.p)^2)  # dK_dlogℓ
+@inline function dk_dθp(pe::FixedPeriodic, r::Float64, p::Int)
+	if p==1
+		dk_dll(pe, r)
+	elseif p==2
+		dk_dlσ(pe, r)
+	else
+		return NaN
+	end
+end
