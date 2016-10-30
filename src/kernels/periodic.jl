@@ -44,4 +44,3 @@ cov(pe::Periodic, r::Float64) = pe.σ2*exp(-2.0/pe.ℓ2*sin(π*r/pe.p)^2)
         return NaN
     end
 end
-

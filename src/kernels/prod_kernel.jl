@@ -126,6 +126,28 @@ end
         s += np
     end
 end
+function grad_slice!{M1<:MatF64, M2<:MatF64}(
+    dK::M1, prodkern::ProdKernel, X::M2, data::SumData, iparam::Int)
+    istart=0
+    for (ikern,kern) in enumerate(prodkern.kerns)
+        np = num_params(kern)
+        if istart<iparam<=np+istart
+            grad_slice!(dK, kern, X, data.datadict[data.keys[ikern]],iparam-istart)
+            break
+        end
+        istart += np
+    end
+    istart=0
+    for (ikern,kern) in enumerate(prodkern.kerns)
+        np = num_params(kern)
+        if !(istart<iparam<=np+istart)
+            multcov!(dK, kern, X, data.datadict[data.keys[ikern]])
+        end
+        istart += np
+    end
+
+    return dK
+end
 
 # Multiplication operators
 function *(k1::ProdKernel, k2::Kernel)
