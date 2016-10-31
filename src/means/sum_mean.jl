@@ -57,7 +57,7 @@ end
 function grad_mean(summean::SumMean, x::Vector{Float64})
      dm = Array(Float64, 0)
       for m in summean.means
-        append!(dm,grad_meanf(m, x))
+        append!(dm,grad_mean(m, x))
       end
     dm
 end
