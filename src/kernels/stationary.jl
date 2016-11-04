@@ -16,8 +16,10 @@ function cov{M1<:MatF64,M2<:MatF64}(k::Stationary, x1::M1, x2::M2)
     nobsv1 = size(x1, 2)
     nobsv2 = size(x2, 2)
     R = distance(k, x1, x2)
-    for i in 1:nobsv1, j in 1:nobsv2
-        R[i,j] = cov(k, R[i,j])
+    for i in 1:nobsv1
+        for j in 1:nobsv2
+            R[i,j] = cov(k, R[i,j])
+        end
     end
     return R
 end
@@ -25,18 +27,22 @@ end
 function cov{M<:MatF64}(k::Stationary, X::M, data::StationaryData)
     nobsv = size(X, 2)
     R = copy(distance(k, X, data))
-    for i in 1:nobsv, j in 1:i
-        @inbounds R[i,j] = cov(k, R[i,j])
-        @inbounds R[j,i] = R[i,j]
+    for i in 1:nobsv
+        for j in 1:i
+            @inbounds R[i,j] = cov(k, R[i,j])
+            @inbounds R[j,i] = R[i,j]
+        end
     end
     return R
 end
 function cov!{M<:MatF64}(cK::MatF64, k::Stationary, X::M, data::StationaryData)
     nobsv = size(X, 2)
     R = distance(k, X, data)
-    for i in 1:nobsv, j in 1:i
-        @inbounds cK[i,j] = cov(k, R[i,j])
-        @inbounds cK[j,i] = cK[i,j]
+    for i in 1:nobsv
+        for j in 1:i
+            @inbounds cK[i,j] = cov(k, R[i,j])
+            @inbounds cK[j,i] = cK[i,j]
+        end
     end
     return cK
 end
