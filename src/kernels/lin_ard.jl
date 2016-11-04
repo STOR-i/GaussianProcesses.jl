@@ -33,7 +33,7 @@ function KernelData{M<:MatF64}(k::LinArd, X::M)
     end
     LinArdData(XtX_d)
 end
-kernel_data_key{M<:MatF64}(k::LinArd, X::M) = :LinArdData
+kernel_data_key{M<:MatF64}(k::LinArd, X::M) = "LinArdData"
 function cov{M<:MatF64}(lin::LinArd, X::M)
     K = (X./lin.ℓ)' * (X./lin.ℓ)
     Base.LinAlg.copytri!(K, 'U')

@@ -11,13 +11,13 @@ type SumKernel <: Kernel
 end
 
 type SumData <: KernelData
-    datadict::Dict{Symbol, KernelData}
-    keys::Vector{Symbol}
+    datadict::Dict{String, KernelData}
+    keys::Vector{String}
 end
 
 function KernelData{M<:MatF64}(sumkern::SumKernel, X::M)
-    datadict = Dict{Symbol, KernelData}()
-    datakeys = Symbol[]
+    datadict = Dict{String, KernelData}()
+    datakeys = String[]
     for k in sumkern.kerns
         data_type = kernel_data_key(k, X)
         if !haskey(datadict, data_type)
@@ -27,7 +27,8 @@ function KernelData{M<:MatF64}(sumkern::SumKernel, X::M)
     end
     SumData(datadict, datakeys)
 end
-kernel_data_key{M<:MatF64}(sumkern::SumKernel, X::M) = :SumData
+kernel_data_key{M<:MatF64}(sumkern::SumKernel, X::M) = join(["SumData" ;
+     sort(unique(kernel_data_key(k, X) for k in sumkern.kerns))])
 
 function show(io::IO, sumkern::SumKernel, depth::Int = 0)
     pad = repeat(" ", 2 * depth)

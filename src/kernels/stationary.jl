@@ -82,7 +82,7 @@ function KernelData{M<:MatF64}(k::Isotropic, X::M)
      IsotropicData(distance(k, X))
 end
 function kernel_data_key{M<:MatF64}(k::Isotropic, X::M)
-    return Symbol(:IsotropicData_, metric(k))
+    return @sprintf("%s_%s", "IsotropicData", metric(k))
 end
 
 distance{M<:MatF64}(k::Isotropic, X::M, data::IsotropicData) = data.R
@@ -126,7 +126,7 @@ function KernelData{M<:MatF64}(k::StationaryARD, X::M)
     end
     StationaryARDData(dist_stack)
 end
-kernel_data_key{M<:MatF64}(k::StationaryARD, X::M) = Symbol(:StationaryARDData, metric(k))
+kernel_data_key{M<:MatF64}(k::StationaryARD, X::M) = @sprintf("%s_%s", "StationaryARDData", metric(k))
 
 function distance{M<:MatF64}(k::StationaryARD, X::M, data::StationaryARDData)
     ### This commented section is slower than recalculating the distance from scratch...
