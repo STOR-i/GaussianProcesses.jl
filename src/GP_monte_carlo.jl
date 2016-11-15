@@ -95,7 +95,7 @@ function likelihood!(gp::GPMC)
     Σ = cov(gp.k, gp.X, gp.data)
     gp.cK = PDMat(Σ + 1e-8*eye(gp.nobsv))
     F = gp.cK*gp.v + μ
-    gp.ll = sum(loglik(gp.lik,F,gp.y))
+    gp.ll = sum(logdens(gp.lik,F,gp.y))
 end
 
 function conditional(gp::GPMC, X::Matrix{Float64})

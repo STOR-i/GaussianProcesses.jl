@@ -12,4 +12,5 @@ function show(io::IO, lik::Likelihood, depth::Int = 0)
 end
 
 include("bernoulli.jl")
+include("exponential.jl")
 include("gaussian.jl")

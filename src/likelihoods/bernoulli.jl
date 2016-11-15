@@ -10,7 +10,7 @@ type Bernoulli <: Likelihood
     Bernoulli() = new()
 end
 
-function loglik(bernoulli::Bernoulli, f::Vector{Float64}, y::Vector{Bool})
+function logdens(bernoulli::Bernoulli, f::Vector{Float64}, y::Vector{Bool})
     return Float64[yi? log(Φ(fi)) : 1.0 - log(Φ(fi)) for (fi,yi) in zip(f,y)]
 end
 
