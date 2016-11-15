@@ -11,7 +11,7 @@ A function for optimising the GP hyperparameters based on type II maximum likeli
 # Return:
 * `::Optim.MultivariateOptimizationResults{Float64,1}`: optimization results object
 """ ->
-function optimize!(gp::GP; lik::Bool=false, mean::Bool=true, kern::Bool=true, method::Optim.Optimizer=NelderMead(), kwargs...)
+function optimize!(gp::GPMC; lik::Bool=false, mean::Bool=true, kern::Bool=true, method::Optim.Optimizer=NelderMead(), kwargs...)
     function ll(hyp::Vector{Float64})
         set_params!(gp, hyp; lik=lik, mean=mean, kern=kern)
         likelihood!(gp)

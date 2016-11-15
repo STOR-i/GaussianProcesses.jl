@@ -1,17 +1,17 @@
 @doc """
 # Description
-A function for running a variety of MCMC algorithms for estimating the GP hyperparameters. This function uses the MCMC algorithms provided by the Lora package and the user is referred to this package for further details.
+A function for running a variety of MCMC algorithms for estimating the GP hyperparameters. This function uses the MCMC algorithms provided by the Klara package and the user is referred to this package for further details.
 
 # Arguments:
 * `gp::GP`: Predefined Gaussian process type
 * `start::Vector{Float64}`: Select a starting value, default is taken as current GP parameters
-* `sampler::Lora.MCSampler`: MCMC sampler selected from the Lora package
-* `mcrange::Lora.BasicMCRange`: Choose number of MCMC iterations and burnin length, default is nsteps=5000, burnin = 1000
+* `sampler::Klara.MCSampler`: MCMC sampler selected from the Klara package
+* `mcrange::Klara.BasicMCRange`: Choose number of MCMC iterations and burnin length, default is nsteps=5000, burnin = 1000
 """ ->
-function mcmc(gp::GP;
+function mcmc(gp::GPMC;
               start::Vector{Float64}=[gp.v; get_params(gp)],
-              sampler::Lora.MCSampler=Lora.MH(ones(gp.nobsv+length(get_params(gp)))),
-              mcrange::Lora.BasicMCRange=BasicMCRange(nsteps=5000, burnin=1000))
+              sampler::Klara.MCSampler=Klara.MH(ones(gp.nobsv+length(get_params(gp)))),
+              mcrange::Klara.BasicMCRange=BasicMCRange(nsteps=5000, burnin=1000))
 
  
     store = [gp.v; get_params(gp)] #store original parameters
@@ -46,7 +46,7 @@ function mcmc(gp::GP;
     job = BasicMCJob(model, sampler, mcrange, starting,tuner=tune)   #set-up MCMC job
     print(job)                                                       #display MCMC set-up for the user
     run(job)
-    chain = Lora.output(job)
+    chain = Klara.output(job)
     set_params!(gp,store)      #reset the parameters stored in the GP to original values
     return chain.value
 end    
