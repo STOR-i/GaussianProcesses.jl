@@ -9,7 +9,7 @@ Y = [rand(Distributions.Exponential(sin(X[i]).^2)) for i in 1:20]
 #build the model
 k = Mat(3/2,1.0,1.0) 
 l = Exponential()
-gp = GPMC{Real}(X', vec(Y), MeanZero(), k, l)
+gp = GPMC(X', vec(Y), MeanZero(), k, l)
 
 
 optimize!(gp)
