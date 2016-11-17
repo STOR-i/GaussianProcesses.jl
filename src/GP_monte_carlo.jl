@@ -34,8 +34,9 @@ type GPMC{T<:Real}
     dim::Int                # Dimension of inputs
     
     # Auxiliary data
+    μ::Vector{Float64} 
+    Σ::Matrix{Float64} 
     cK::AbstractPDMat       # (k + exp(2*obsNoise))
-    alpha::Vector{Float64}  # (k + exp(2*obsNoise))⁻¹y
     ll::Float64             # Log-likelihood of general GPMC model
     
 
@@ -61,40 +62,57 @@ end
 # Creates GP object for 1D case
 GPMC(x::Vector{Float64}, y::Vector, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPMC(x', y, meanf, kernel, lik)
 
-@doc """
-# Description
-Fits an existing Gaussian process to a set of training points.
-
-# Arguments:
-* `gp::GP`: Exiting Gaussian process object
-* `X::Matrix{Float64}`: Input observations
-* `y::Vector{Float64}`: Output observations
-
-# Returns:
-* `gp::GP`            : A Gaussian process fitted to the training data
-""" ->
-function fit!(gp::GPMC, X::Matrix{Float64}, y::Vector{Float64})
-    length(y) == size(X,2) || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-    gp.X = X
-    gp.y = y
-    gp.data = KernelData(gp.k, X)
-    gp.dim, gp.nobsv = size(X)
-    initialise_mll!(gp)
-    return gp
-end
-
-fit!(gp::GPMC, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 
 
 #Likelihood function of general GP model
 function likelihood!(gp::GPMC)
     # log p(Y|v,θ) 
-    μ = mean(gp.m,gp.X)
-    Σ = cov(gp.k, gp.X, gp.data)
-    gp.cK = PDMat(Σ + 1e-8*eye(gp.nobsv))
-    F = gp.cK*gp.v + μ
-    gp.ll = sum(logdens(gp.lik,F,gp.y))
+    gp.μ = mean(gp.m,gp.X)
+    gp.Σ = cov(gp.k, gp.X, gp.data)
+    gp.cK = PDMat(gp.Σ + 1e-8*eye(gp.nobsv))
+    F = gp.cK*gp.v + gp.μ
+    gp.ll = sum(log_dens(gp.lik,F,gp.y))
 end
+
+function d_likelihood!(gp::GPMC;
+                       lik::Bool=true,  # include gradient component for the likelihood parameters
+                       mean::Bool=true, # include gradient components for the mean parameters
+                       kern::Bool=true, # include gradient components for the spatial kernel parameters
+)
+    # dlog p(Y|v,θ)
+    n_lik_params = num_params(gp.lik)
+    n_mean_params = num_params(gp.m)
+    n_kern_params = num_params(gp.k)
+
+    likelihood!(gp)
+    gp.dll = Array(Float64,gp.nobsv + lik*n_lik_params + mean*n_mean_params + kern*n_kern_params)
+
+    gp.dll[1:gp.nobsv] = dlog_dens(gp.lik, gp.cK*gp.v + gp.μ, gp.y)
+
+    i=1  #NEEDS COMPLETING
+    if lik
+        Mgrads = grad_stack(gp.m, gp.X)
+        for j in 1:n_lik_params
+            gp.dll[i] = dot(Mgrads[:,j],gp.alpha)
+            i += 1
+        end
+    end
+    if mean
+        Mgrads = grad_stack(gp.m, gp.X)
+        for j in 1:n_mean_params
+            gp.dll[i] = dot(Mgrads[:,j],gp.alpha)
+            i += 1
+        end
+    end
+    if kern
+        for iparam in 1:n_kern_params
+            grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
+            gp.dll[i] = vecdot(Kgrad,ααinvcKI)/2.0
+            i+=1
+        end
+    end
+end    
+
 
 function conditional(gp::GPMC, X::Matrix{Float64})
     n = size(X, 2)
@@ -118,48 +136,18 @@ end
     * `X::Matrix{Float64}`:  matrix of points for which one would would like to predict the value of the process.
                            (each column of the matrix is a point)
 
-    # Keyword Arguments
-    * `full_cov::Bool`: indicates whether full covariance matrix should be returned instead of only variances (default is false)
-
     # Returns:
     * `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
                                                         process at the specified points
     """ ->
 function predict(gp::GPMC, X::Matrix{Float64}; full_cov::Bool=false)
     size(X,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
-    if typeof(gp.lik)!=Gaussian
         return μ, σ2 = conditional(gp, X)
-    else
-        if full_cov
-            return _predict(gp, X)
-        else
-            ## Calculate prediction for each point independently
-            μ = Array(Float64, size(X,2))
-            σ2 = similar(μ)
-            for k in 1:size(X,2)
-                m, sig = _predict(gp, X[:,k:k])
-                μ[k] = m[1]
-                σ2[k] = max(full(sig)[1,1], 0.0)
-            end
-            return μ, σ2
-        end
-    end
 end
 
 # 1D Case for prediction
 predict(gp::GPMC, x::Vector{Float64}; full_cov::Bool=false) = predict(gp, x'; full_cov=full_cov)
 
-## compute predictions
-function _predict(gp::GPMC, X::Array{Float64})
-    n = size(X, 2)
-    cK = cov(gp.k, X, gp.X)
-    Lck = whiten(gp.cK, cK')
-    mu = mean(gp.m,X) + cK*gp.alpha        # Predictive mean
-    Sigma_raw = cov(gp.k, X) - Lck'Lck # Predictive covariance
-    # Hack to get stable covariance
-    Sigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+1e-8*sum(diag(Sigma_raw))/n*eye(n)) end 
-    return (mu, Sigma)
-end
 
 function get_params(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     params = Float64[]
