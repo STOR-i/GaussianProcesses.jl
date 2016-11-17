@@ -31,7 +31,7 @@ function mcmc(gp::GPMC;
     function lpost(hyp::Vector{Float64})  #log-target
         set_params!(gp, hyp)
         likelihood!(gp)
-        return gp.mLL + logpdf(prior,hyp)
+        return gp.ll + logpdf(prior,hyp)
     end
     
     # function dlogpost(hyp::Vector{Float64}) #gradient of the log-target

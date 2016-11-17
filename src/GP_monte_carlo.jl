@@ -37,8 +37,6 @@ type GPMC{T<:Real}
     cK::AbstractPDMat       # (k + exp(2*obsNoise))
     alpha::Vector{Float64}  # (k + exp(2*obsNoise))⁻¹y
     ll::Float64             # Log-likelihood of general GPMC model
-    mLL::Float64            # Marginal log-likelihood
-    dmLL::Vector{Float64}   # Gradient marginal log-likelihood
     
 
     function GPMC{S<:Real}(X::Matrix{Float64}, y::Vector{S}, m::Mean, k::Kernel, lik::Likelihood)
@@ -90,7 +88,7 @@ fit!(gp::GPMC, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 
 #Likelihood function of general GP model
 function likelihood!(gp::GPMC)
-    # log p(Y,v|θ) 
+    # log p(Y|v,θ) 
     μ = mean(gp.m,gp.X)
     Σ = cov(gp.k, gp.X, gp.data)
     gp.cK = PDMat(Σ + 1e-8*eye(gp.nobsv))
