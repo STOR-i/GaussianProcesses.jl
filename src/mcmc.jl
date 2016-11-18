@@ -17,7 +17,6 @@ function mcmc(gp::GPMC;
     store = [gp.v; get_params(gp)] #store original parameters
     npara = length(store)  #number of parameters
 
-    prior = Distributions.MvNormal(zeros(npara),eye(npara)) #default prior
     # prior=Array(Distribution,npara)
     # if eltype(prior)==Distributions.Distribution
     # logprior(prior,hyp::Vector{Float64}) = sum([logpdf(prior[i],hyp[i]) for i=1:npara])
@@ -30,8 +29,7 @@ function mcmc(gp::GPMC;
     
     function lpost(hyp::Vector{Float64})  #log-target
         set_params!(gp, hyp)
-        likelihood!(gp)
-        return gp.ll + logpdf(prior,hyp)
+        return log_posterior(gp)
     end
     
     # function dlogpost(hyp::Vector{Float64}) #gradient of the log-target

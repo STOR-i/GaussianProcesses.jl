@@ -19,7 +19,7 @@ include("means/meanFunctions.jl")
 include("kernels/kernels.jl")
 include("likelihoods/likelihoods.jl")
 include("utils.jl")
-include("GP_monte_carlo.jl")
+include("GPMC.jl")
 include("mcmc.jl")
 include("optimize.jl")
 

@@ -74,8 +74,14 @@ function likelihood!(gp::GPMC)
     gp.ll = sum(log_dens(gp.lik,F,gp.y))
 end
 
+function log_posterior(gp::GPMC)
+    likelihood!(gp)
+    #log p(θ,v|y) = log p(y|v,θ) + log p(v) +  log p(θ)
+    return gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi))  #need to create prior type for parameters
+end    
+
 function d_likelihood!(gp::GPMC;
-                       lik::Bool=true,  # include gradient component for the likelihood parameters
+                       lik::Bool=true,  # include gradient components for the likelihood parameters
                        mean::Bool=true, # include gradient components for the mean parameters
                        kern::Bool=true, # include gradient components for the spatial kernel parameters
 )
