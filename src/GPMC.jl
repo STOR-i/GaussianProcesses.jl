@@ -3,27 +3,26 @@ import Base.show
 
 @doc """
 # Description
-Fits a Gaussian process to a set of training points. The Gaussian process is defined in terms of its mean and covaiance (kernel) functions, which are user defined. As a default it is assumed that the observations are noise free.
+Fits a Gaussian process to a set of training points. The Gaussian process is defined in terms of its likelihood function and mean and covaiance (kernel) functions, which are user defined. 
 
 # Constructors:
-    GP(X, y, m, k, logNoise)
-    GPMC(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8) # observation-free constructor
+    GP(X, y, m, k, lik)
+    GPMC(; m=MeanZero(), k=SE(0.0, 0.0), lik=Likelihood()) # observation-free constructor
 
 # Arguments:
 * `X::Matrix{Float64}`: Input observations
 * `y::Vector{Float64}`: Output observations
 * `m::Mean`           : Mean function
 * `k::kernel`         : Covariance function
-* `logNoise::Float64` : Log of the standard deviation for the observation noise. The default is -1e8, which is equivalent to assuming no observation noise.
+* `lik::likelihood`   : Likelihood function
 
 # Returns:
-* `gp::GPMC`            : Gaussian process object, fitted to the training data if provided
+* `gp::GPMC`          : Gaussian process object, fitted to the training data if provided
 """ ->
 type GPMC{T<:Real}
     m:: Mean                # Mean object
     k::Kernel               # Kernel object
     lik::Likelihood         # Likelihood is Gaussian for GPMC regression
-    # logNoise::Float64       # log standard deviation of observation noise
     
     # Observation data
     nobsv::Int              # Number of observations
@@ -74,11 +73,6 @@ function likelihood!(gp::GPMC)
     gp.ll = sum(log_dens(gp.lik,F,gp.y))
 end
 
-function log_posterior(gp::GPMC)
-    likelihood!(gp)
-    #log p(θ,v|y) = log p(y|v,θ) + log p(v) +  log p(θ)
-    return gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi))  #need to create prior type for parameters
-end    
 
 function d_likelihood!(gp::GPMC;
                        lik::Bool=true,  # include gradient components for the likelihood parameters
@@ -99,14 +93,14 @@ function d_likelihood!(gp::GPMC;
     if lik
         Mgrads = grad_stack(gp.m, gp.X)
         for j in 1:n_lik_params
-            gp.dll[i] = dot(Mgrads[:,j],gp.alpha)
+            gp.dll[i] = dot(Mgrads[:,j],gp.v)
             i += 1
         end
     end
     if mean
         Mgrads = grad_stack(gp.m, gp.X)
         for j in 1:n_mean_params
-            gp.dll[i] = dot(Mgrads[:,j],gp.alpha)
+            gp.dll[i] = dot(Mgrads[:,j],gp.v)
             i += 1
         end
     end
@@ -119,6 +113,16 @@ function d_likelihood!(gp::GPMC;
     end
 end    
 
+function log_posterior(gp::GPMC)
+    likelihood!(gp)
+    #log p(θ,v|y) = log p(y|v,θ) + log p(v) +  log p(θ)
+    return gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi))  #need to create prior type for parameters
+end    
+
+function dlog_posterior(gp::GPMC)
+    d_likelihood!(gp::GPMC)
+    gp.dll + dlog_prior()
+end    
 
 function conditional(gp::GPMC, X::Matrix{Float64})
     n = size(X, 2)
@@ -157,7 +161,8 @@ predict(gp::GPMC, x::Vector{Float64}; full_cov::Bool=false) = predict(gp, x'; fu
 
 function get_params(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     params = Float64[]
-    if lik  && num_params(gp.lik)>0; push!(params, get_params(gp.lik)); end
+    append!(params, gp.v)
+    if lik  && num_params(gp.lik)>0; append!(params, get_params(gp.lik)); end
     if mean;  append!(params, get_params(gp.m)); end
     if kern; append!(params, get_params(gp.k)); end
     return params

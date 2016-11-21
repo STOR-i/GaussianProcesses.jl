@@ -9,14 +9,11 @@ A function for running a variety of MCMC algorithms for estimating the GP hyperp
 * `mcrange::Klara.BasicMCRange`: Choose number of MCMC iterations and burnin length, default is nsteps=5000, burnin = 1000
 """ ->
 function mcmc(gp::GPMC;
-              start::Vector{Float64}=[gp.v; get_params(gp)],
-              sampler::Klara.MCSampler=Klara.MH(ones(gp.nobsv+length(get_params(gp)))),
-              mcrange::Klara.BasicMCRange=BasicMCRange(nsteps=5000, burnin=1000))
+              start::Vector{Float64}=get_params(gp),
+              sampler::Klara.MCSampler=Klara.MH(length(get_params(gp))),
+              mcrange::Klara.BasicMCRange=Klara.BasicMCRange(nsteps=5000, burnin=1000))
 
  
-    store = [gp.v; get_params(gp)] #store original parameters
-    npara = length(store)  #number of parameters
-
     # prior=Array(Distribution,npara)
     # if eltype(prior)==Distributions.Distribution
     # logprior(prior,hyp::Vector{Float64}) = sum([logpdf(prior[i],hyp[i]) for i=1:npara])
@@ -45,7 +42,7 @@ function mcmc(gp::GPMC;
     print(job)                                                       #display MCMC set-up for the user
     run(job)
     chain = Klara.output(job)
-    set_params!(gp,store)      #reset the parameters stored in the GP to original values
+    set_params!(gp,start)      #reset the parameters stored in the GP to original values
     return chain.value
 end    
     

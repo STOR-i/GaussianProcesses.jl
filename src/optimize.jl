@@ -18,7 +18,7 @@ function optimize!(gp::GPMC; lik::Bool=false, mean::Bool=true, kern::Bool=true, 
         return -gp.ll
     end
 
-    init = [gp.v; get_params(gp;  lik=lik, mean=mean, kern=kern)]  # Initial hyperparameter values
+    init = get_params(gp;  lik=lik, mean=mean, kern=kern)  # Initial hyperparameter values
     results = optimize(ll, init, method, kwargs...)                     # Run optimizer
     print(results)
 end

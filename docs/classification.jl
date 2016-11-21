@@ -44,3 +44,15 @@ ax[:fill_between](xtest,u,l, facecolor="blue", alpha=0.25)
 
 
 out = mcmc(gp)
+
+
+# prev_ll=gp.ll
+# prev_params=[gp.v; GaussianProcesses.get_params(gp)]
+# prev_dll = [GaussianProcesses.dlog_dens(gp.lik, gp.cK*gp.v + gp.μ, gp.y);0.0;0.0;0.0]
+
+# dθ=[1.0;zeros(gp.nobsv-1);0.0;0.0;0.0]*1e-4
+# GaussianProcesses.set_params!(gp, prev_params.+dθ)
+# GaussianProcesses.likelihood!(gp)
+
+# println("change in log likelihood: ", gp.ll-prev_ll)
+# println("expected change in log likelihood: ", dot(prev_dll, dθ))
