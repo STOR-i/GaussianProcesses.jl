@@ -53,7 +53,7 @@ type GPMC{T<:Real}
         L L^T = K
         =#
         gp = new(m, k, lik, nobsv, X, y, v, KernelData(k, X), dim)
-        likelihood!(gp)
+        ll!(gp)
         return gp
     end
 end
@@ -64,7 +64,7 @@ GPMC(x::Vector{Float64}, y::Vector, meanf::Mean, kernel::Kernel, lik::Likelihood
 
 
 #Likelihood function of general GP model
-function likelihood!(gp::GPMC)
+function ll!(gp::GPMC)
     # log p(Y|v,θ) 
     gp.μ = mean(gp.m,gp.X)
     gp.Σ = cov(gp.k, gp.X, gp.data)
@@ -74,8 +74,8 @@ function likelihood!(gp::GPMC)
 end
 
 
-function d_likelihood!(gp::GPMC;
-                       lik::Bool=true,  # include gradient components for the likelihood parameters
+function dll!(gp::GPMC;
+                       lik::Bool=false,  # include gradient components for the likelihood parameters
                        mean::Bool=true, # include gradient components for the mean parameters
                        kern::Bool=true, # include gradient components for the spatial kernel parameters
 )
@@ -84,7 +84,7 @@ function d_likelihood!(gp::GPMC;
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
 
-    likelihood!(gp)
+    ll!(gp)
     gp.dll = Array(Float64,gp.nobsv + lik*n_lik_params + mean*n_mean_params + kern*n_kern_params)
 
     gp.dll[1:gp.nobsv] = dlog_dens(gp.lik, gp.cK*gp.v + gp.μ, gp.y)
@@ -100,7 +100,7 @@ function d_likelihood!(gp::GPMC;
     if mean
         Mgrads = grad_stack(gp.m, gp.X)
         for j in 1:n_mean_params
-            gp.dll[i] = dot(Mgrads[:,j],gp.v)
+            gp.dll[i] = dot(gp.dll[1:gp.nobsv],Mgrads[:,j])
             i += 1
         end
     end
@@ -119,14 +119,14 @@ function d_likelihood!(gp::GPMC;
 end    
 
 function log_posterior(gp::GPMC)
-    likelihood!(gp)
+    ll!(gp)
     #log p(θ,v|y) = log p(y|v,θ) + log p(v) +  log p(θ)
     return gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi))  #need to create prior type for parameters
 end    
 
 function dlog_posterior(gp::GPMC)
-    d_likelihood!(gp::GPMC)
-    gp.dll + dlog_prior()
+    dll!(gp::GPMC)
+    gp.dll -gp.v #+ dlog_prior()
 end    
 
 function conditional(gp::GPMC, X::Matrix{Float64})
