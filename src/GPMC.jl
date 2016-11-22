@@ -37,7 +37,7 @@ type GPMC{T<:Real}
     Σ::Matrix{Float64} 
     cK::AbstractPDMat       # (k + exp(2*obsNoise))
     ll::Float64             # Log-likelihood of general GPMC model
-    
+    dll::Vector{Float64}    # Gradient of log-likelihood
 
     function GPMC{S<:Real}(X::Matrix{Float64}, y::Vector{S}, m::Mean, k::Kernel, lik::Likelihood)
         dim, nobsv = size(X)
@@ -74,7 +74,7 @@ function ll!(gp::GPMC)
 end
 
 
-function dll!(gp::GPMC;
+function dll!(gp::GPMC, Kgrad::MatF64;
                        lik::Bool=false,  # include gradient components for the likelihood parameters
                        mean::Bool=true, # include gradient components for the mean parameters
                        kern::Bool=true, # include gradient components for the spatial kernel parameters
@@ -87,7 +87,7 @@ function dll!(gp::GPMC;
     ll!(gp)
     gp.dll = Array(Float64,gp.nobsv + lik*n_lik_params + mean*n_mean_params + kern*n_kern_params)
 
-    gp.dll[1:gp.nobsv] = dlog_dens(gp.lik, gp.cK*gp.v + gp.μ, gp.y)
+    gp.dll[1:gp.nobsv] = dlog_dens(gp.lik, gp.cK*gp.v + gp.μ, gp.y).*(gp.cK.chol.factors*ones(gp.nobsv))
 
     i=1  #NEEDS COMPLETING
     if lik
