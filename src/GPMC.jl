@@ -107,7 +107,12 @@ function d_likelihood!(gp::GPMC;
     if kern
         for iparam in 1:n_kern_params
             grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
-            gp.dll[i] = vecdot(Kgrad,ααinvcKI)/2.0
+            Phi=chol(gp.Σ + 1e-8*eye(gp.nobsv))'\Kgrad*inv(chol(gp.Σ + 1e-8*eye(gp.nobsv)))
+            Phi=tril(Phi) #see Murray(2016)
+            for i in 1:gp.nobsv
+                Phi[i,i] = Phi[i,i]/2.0
+            end
+            gp.dll[i] = dot(gp.dll[1:gp.nobsv],Phi*gp.v)
             i+=1
         end
     end
