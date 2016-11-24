@@ -69,7 +69,7 @@ function ll!(gp::GPMC)
     gp.μ = mean(gp.m,gp.X)
     gp.Σ = cov(gp.k, gp.X, gp.data)
     gp.cK = PDMat(gp.Σ + 1e-6*eye(gp.nobsv))
-    F = (chol(gp.Σ + 1e-6*eye(gp.nobsv))')*gp.v+ gp.μ #gp.cK*gp.v + gp.μ
+    F = unwhiten(gp.cK,gp.v) + gp.μ #gp.cK*gp.v + gp.μ
     gp.ll = sum(log_dens(gp.lik,F,gp.y))
 end
 
@@ -85,9 +85,10 @@ function dll!(gp::GPMC, Kgrad::MatF64;
     n_kern_params = num_params(gp.k)
 
     ll!(gp)
+    Lv = unwhiten(gp.cK,gp.v)
     gp.dll = Array(Float64,gp.nobsv + lik*n_lik_params + mean*n_mean_params + kern*n_kern_params)
-
-    gp.dll[1:gp.nobsv] = dlog_dens(gp.lik, (chol(gp.Σ + 1e-6*eye(gp.nobsv))')*gp.v+ gp.μ, gp.y).*(chol(gp.Σ + 1e-8*eye(gp.nobsv))'*ones(gp.nobsv))
+    dl_df=dlog_dens(gp.lik, Lv + gp.μ, gp.y)
+    gp.dll[1:gp.nobsv] = chol(gp.Σ + 1e-6*eye(gp.nobsv))*dl_df
 
     i=gp.nobsv+1  #NEEDS COMPLETING
     if lik
@@ -100,19 +101,19 @@ function dll!(gp::GPMC, Kgrad::MatF64;
     if mean
         Mgrads = grad_stack(gp.m, gp.X)
         for j in 1:n_mean_params
-            gp.dll[i] = dot(gp.dll[1:gp.nobsv],Mgrads[:,j])
+            gp.dll[i] = dot(dl_df,Mgrads[:,j])
             i += 1
         end
     end
     if kern
         for iparam in 1:n_kern_params
             GaussianProcesses.grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
-            Phi=chol(gp.Σ + 1e-8*eye(gp.nobsv))'\Kgrad*inv(chol(gp.Σ + 1e-8*eye(gp.nobsv)))
+            Phi=(chol(gp.Σ + 1e-8*eye(gp.nobsv))')\Kgrad*inv(chol(gp.Σ + 1e-8*eye(gp.nobsv)))
             Phi=tril(Phi) #see Murray(2016)
             for j in 1:gp.nobsv
                 Phi[j,j] = Phi[j,j]/2.0
             end
-            gp.dll[i] = dot(gp.dll[1:gp.nobsv],Phi*gp.v)
+            gp.dll[i] = dot(dl_df,Phi*gp.v)
             i+=1
         end
     end
@@ -138,7 +139,7 @@ function conditional(gp::GPMC, X::Matrix{Float64})
     Sigma_raw = cov(gp.k, X) - Lck'Lck # Predictive covariance #NOTE: should look at a diagonal versions as well of this
     # Hack to get stable covariance
     fSigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+1e-8*sum(diag(Sigma_raw))/n*eye(n)) end
-    fmu =  mean(gp.m,X) + Lck'*((chol(gp.Σ + 1e-8*eye(gp.nobsv))')*gp.v)        # Predictive mean
+    fmu =  mean(gp.m,X) + Lck'*unwhiten(gp.cK,gp.v)        # Predictive mean
     return fmu, fSigma
 end
 
