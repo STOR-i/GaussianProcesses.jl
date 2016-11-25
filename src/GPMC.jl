@@ -74,11 +74,12 @@ function ll!(gp::GPMC)
 end
 
 
+#Derivative of Cholesky decomposition, see Murray(2016). Differentiation of the Cholesky decomposition. arXiv.1602.07527
 function dL(Σ::MatF64, Kgrad::MatF64)
     nobsv = size(Σ,1)
     L=chol(Σ + 1e-8*eye(nobsv))'
-    Phi=L\Kgrad*inv(L)'
-    Phi=tril(Phi) #see Murray(2016)
+    Phi=(L\(L\Kgrad)')' #L\Kgrad*inv(L')
+    Phi=tril(Phi) 
     for j in 1:nobsv
         Phi[j,j] = Phi[j,j]/2.0
     end
