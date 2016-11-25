@@ -108,12 +108,15 @@ function dll!(gp::GPMC, Kgrad::MatF64;
     if kern
         for iparam in 1:n_kern_params
             GaussianProcesses.grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
-            Phi=(chol(gp.Σ + 1e-8*eye(gp.nobsv))')\Kgrad*inv(chol(gp.Σ + 1e-8*eye(gp.nobsv)))
+            L=chol(gp.Σ + 1e-8*eye(gp.nobsv))'
+            Phi=L\Kgrad*inv(L)'
             Phi=tril(Phi) #see Murray(2016)
             for j in 1:gp.nobsv
                 Phi[j,j] = Phi[j,j]/2.0
             end
-            gp.dll[i] = dot(dl_df,Phi*gp.v)
+            dL = L*Phi
+            Df_θ = dL * gp.v
+            gp.dll[i] = dot(dl_df, Df_θ)
             i+=1
         end
     end
