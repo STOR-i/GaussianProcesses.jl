@@ -74,6 +74,18 @@ function ll!(gp::GPMC)
 end
 
 
+function dL(Σ::MatF64, Kgrad::MatF64)
+    nobsv = size(Σ,1)
+    L=chol(Σ + 1e-8*eye(nobsv))'
+    Phi=L\Kgrad*inv(L)'
+    Phi=tril(Phi) #see Murray(2016)
+    for j in 1:nobsv
+        Phi[j,j] = Phi[j,j]/2.0
+    end
+    dL = L*Phi
+    return dL
+end
+
 function dll!(gp::GPMC, Kgrad::MatF64;
                        lik::Bool=false,  # include gradient components for the likelihood parameters
                        mean::Bool=true, # include gradient components for the mean parameters
@@ -108,19 +120,13 @@ function dll!(gp::GPMC, Kgrad::MatF64;
     if kern
         for iparam in 1:n_kern_params
             GaussianProcesses.grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
-            L=chol(gp.Σ + 1e-8*eye(gp.nobsv))'
-            Phi=L\Kgrad*inv(L)'
-            Phi=tril(Phi) #see Murray(2016)
-            for j in 1:gp.nobsv
-                Phi[j,j] = Phi[j,j]/2.0
-            end
-            dL = L*Phi
-            Df_θ = dL * gp.v
+            deriv_L = dL(gp.Σ, Kgrad)
+            Df_θ = deriv_L * gp.v
             gp.dll[i] = dot(dl_df, Df_θ)
             i+=1
         end
     end
-end    
+end
 
 function log_posterior(gp::GPMC)
     ll!(gp)
@@ -244,4 +250,3 @@ function show(io::IO, gp::GPMC)
         end            
     end
 end
-
