@@ -53,7 +53,7 @@ type GPMC{T<:Real}
         L L^T = K
         =#
         gp = new(m, k, lik, nobsv, X, y, v, KernelData(k, X), dim)
-        ll!(gp)
+        initialise_ll!(gp)
         return gp
     end
 end
@@ -63,14 +63,28 @@ GPMC(x::Vector{Float64}, y::Vector, meanf::Mean, kernel::Kernel, lik::Likelihood
 
 
 
-#log-likelihood function of general GP model
-function ll!(gp::GPMC)
+#initiate the log-likelihood function of a general GP model
+function initialise_ll!(gp::GPMC)
     # log p(Y|v,θ) 
     gp.μ = mean(gp.m,gp.X)
     gp.Σ = cov(gp.k, gp.X, gp.data)
     gp.cK = PDMat(gp.Σ + 1e-6*eye(gp.nobsv))
-    F = unwhiten(gp.cK,gp.v) + gp.μ #gp.cK*gp.v + gp.μ
-    gp.ll = sum(log_dens(gp.lik,F,gp.y))
+    F = unwhiten(gp.cK,gp.v) + gp.μ 
+    gp.ll = sum(log_dens(gp.lik,F,gp.y)) #Log-likelihood
+end
+
+# modification of initialise_ll! that reuses existing matrices to avoid
+# unnecessary memory allocations, which speeds things up significantly
+function update_ll!(gp::GPMC)
+    Σbuffer = gp.cK.mat
+    gp.μ = mean(gp.m,gp.X)
+    cov!(Σbuffer, gp.k, gp.X, gp.data)
+    chol_buffer = gp.cK.chol.factors
+    copy!(chol_buffer, Σbuffer)
+    chol = cholfact!(Symmetric(chol_buffer))
+    gp.cK = PDMats.PDMat(Σbuffer, chol)
+    F = unwhiten(gp.cK,gp.v) + gp.μ
+    gp.ll = sum(log_dens(gp.lik,F,gp.y)) #Log-likelihood
 end
 
 
@@ -88,18 +102,24 @@ function dL(Σ::MatF64, Kgrad::MatF64)
 end
 
 # dlog p(Y|v,θ)
-function dll!(gp::GPMC, Kgrad::MatF64;
-                       lik::Bool=false,  # include gradient components for the likelihood parameters
-                       mean::Bool=true, # include gradient components for the mean parameters
-                       kern::Bool=true, # include gradient components for the spatial kernel parameters
-)
-
+""" Update gradient of the log-likelihood """
+function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
+    lik::Bool=false,  # include gradient components for the likelihood parameters
+    mean::Bool=true, # include gradient components for the mean parameters
+    kern::Bool=true, # include gradient components for the spatial kernel parameters
+    )
+    size(Kgrad) == (gp.nobsv, gp.nobsv) || throw(ArgumentError, 
+    @sprintf("Buffer for Kgrad should be a %dx%d matrix, not %dx%d",
+             gp.nobsv, gp.nobsv,
+             size(Kgrad,1), size(Kgrad,2)))
+    
     n_lik_params = num_params(gp.lik)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
 
-    ll!(gp)
+    update_ll!(gp)
     Lv = unwhiten(gp.cK,gp.v)
+    
     gp.dll = Array(Float64,gp.nobsv + lik*n_lik_params + mean*n_mean_params + kern*n_kern_params)
     dl_df=dlog_dens_df(gp.lik, Lv + gp.μ, gp.y)
     gp.dll[1:gp.nobsv] = chol(gp.Σ + 1e-6*eye(gp.nobsv))*dl_df
@@ -121,7 +141,7 @@ function dll!(gp::GPMC, Kgrad::MatF64;
     end
     if kern
         for iparam in 1:n_kern_params
-            GaussianProcesses.grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
+            grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
             deriv_L = dL(gp.Σ, Kgrad)
             Df_θ = deriv_L * gp.v
             gp.dll[i] = dot(dl_df, Df_θ)
@@ -130,16 +150,23 @@ function dll!(gp::GPMC, Kgrad::MatF64;
     end
 end
 
+
+function update_mll_and_dmll!(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
+    Kgrad = Array(Float64, gp.nobsv, gp.nobsv)
+    update_mll_and_dmll!(gp, Kgrad, lik=lik, mean=mean, kern=kern)
+end
+
+
 #log p(θ,v|y) = log p(y|v,θ) + log p(v) +  log p(θ)
 function log_posterior(gp::GPMC)
-    ll!(gp)
-    return gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi))  #need to create prior type for parameters
+    update_ll!(gp)
+    return gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) #need to create prior type for parameters
 end    
 
 #dlog p(θ,v|y) = dlog p(y|v,θ) + dlog p(v) +  dlog p(θ)
 function dlog_posterior(gp::GPMC, Kgrad::MatF64; lik::Bool=false, mean::Bool=true, kern::Bool=true)
-    dll!(gp::GPMC, Kgrad; lik=lik, mean=mean, kern=kern)
-    gp.dll + [-gp.v;zeros(num_params(gp.lik)+num_params(gp.m)+num_params(gp.k))] #+ dlog_prior()
+    update_ll_and_dll!(gp::GPMC, Kgrad; lik=lik, mean=mean, kern=kern)
+    gp.dll + [-gp.v;zeros(num_params(gp.lik)+num_params(gp.m)++num_params(gp.k))]   #+ dlog_prior()
 end    
 
 

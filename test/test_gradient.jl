@@ -24,8 +24,6 @@ function dL_exact(hyp::Vector{Float64}, iparam::Int)
     return dL(Σ, Kgrad)
 end
 
-
-
 function dL_numeric(hyp::Vector{Float64}, iparam::Int)
     set_params!(k, hyp)
     nobsv = size(X, 2)
@@ -43,7 +41,7 @@ function dL_numeric(hyp::Vector{Float64}, iparam::Int)
         deriv_L[i,j] = Calculus.gradient(θ->calc_L(θ,i,j), hyp[iparam])
     end
     return deriv_L
-end    
+end
 
 hyp = [1.0, 1.0]
 iparam = 1

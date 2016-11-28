@@ -17,7 +17,7 @@ function optimize!(gp::GPMC; lik::Bool=false, mean::Bool=true, kern::Bool=true,
     init = get_params(gp;  lik=lik, mean=mean, kern=kern)  # Initial hyperparameter values
     results = optimize(func,init; method=method, kwargs...)                     # Run optimizer
     set_params!(gp, results.minimum, lik=lik,mean=mean,kern=kern)
-    ll!(gp)
+    update_ll!(gp)
     return results
 end
 
@@ -27,7 +27,7 @@ function get_optim_target(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=
     function ll(hyp::Vector{Float64})
         try
             set_params!(gp, hyp; lik=lik, mean=mean, kern=kern)
-            ll!(gp)
+            update_ll!(gp)
             return -gp.ll
         catch err
             if !all(isfinite(hyp))
@@ -48,7 +48,7 @@ function get_optim_target(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=
     function ll_and_dll!(hyp::Vector{Float64}, grad::Vector{Float64})
         try
             set_params!(gp, hyp; lik=lik, mean=mean, kern=kern)
-            dll!(gp, Kgrad_buffer; lik=lik, mean=mean, kern=kern)
+            update_ll_and_dll!(gp, Kgrad_buffer; lik=lik, mean=mean, kern=kern)
             grad[:] = -gp.dll
             return -gp.ll
         catch err
