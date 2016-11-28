@@ -15,7 +15,7 @@ typealias MatF64 AbstractMatrix{Float64}
 typealias VecF64 AbstractVector{Float64}
 
 # all package code should be included here
-include("means/meanFunctions.jl")
+include("means/means.jl")
 include("kernels/kernels.jl")
 include("likelihoods/likelihoods.jl")
 include("utils.jl")

@@ -14,7 +14,7 @@ function log_dens(bernoulli::Bernoulli, f::Vector{Float64}, y::Vector{Bool})
     return Float64[yi? log(Φ(fi)) : log(1.0 - Φ(fi)) for (fi,yi) in zip(f,y)]
 end
 
-function dlog_dens(bernoulli::Bernoulli, f::Vector{Float64}, y::Vector{Bool})
+function dlog_dens_df(bernoulli::Bernoulli, f::Vector{Float64}, y::Vector{Bool})
     return Float64[yi? -φ(fi)/Φ(fi) : φ(fi)/(1.0 - Φ(fi)) for (fi,yi) in zip(f,y)]
 end                   
 

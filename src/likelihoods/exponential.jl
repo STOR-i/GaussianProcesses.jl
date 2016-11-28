@@ -15,7 +15,7 @@ function log_dens(exponential::Exponential, f::Vector{Float64}, y::Vector{Float6
     return [fi - exp(fi)*yi for (fi,yi) in zip(f,y)]
 end
 
-function dlog_dens(exponential::Exponential, f::Vector{Float64}, y::Vector{Float64})
+function dlog_dens_df(exponential::Exponential, f::Vector{Float64}, y::Vector{Float64})
     return [(1/exp(fi) - yi)*exp(fi) for (fi,yi) in zip(f,y)]
 end                   
 

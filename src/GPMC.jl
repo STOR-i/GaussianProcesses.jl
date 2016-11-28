@@ -87,12 +87,13 @@ function dL(Σ::MatF64, Kgrad::MatF64)
     return dL
 end
 
+# dlog p(Y|v,θ)
 function dll!(gp::GPMC, Kgrad::MatF64;
                        lik::Bool=false,  # include gradient components for the likelihood parameters
                        mean::Bool=true, # include gradient components for the mean parameters
                        kern::Bool=true, # include gradient components for the spatial kernel parameters
 )
-    # dlog p(Y|v,θ)
+
     n_lik_params = num_params(gp.lik)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
@@ -100,18 +101,18 @@ function dll!(gp::GPMC, Kgrad::MatF64;
     ll!(gp)
     Lv = unwhiten(gp.cK,gp.v)
     gp.dll = Array(Float64,gp.nobsv + lik*n_lik_params + mean*n_mean_params + kern*n_kern_params)
-    dl_df=dlog_dens(gp.lik, Lv + gp.μ, gp.y)
+    dl_df=dlog_dens_df(gp.lik, Lv + gp.μ, gp.y)
     gp.dll[1:gp.nobsv] = chol(gp.Σ + 1e-6*eye(gp.nobsv))*dl_df
 
     i=gp.nobsv+1  #NEEDS COMPLETING
-    if lik
+    if lik  && n_lik_params>0
         Mgrads = grad_stack(gp.m, gp.X)
         for j in 1:n_lik_params
             gp.dll[i] = dot(Mgrads[:,j],gp.v)
             i += 1
         end
     end
-    if mean
+    if mean && n_mean_params>0
         Mgrads = grad_stack(gp.m, gp.X)
         for j in 1:n_mean_params
             gp.dll[i] = dot(dl_df,Mgrads[:,j])
@@ -129,29 +130,18 @@ function dll!(gp::GPMC, Kgrad::MatF64;
     end
 end
 
+#log p(θ,v|y) = log p(y|v,θ) + log p(v) +  log p(θ)
 function log_posterior(gp::GPMC)
     ll!(gp)
-    #log p(θ,v|y) = log p(y|v,θ) + log p(v) +  log p(θ)
     return gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi))  #need to create prior type for parameters
 end    
 
+#dlog p(θ,v|y) = dlog p(y|v,θ) + dlog p(v) +  dlog p(θ)
 function dlog_posterior(gp::GPMC, Kgrad::MatF64; lik::Bool=false, mean::Bool=true, kern::Bool=true)
     dll!(gp::GPMC, Kgrad; lik=lik, mean=mean, kern=kern)
     gp.dll + [-gp.v;zeros(num_params(gp.lik)+num_params(gp.m)+num_params(gp.k))] #+ dlog_prior()
 end    
 
-function conditional(gp::GPMC, X::Matrix{Float64})
-    n = size(X, 2)
-    gp.Σ = cov(gp.k, gp.X, gp.data)
-    gp.cK = PDMat(gp.Σ + 1e-6*eye(gp.nobsv))
-    cK = cov(gp.k, X, gp.X)
-    Lck = whiten(gp.cK, cK')
-    Sigma_raw = cov(gp.k, X) - Lck'Lck # Predictive covariance #NOTE: should look at a diagonal versions as well of this
-    # Hack to get stable covariance
-    fSigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+1e-8*sum(diag(Sigma_raw))/n*eye(n)) end
-    fmu =  mean(gp.m,X) + Lck'*unwhiten(gp.cK,gp.v)        # Predictive mean
-    return fmu, fSigma
-end
 
 @doc """
     # Description
@@ -166,14 +156,37 @@ end
     * `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
                                                         process at the specified points
     """ ->
-function predict(gp::GPMC, X::Matrix{Float64}; full_cov::Bool=false)
-    size(X,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
-        return μ, σ2 = conditional(gp, X)
+function predict{M<:MatF64}(gp::GPMC, x::M; full_cov::Bool=false)
+    size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
+    if full_cov
+        return _predict(gp, x)
+    else
+        ## Calculate prediction for each point independently
+            μ = Array(Float64, size(x,2))
+            σ2 = similar(μ)
+        for k in 1:size(x,2)
+            m, sig = _predict(gp, x[:,k:k])
+            μ[k] = m[1]
+            σ2[k] = max(full(sig)[1,1], 0.0)
+        end
+        return μ, σ2
+    end
 end
 
 # 1D Case for prediction
-predict(gp::GPMC, x::Vector{Float64}; full_cov::Bool=false) = predict(gp, x'; full_cov=full_cov)
+predict{V<:VecF64}(gp::GPMC, x::V; full_cov::Bool=false) = predict(gp, x'; full_cov=full_cov)
 
+## compute predictions
+function _predict{M<:MatF64}(gp::GPMC, X::M)
+    n = size(X, 2)
+    cK = cov(gp.k, X, gp.X)
+    Lck = whiten(gp.cK, cK')
+    fmu =  mean(gp.m,X) + Lck'gp.v     # Predictive mean
+    Sigma_raw = cov(gp.k, X) - Lck'Lck # Predictive covariance 
+    # Hack to get stable covariance
+    fSigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+1e-8*sum(diag(Sigma_raw))/n*eye(n)) end
+    return fmu, fSigma
+end
 
 function get_params(gp::GPMC; lik::Bool=false, mean::Bool=true, kern::Bool=true)
     params = Float64[]
@@ -181,7 +194,7 @@ function get_params(gp::GPMC; lik::Bool=false, mean::Bool=true, kern::Bool=true)
     if lik  && num_params(gp.lik)>0
         append!(params, get_params(gp.lik))
     end
-    if mean
+    if mean && num_params(gp.m)>0
         append!(params, get_params(gp.m))
     end
     if kern
@@ -197,11 +210,11 @@ function set_params!(gp::GPMC, hyp::Vector{Float64}; lik::Bool=false, mean::Bool
 
     gp.v = hyp[1:gp.nobsv]
     i=gp.nobsv+1  
-    if lik  && n_lik_params>0;
+    if lik  && n_lik_params>0
         set_params!(gp.lik, hyp[i:i+n_lik_params-1]);
         i += n_lik_params
     end
-    if mean
+    if mean && n_mean_params>0
         set_params!(gp.m, hyp[i:i+n_mean_params-1])
         i += n_mean_params
     end

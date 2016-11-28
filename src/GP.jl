@@ -194,7 +194,7 @@ Calculates the posterior mean and variance of Gaussian Process at specified poin
 * `full_cov::Bool`: indicates whether full covariance matrix should be returned instead of only variances (default is false)
 
 # Returns:
-* `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
+* `(μ, σ²)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
                                                     process at the specified points
 """ ->
 function predict{M<:MatF64}(gp::GP, x::M; full_cov::Bool=false)

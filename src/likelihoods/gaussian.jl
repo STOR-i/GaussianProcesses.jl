@@ -13,6 +13,6 @@ type Gaussian <: Likelihood
     Gaussian(μ::Float64, lσ::Float64) = new(μ, exp(2*lσ))
 end
 
-function loglik(gaussian::Gaussian, f::Vector{Float64}, y::Vector{Float64})
+function log_dens(gaussian::Gaussian, f::Vector{Float64}, y::Vector{Float64})
     return Distributions.logpdf(Distributions.MvNormal(f,lik.σ2*eye(length(f))),y)
 end

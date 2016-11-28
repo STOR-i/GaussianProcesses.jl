@@ -1,6 +1,6 @@
 import Gadfly
 
-function plot1D(gp::GP; clim::Tuple{Float64, Float64}=(minimum(gp.X), maximum(gp.X)), CI::Float64=1.96, res::Int=1000)
+function plot1D(gp::GPMC; clim::Tuple{Float64, Float64}=(minimum(gp.X), maximum(gp.X)), CI::Float64=1.96, res::Int=1000)
 
         sx = (clim[2]-clim[1])/(res-1)
         x=collect(clim[1]:sx:clim[2])
@@ -14,7 +14,7 @@ function plot1D(gp::GP; clim::Tuple{Float64, Float64}=(minimum(gp.X), maximum(gp
 end
 
 
-function plot2D(gp::GP; clim::Tuple{Float64, Float64, Float64, Float64} = (minimum(gp.X[1,:]), maximum(gp.X[1,:]),
+function plot2D(gp::GPMC; clim::Tuple{Float64, Float64, Float64, Float64} = (minimum(gp.X[1,:]), maximum(gp.X[1,:]),
                                                                    minimum(gp.X[2,:]), maximum(gp.X[2,:])),
                 res::Int=50)
         sx = (clim[2]-clim[1])/(res-1)
@@ -31,7 +31,7 @@ function plot2D(gp::GP; clim::Tuple{Float64, Float64, Float64, Float64} = (minim
         Gadfly.plot(z=z,x=collect(clim[1]:sx:clim[2]),y=collect(clim[3]:sy:clim[4]),Gadfly.Geom.contour)
 end
 
-function Gadfly.plot(gp::GP; kwargs...)
+function Gadfly.plot(gp::GPMC; kwargs...)
     d, n = size(gp.X)
     if d>2
         error("Can only plot one or two dimensional Gaussian processes")

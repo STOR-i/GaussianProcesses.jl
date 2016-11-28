@@ -22,7 +22,8 @@ function grad_stack(m::Mean, X::Matrix{Float64})
     return mat
 end
 
-include("mConst.jl")         # Constant mean function, which also contains the zero mean function
+include("mZero.jl")          # Zero mean function
+include("mConst.jl")         # Constant mean function
 include("mLin.jl")           # Linear mean function
 include("mPoly.jl")          # Polynomial mean function
 include("sum_mean.jl")       # Sum mean functions

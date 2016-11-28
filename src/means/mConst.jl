@@ -13,14 +13,6 @@ type MeanConst <: Mean
     MeanConst(β::Float64) = new(β)
 end
 
-@doc """
-# Description
-Constructor for the zero mean function
-
-m(x) = 0
-""" ->
-MeanZero() = MeanConst(0.0)
-
 mean(mConst::MeanConst,x::Matrix{Float64}) =  fill(mConst.β, size(x,2))
 
 get_params(mConst::MeanConst) = Float64[mConst.β]
