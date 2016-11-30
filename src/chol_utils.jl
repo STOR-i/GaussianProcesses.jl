@@ -1,6 +1,6 @@
 # This file contains the code for differentiating the Cholesky decomposition
 
-function level2partition(A::Matrix{Float64}, j::Int)
+function level2partition{T<:Real}(A::DenseMatrix{T}, j::Int)
     N = size(A, 1)
     r = view(A, j, 1:j-1)
     d = view(A, j, j)
@@ -9,7 +9,8 @@ function level2partition(A::Matrix{Float64}, j::Int)
     return r, d, B, c
 end
 
-function chol_unblocked_rev!(L::Matrix{Float64}, A_bar)
+# Derivative of Cholesky decomposition, see Murray(2016). Differentiation of the Cholesky decomposition. arXiv.1602.07527
+function chol_unblocked_rev!{T<:Real}(L::DenseMatrix{T}, A_bar::DenseMatrix{T})
     N = size(A_bar, 1)
     for j in N:-1:1
         r, d, B, c = level2partition(L, j)
@@ -24,11 +25,14 @@ function chol_unblocked_rev!(L::Matrix{Float64}, A_bar)
         for i in eachindex(r_bar)
             r_bar[i] -= d_bar[1]*r[i]
         end
-        
-        LinAlg.BLAS.gemv!('T', -1.0, B, c_bar, 1.0, r_bar) # r_bar = r_bar - Bᵀ c_bar
-        LinAlg.BLAS.ger!(-1.0, c_bar, r, B_bar) # B_bar = B_bar - c_bar * r'
+
+        r_bar[:] = r_bar - B'c_bar
+        # LinAlg.BLAS.gemv!('T', -1.0, B, c_bar, 1.0, r_bar) # r_bar = r_bar - Bᵀ c_bar
+        B_bar[:,:] = B_bar - c_bar * r'
+        # LinAlg.BLAS.ger!(-1.0, c_bar, r, B_bar) # B_bar = B_bar - c_bar * r'
         d_bar[1] /= 2
     end
     
     return A_bar
 end
+

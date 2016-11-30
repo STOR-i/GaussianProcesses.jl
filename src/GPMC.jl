@@ -34,7 +34,6 @@ type GPMC{T<:Real}
     
     # Auxiliary data
     μ::Vector{Float64} 
-    Σ::Matrix{Float64} 
     cK::AbstractPDMat       # (k + exp(2*obsNoise))
     ll::Float64             # Log-likelihood of general GPMC model
     dll::Vector{Float64}    # Gradient of log-likelihood
@@ -67,8 +66,8 @@ GPMC(x::Vector{Float64}, y::Vector, meanf::Mean, kernel::Kernel, lik::Likelihood
 function initialise_ll!(gp::GPMC)
     # log p(Y|v,θ) 
     gp.μ = mean(gp.m,gp.X)
-    gp.Σ = cov(gp.k, gp.X, gp.data)
-    gp.cK = PDMat(gp.Σ + 1e-6*eye(gp.nobsv))
+    Σ = cov(gp.k, gp.X, gp.data)
+    gp.cK = PDMat(Σ + 1e-6*eye(gp.nobsv))
     F = unwhiten(gp.cK,gp.v) + gp.μ 
     gp.ll = sum(log_dens(gp.lik,F,gp.y)) #Log-likelihood
 end
@@ -79,6 +78,9 @@ function update_ll!(gp::GPMC)
     Σbuffer = gp.cK.mat
     gp.μ = mean(gp.m,gp.X)
     cov!(Σbuffer, gp.k, gp.X, gp.data)
+    for i in 1:gp.nobsv
+        Σbuffer[i,i] += 1e-8
+    end
     chol_buffer = gp.cK.chol.factors
     copy!(chol_buffer, Σbuffer)
     chol = cholfact!(Symmetric(chol_buffer))
@@ -88,18 +90,6 @@ function update_ll!(gp::GPMC)
 end
 
 
-#Derivative of Cholesky decomposition, see Murray(2016). Differentiation of the Cholesky decomposition. arXiv.1602.07527
-function dL(Σ::MatF64, Kgrad::MatF64)
-    nobsv = size(Σ,1)
-    L=chol(Σ + 1e-8*eye(nobsv))'
-    Phi=(L\(L\Kgrad)')' #L\Kgrad*inv(L')
-    Phi=tril(Phi) 
-    for j in 1:nobsv
-        Phi[j,j] = Phi[j,j]/2.0
-    end
-    dL = L*Phi
-    return dL
-end
 
 # dlog p(Y|v,θ)
 """ Update gradient of the log-likelihood """
@@ -122,8 +112,11 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
     
     gp.dll = Array(Float64,gp.nobsv + lik*n_lik_params + mean*n_mean_params + kern*n_kern_params)
     dl_df=dlog_dens_df(gp.lik, Lv + gp.μ, gp.y)
-    gp.dll[1:gp.nobsv] = chol(gp.Σ + 1e-6*eye(gp.nobsv))*dl_df
 
+    U = triu(gp.cK.chol.factors)
+    L = U'
+    gp.dll[1:gp.nobsv] = L'dl_df
+    
     i=gp.nobsv+1  #NEEDS COMPLETING
     if lik  && n_lik_params>0
         Mgrads = grad_stack(gp.m, gp.X)
@@ -140,11 +133,13 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
         end
     end
     if kern
+        # L_bar = zeros(gp.nobsv, gp.nobsv)
+        # tril!(LinAlg.BLAS.ger!(1.0, dl_df, gp.v, L_bar)) # grad_ll_L
+        L_bar = tril(dl_df * gp.v')
+        chol_unblocked_rev!(L, L_bar)
         for iparam in 1:n_kern_params
             grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
-            deriv_L = dL(gp.Σ, Kgrad)
-            Df_θ = deriv_L * gp.v
-            gp.dll[i] = dot(dl_df, Df_θ)
+            gp.dll[i] = vecdot(Kgrad, L_bar)
             i+=1
         end
     end
