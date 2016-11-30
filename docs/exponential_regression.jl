@@ -3,8 +3,9 @@
 using Gadfly
 using GaussianProcesses
 
-X = linspace(-3,3,10)
-Y = [rand(Distributions.Exponential(sin(X[i]).^2)) for i in 1:10]
+n = 50
+X = linspace(-3,3,n)
+Y = [rand(Distributions.Exponential(sin(X[i]).^2)) for i in 1:n]
 
 #build the model
 k = Mat(3/2,0.0,0.0)
