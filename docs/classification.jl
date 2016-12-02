@@ -1,6 +1,5 @@
 #This file gives a demo of how the GP package handles non-Gaussian data on a classification example
 
-using PyPlot
 using GaussianProcesses
 
 X = rand(20)
@@ -27,8 +26,7 @@ fs = Vector(Float64,100,size(samples,2))
 for i in size(samples,2)
     GaussianProcesses.set_params!(gp,samples[:,i])
     GaussianProcesses.update_ll!(gp)
-    fmean, fvar = predict(gp,xtest)
-    fs[:,i] = rand(Distributions.MvNormal(fmean,fvar))
+    fs[:,i] = rand(gp,xtest,1)
 end
 
 

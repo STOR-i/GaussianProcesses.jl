@@ -210,6 +210,39 @@ function _predict{M<:MatF64}(gp::GPMC, X::M)
     return fmu, fSigma
 end
 
+
+# Sample from functions from the GP 
+function rand!{M<:MatF64}(gp::GPMC, X::M, A::DenseMatrix)
+    nobsv = size(X,2)
+    n_sample = size(A,2)
+
+    if gp.nobsv == 0
+        # Prior mean and covariance
+        μ = mean(gp.m, X);
+        Σraw = cov(gp.k, X);
+        Σ = try PDMat(Σraw) catch; PDMat(Σraw+1e-8*sum(diag(Σraw))/nobsv*eye(nobsv)) end  
+    else
+        # Posterior mean and covariance
+        μ, Σ = predict(gp, X; full_cov=true)
+    end
+    
+    return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobsv, n_sample)))
+end
+
+function rand{M<:MatF64}(gp::GPMC, X::M, n::Int)
+    nobsv=size(X,2)
+    A = Array(Float64, nobsv, n)
+    return rand!(gp, X, A)
+end
+
+# Sample from 1D GP
+rand{V<:VecF64}(gp::GPMC, x::V, n::Int) = rand(gp, x', n)
+
+# Generate only one sample from the GP and returns a vector
+rand{M<:MatF64}(gp::GPMC,X::M) = vec(rand(gp,X,1))
+rand{V<:VecF64}(gp::GPMC,x::V) = vec(rand(gp,x',1))
+
+
 function get_params(gp::GPMC; lik::Bool=false, mean::Bool=true, kern::Bool=true)
     params = Float64[]
     append!(params, gp.v)

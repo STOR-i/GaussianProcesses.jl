@@ -35,8 +35,8 @@ for i in 1:size(samples,2)
     fsamples[:,i] = rand(Distributions.MvNormal(fmean,fvar))
 end    
 
-rateSamples = exp(fsamples)
+rateSamples = exp(fsamples);
 
-fmean = mean(rateSamples,2); fvar = var(rateSamples,2)
+fmean = mean(rateSamples,2); fvar = var(rateSamples,2);
 plot(layer(x=xtest,y=exp(fmean),ymin=exp(fmean-1.96sqrt(fvar)),ymax=exp(fmean+1.96sqrt(fvar)),Geom.line,Geom.ribbon),layer(x=X,y=Y,Geom.point))
 
