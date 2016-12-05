@@ -10,13 +10,14 @@ type Exponential <: Likelihood
     Exponential() = new()
 end
 
+
 function log_dens(exponential::Exponential, f::Vector{Float64}, y::Vector{Float64})
-    #where f = exp(fi), check for zero
-    return [fi - exp(fi)*yi for (fi,yi) in zip(f,y)]
+    #where we exponentiate for positivity f = exp(fi) 
+    return [-fi - exp(-fi)*yi for (fi,yi) in zip(f,y)]
 end
 
 function dlog_dens_df(exponential::Exponential, f::Vector{Float64}, y::Vector{Float64})
-    return [(1/exp(fi) - yi)*exp(fi) for (fi,yi) in zip(f,y)]
+    return [(yi*exp(-fi)-1) for (fi,yi) in zip(f,y)]
 end                   
 
 get_params(exponential::Exponential) = []

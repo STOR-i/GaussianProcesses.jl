@@ -146,22 +146,18 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
 end
 
 
-function update_mll_and_dmll!(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
-    Kgrad = Array(Float64, gp.nobsv, gp.nobsv)
-    update_mll_and_dmll!(gp, Kgrad, lik=lik, mean=mean, kern=kern)
-end
 
 
 #log p(θ,v|y) = log p(y|v,θ) + log p(v) +  log p(θ)
 function log_posterior(gp::GPMC)
     update_ll!(gp)
-    return gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) #need to create prior type for parameters
+    return gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + sum(Distributions.logpdf(Distributions.Gamma(1.0,1.0),exp(get_params(gp.k)))) #need to create prior type for parameters
 end    
 
 #dlog p(θ,v|y) = dlog p(y|v,θ) + dlog p(v) +  dlog p(θ)
 function dlog_posterior(gp::GPMC, Kgrad::MatF64; lik::Bool=false, mean::Bool=true, kern::Bool=true)
     update_ll_and_dll!(gp::GPMC, Kgrad; lik=lik, mean=mean, kern=kern)
-    gp.dll + [-gp.v;zeros(num_params(gp.lik)+num_params(gp.m)+num_params(gp.k))]   #+ dlog_prior()
+    return gp.dll + [-gp.v;zeros(num_params(gp.lik)+num_params(gp.m));-exp(get_params(gp.k))]   #+ dlog_prior()
 end    
 
 
@@ -319,3 +315,5 @@ function show(io::IO, gp::GPMC)
         end            
     end
 end
+
+
