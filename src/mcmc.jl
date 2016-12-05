@@ -27,21 +27,20 @@ function mcmc(gp::GPMC;
     function logpost(hyp::Vector{Float64})  #log-target
         set_params!(gp, hyp)
         update_ll!(gp)
-        return gp.ll #log_posterior(gp)
+        return log_posterior(gp)
     end
 
     function dlogpost(hyp::Vector{Float64}) #gradient of the log-target
         Kgrad_buffer = Array(Float64, gp.nobsv, gp.nobsv)
         set_params!(gp, hyp)
-        update_ll_and_dll!(gp, Kgrad_buffer)
-        return gp.dll #dlog_posterior(gp, Kgrad_buffer)
+        return dlog_posterior(gp, Kgrad_buffer)
     end
     
     starting = Dict(:p=>start)
     q = BasicContMuvParameter(:p, logtarget=logpost, gradlogtarget=dlogpost) 
     model = likelihood_model(q, false)                               #set-up the model
-    tune = AcceptanceRateMCTuner(0.6, verbose=true)                     #set length of tuning (default to burnin length)
-    job = BasicMCJob(model, sampler, mcrange, starting,tuner=tune)   #set-up MCMC job
+#    tune = AcceptanceRateMCTuner(0.6, verbose=true)                     #set length of tuning (default to burnin length)
+    job = BasicMCJob(model, sampler, mcrange, starting)   #set-up MCMC job
     print(job)                                                       #display MCMC set-up for the user
     run(job)
     chain = Klara.output(job)
