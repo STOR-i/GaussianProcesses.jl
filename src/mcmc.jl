@@ -39,7 +39,7 @@ function mcmc(gp::GPMC;
     starting = Dict(:p=>start)
     q = BasicContMuvParameter(:p, logtarget=logpost, gradlogtarget=dlogpost) 
     model = likelihood_model(q, false)                               #set-up the model
-#    tune = AcceptanceRateMCTuner(0.6, verbose=true)                     #set length of tuning (default to burnin length)
+    tune = AcceptanceRateMCTuner(0.6, verbose=true)                     #set length of tuning (default to burnin length)
     job = BasicMCJob(model, sampler, mcrange, starting)   #set-up MCMC job
     print(job)                                                       #display MCMC set-up for the user
     run(job)
