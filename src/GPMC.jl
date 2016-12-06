@@ -202,7 +202,7 @@ function _predict{M<:MatF64}(gp::GPMC, X::M)
     fmu =  mean(gp.m,X) + Lck'gp.v     # Predictive mean
     Sigma_raw = cov(gp.k, X) - Lck'Lck # Predictive covariance 
     # Hack to get stable covariance
-    fSigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+1e-8*sum(diag(Sigma_raw))/n*eye(n)) end
+    fSigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+1e-6*sum(diag(Sigma_raw))/n*eye(n)) end
     return fmu, fSigma
 end
 
