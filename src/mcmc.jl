@@ -26,7 +26,6 @@ function mcmc(gp::GPMC;
     
     function logpost(hyp::Vector{Float64})  #log-target
         set_params!(gp, hyp)
-        update_ll!(gp)
         return log_posterior(gp)
     end
 

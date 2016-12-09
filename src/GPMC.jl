@@ -301,7 +301,7 @@ function show(io::IO, gp::GPMC)
         show(io, gp.X)
         print(io,"\n  Output observations = ")
         show(io, gp.y)
-        if typeof(gp.lik)!=Gaussian
+        if typeof(gp.lik)!=GaussLik
             print(io,"\n  Log-Likelihood = ")
             show(io, round(gp.ll,3))
         else
