@@ -26,13 +26,12 @@ function mcmc(gp::GPMC;
     
     function logpost(hyp::Vector{Float64})  #log-target
         set_params!(gp, hyp)
-        return log_posterior(gp)
+        return update_lpost!(gp)
     end
 
     function dlogpost(hyp::Vector{Float64}) #gradient of the log-target
-        Kgrad_buffer = Array(Float64, gp.nobsv, gp.nobsv)
         set_params!(gp, hyp)
-        return dlog_posterior(gp, Kgrad_buffer)
+        return update_lpost_and_dlpost!(gp, Array(Float64, gp.nobsv, gp.nobsv))
     end
     
     starting = Dict(:p=>start)
