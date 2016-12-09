@@ -50,7 +50,7 @@ type GPMC{T<:Real}
         v = zeros(nobsv)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         gp = new(m, k, lik, nobsv, X, y, v, KernelData(k, X), dim)
-        initialise_ll!(gp)
+        initialise_lpost!(gp)
         return gp
     end
 end
@@ -145,6 +145,11 @@ end
 
 
 
+#log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)
+function initialise_lpost!(gp::GPMC)
+    initialise_ll!(gp)
+    gp.lp = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.k) 
+end    
 
 #log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)
 function update_lpost!(gp::GPMC)
@@ -303,14 +308,8 @@ function show(io::IO, gp::GPMC)
         show(io, gp.X)
         print(io,"\n  Output observations = ")
         show(io, gp.y)
-        if typeof(gp.lik)!=GaussLik
-            print(io,"\n  Log-Likelihood = ")
-            show(io, round(gp.ll,3))
-        else
-            print(io,"\n  Marginal Log-Likelihood = ")
-            show(io, round(gp.mLL,3))
-
-        end            
+        print(io,"\n  Log-posterior = ")
+        show(io, round(gp.lp,3))
     end
 end
 

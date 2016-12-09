@@ -11,24 +11,24 @@
     # Return:
     * `::Optim.MultivariateOptimizationResults{Float64,1}`: optimization results object
     """ ->
-function optimize!(gp::GPMC; lik::Bool=false, mean::Bool=true, kern::Bool=true,
-                   method=BFGS(), kwargs...)
+function optimize!(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true,
+                   method=LBFGS(), kwargs...)
     func = get_optim_target(gp, lik=lik, mean=mean, kern=kern)
     init = get_params(gp;  lik=lik, mean=mean, kern=kern)  # Initial hyperparameter values
     results = optimize(func,init; method=method, kwargs...)                     # Run optimizer
     set_params!(gp, results.minimizer, lik=lik,mean=mean,kern=kern)
-    update_ll!(gp)
+    update_lpost!(gp)
     return results
 end
 
 function get_optim_target(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     Kgrad_buffer = Array(Float64, gp.nobsv, gp.nobsv)
     
-    function ll(hyp::Vector{Float64})
+    function lpost(hyp::Vector{Float64})
         try
             set_params!(gp, hyp; lik=lik, mean=mean, kern=kern)
-            update_ll!(gp)
-            return -gp.ll
+            update_lpost!(gp)
+            return -gp.lp
         catch err
             if !all(isfinite(hyp))
                 println(err)
@@ -45,12 +45,12 @@ function get_optim_target(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=
         end        
     end
 
-    function ll_and_dll!(hyp::Vector{Float64}, grad::Vector{Float64})
+    function lpost_and_dlpost!(hyp::Vector{Float64}, grad::Vector{Float64})
         try
             set_params!(gp, hyp; lik=lik, mean=mean, kern=kern)
-            update_ll_and_dll!(gp, Kgrad_buffer; lik=lik, mean=mean, kern=kern)
-            grad[:] = -gp.dll
-            return -gp.ll
+            update_lpost_and_dlpost!(gp, Kgrad_buffer; lik=lik, mean=mean, kern=kern)
+            grad[:] = -gp.dlp
+            return -gp.lp
         catch err
             if !all(isfinite(hyp))
                 println(err)
@@ -67,10 +67,10 @@ function get_optim_target(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=
         end 
     end
     
-    function dLL!(hyp::Vector{Float64}, grad::Vector{Float64})
-        ll_and_dll!(hyp::Vector{Float64}, grad::Vector{Float64})
+    function dlpost!(hyp::Vector{Float64}, grad::Vector{Float64})
+        lpost_and_dlpost!(hyp::Vector{Float64}, grad::Vector{Float64})
     end
 
-    func = DifferentiableFunction(ll, dLL!, ll_and_dll!)
+    func = DifferentiableFunction(lpost, dlpost!, lpost_and_dlpost!)
     return func
 end
