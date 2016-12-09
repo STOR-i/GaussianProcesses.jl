@@ -10,7 +10,8 @@ k(x,x') = σ²exp(-(x-x')ᵀ(x-x')/2ℓ²)
 type SEIso <: Isotropic
     ℓ2::Float64      # Length scale
     σ2::Float64      # Signal std
-    SEIso(ll::Float64, lσ::Float64) = new(exp(2*ll), exp(2*lσ))
+    priors::Array          # Array of priors for kernel parameters
+    SEIso(ll::Float64, lσ::Float64) = new(exp(2*ll), exp(2*lσ),[])
 end
 
 function set_params!(se::SEIso, hyp::Vector{Float64})

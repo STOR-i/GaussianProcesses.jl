@@ -3,7 +3,12 @@ import Base.show
 
 @doc """
 # Description
-Fits a Gaussian process to a set of training points. The Gaussian process is defined in terms of its likelihood function and mean and covaiance (kernel) functions, which are user defined. 
+Fits a Gaussian process to a set of training points. The Gaussian process is defined in terms of its likelihood function and mean and covaiance (kernel) functions, which are user defined. We use a Monte Carlo methods to handle the non-Gaussian likelihood. The latent function values are represented by centered (whitened) variables, where:
+        v ~ N(0, I)
+        f = Lv + m(x)
+        with
+        L L^T = K_θ
+
 
 # Constructors:
     GP(X, y, m, k, lik)
@@ -42,15 +47,6 @@ type GPMC{T<:Real}
         dim, nobsv = size(X)
         v = zeros(nobsv)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        #=
-        This is a vanilla implementation of a GPMC with a non-Gaussian
-        likelihood. The latent function values are represented by centered
-        (whitened) variables, where
-        v ~ N(0, I)
-        f = Lv + m(x)
-        with
-        L L^T = K
-        =#
         gp = new(m, k, lik, nobsv, X, y, v, KernelData(k, X), dim)
         initialise_ll!(gp)
         return gp
@@ -151,13 +147,13 @@ end
 #log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)
 function log_posterior(gp::GPMC)
     update_ll!(gp)
-    return gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + sum(Distributions.logpdf(Distributions.Normal(-2.0,2.0),get_params(gp.k))) #need to create prior type for parameters
+    return gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.k) #need to create prior type for parameters
 end    
 
 #dlog p(θ,v|y) ∝ dlog p(y|v,θ) + dlog p(v) +  dlog p(θ)
 function dlog_posterior(gp::GPMC, Kgrad::MatF64; lik::Bool=false, mean::Bool=true, kern::Bool=true)
     update_ll_and_dll!(gp::GPMC, Kgrad; lik=lik, mean=mean, kern=kern)
-    return gp.dll + [-gp.v;zeros(num_params(gp.lik)+num_params(gp.m));-1/4*(get_params(gp.k)+2.0)]   #+ dlog_prior()
+    return gp.dll + [-gp.v;zeros(num_params(gp.lik)+num_params(gp.m));prior_gradlogpdf(gp.k)]   #+ dlog_prior()
 end    
 
 
