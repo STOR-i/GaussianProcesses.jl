@@ -117,6 +117,9 @@ ll = rand(d)
 x = 2π * rand(d, n)
 y = randn(n)
 
+rq = RQIso(1.0, 1.0, 1.0)
+test_Kernel(fix(rq, :lσ), x, y)
+
 # Isotropic kernels
 
 se = SEIso(1.0, 1.0)

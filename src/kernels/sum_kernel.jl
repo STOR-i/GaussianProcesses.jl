@@ -45,12 +45,15 @@ function cov{V1<:VecF64,V2<:VecF64}(sumkern::SumKernel, x::V1, y::V2)
     return s
 end
 
-function cov!{M<:MatF64}(s::MatF64, sumkern::SumKernel, X::M, data::SumData)
-    s[:,:] = 0.0
+function addcov!{M<:MatF64}(s::MatF64, sumkern::SumKernel, X::M, data::SumData)
     for (ikern,kern) in enumerate(sumkern.kerns)
         addcov!(s, kern, X, data.datadict[data.keys[ikern]])
     end
     return s
+end
+function cov!{M<:MatF64}(s::MatF64, sumkern::SumKernel, X::M, data::SumData)
+    s[:,:] = 0.0
+    addcov!(s, sumkern, X, data)
 end
 function cov{M<:MatF64}(sumkern::SumKernel, X::M, data::SumData)
     d, nobsv = size(X)
