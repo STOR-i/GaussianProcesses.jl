@@ -14,3 +14,4 @@ end
 include("bernoulli.jl")
 include("exponential.jl")
 include("gaussian.jl")
+include("studentT.jl")

@@ -9,7 +9,7 @@ import Base: rand, rand!, mean, cov, push!
 # Functions that should be available to package
 # users should be explicitly exported here
 
-export GPMC, predict, SumKernel, ProdKernel, Masked, FixedKern, fix, Noise, Kernel, SE, SEIso, SEArd, Periodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Mat, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, optimize!, GaussLik, BernLik, ExpLik, mcmc
+export GPMC, predict, SumKernel, ProdKernel, Masked, FixedKern, fix, Noise, Kernel, SE, SEIso, SEArd, Periodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Mat, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, optimize!, GaussLik, BernLik, ExpLik, StuTLik, mcmc
 
 typealias MatF64 AbstractMatrix{Float64}
 typealias VecF64 AbstractVector{Float64}

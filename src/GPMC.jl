@@ -92,7 +92,7 @@ end
 # dlog p(Y|v,θ)
 """ Update gradient of the log-likelihood """
 function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
-    lik::Bool=false,  # include gradient components for the likelihood parameters
+    lik::Bool=true,  # include gradient components for the likelihood parameters
     mean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
     )
@@ -115,11 +115,11 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
     L = U'
     gp.dll[1:gp.nobsv] = L'dl_df
     
-    i=gp.nobsv+1  #NEEDS COMPLETING
+    i=gp.nobsv+1 
     if lik  && n_lik_params>0
-        Mgrads = grad_stack(gp.m, gp.X)
+        Lgrads = dlog_dens_dθ(gp.lik,Lv + gp.μ, gp.y)
         for j in 1:n_lik_params
-            gp.dll[i] = dot(Mgrads[:,j],gp.v)
+            gp.dll[i] = sum(Lgrads[:,j])
             i += 1
         end
     end
@@ -158,7 +158,7 @@ function update_lpost!(gp::GPMC)
 end    
 
 #dlog p(θ,v|y) ∝ dlog p(y|v,θ) + dlog p(v) +  dlog p(θ)
-function update_lpost_and_dlpost!(gp::GPMC, Kgrad::MatF64; lik::Bool=false, mean::Bool=true, kern::Bool=true)
+function update_lpost_and_dlpost!(gp::GPMC, Kgrad::MatF64; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     update_ll_and_dll!(gp::GPMC, Kgrad; lik=lik, mean=mean, kern=kern)
     gp.dlp = gp.dll + [-gp.v;zeros(num_params(gp.lik)+num_params(gp.m));prior_gradlogpdf(gp.k)] 
 end    
@@ -242,7 +242,7 @@ rand{M<:MatF64}(gp::GPMC,X::M) = vec(rand(gp,X,1))
 rand{V<:VecF64}(gp::GPMC,x::V) = vec(rand(gp,x',1))
 
 
-function get_params(gp::GPMC; lik::Bool=false, mean::Bool=true, kern::Bool=true)
+function get_params(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     params = Float64[]
     append!(params, gp.v)
     if lik  && num_params(gp.lik)>0
@@ -257,7 +257,7 @@ function get_params(gp::GPMC; lik::Bool=false, mean::Bool=true, kern::Bool=true)
     return params
 end
 
-function set_params!(gp::GPMC, hyp::Vector{Float64}; lik::Bool=false, mean::Bool=true, kern::Bool=true)
+function set_params!(gp::GPMC, hyp::Vector{Float64}; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     n_lik_params = num_params(gp.lik)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
