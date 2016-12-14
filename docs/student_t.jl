@@ -38,16 +38,16 @@ fsamples = Array(Float64,100);
 for i in 1:size(samples,2)
     GaussianProcesses.set_params!(gp,samples[:,i])
     GaussianProcesses.update_ll!(gp)
-    samp = rand(gp,xtest,5) 
+    samp = rand(gp,xtest,5)
     fsamples = hcat(fsamples,samp)
 end    
+fsamples = fsamples[:,2:end]
 
-rateSamples = fsamples
-fmean = mean(rateSamples,2); 
+fmean = mean(fsamples,2); 
 
 quant = Array(Float64,100,2);
 for i in 1:100
-    quant[i,:] = quantile(rateSamples[i,:],[0.05,0.95])
+    quant[i,:] = quantile(fsamples[i,:],[0.05,0.95])
 end
 
 plot(layer(x=xtest,y=fmean,ymin=quant[:,1],ymax=quant[:,2],Geom.line,Geom.ribbon),layer(x=vec(X),y=Y,Geom.point))
