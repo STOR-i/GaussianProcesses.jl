@@ -16,7 +16,7 @@ function optimize!(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true,
     func = get_optim_target(gp, lik=lik, mean=mean, kern=kern)
     init = get_params(gp;  lik=lik, mean=mean, kern=kern)  # Initial hyperparameter values
     results = optimize(func,init; method=method, kwargs...)                     # Run optimizer
-    set_params!(gp, results.minimizer, lik=lik,mean=mean,kern=kern)
+    set_params!(gp, Optim.minimizer(results), lik=lik,mean=mean,kern=kern)
     update_lpost!(gp)
     return results
 end

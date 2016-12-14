@@ -301,6 +301,8 @@ function show(io::IO, gp::GPMC)
     show(io, gp.m, 2)
     println(io, "  Kernel:")
     show(io, gp.k, 2)
+    println(io, "  Likelihood:")
+    show(io, gp.lik, 2)
     if (gp.nobsv == 0)
         println("  No observation data")
     else

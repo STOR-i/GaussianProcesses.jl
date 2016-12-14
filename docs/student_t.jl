@@ -9,17 +9,20 @@ sigma = 2.0
 Y = X + sigma*rand(Distributions.TDist(3),n)
 
 #plot the data
-#plot(x=X,y=Y,Geom.point)
+plot(x=X,y=Y,Geom.point)
 
 #build the model
+m = MeanZero()
 k = Mat(3/2,0.0,0.0)
 l = StuTLik(3,0.1)
-gp = GPMC{Float64}(X', vec(Y), MeanZero(), k, l)
+gp = GPMC{Float64}(X', vec(Y), m, k, l)
+
+#set the priors (need a better interface)
+GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(-2.0,4.0),Distributions.Normal(-2.0,4.0)])
 
 optimize!(gp)
 xtest = collect(linspace(-4.0,4.0,20));
 fmean, fvar = predict(gp,xtest);
-
 
 plot(layer(x=xtest,y=fmean,ymin=exp(fmean-1.96sqrt(fvar)),ymax=exp(fmean+1.96sqrt(fvar)),Geom.line,Geom.ribbon),layer(x=X,y=Y,Geom.point))
 
@@ -35,7 +38,7 @@ fsamples = Array(Float64,100);
 for i in 1:size(samples,2)
     GaussianProcesses.set_params!(gp,samples[:,i])
     GaussianProcesses.update_ll!(gp)
-    samp = rand(gp,xtest,50) 
+    samp = rand(gp,xtest,5) 
     fsamples = hcat(fsamples,samp)
 end    
 
