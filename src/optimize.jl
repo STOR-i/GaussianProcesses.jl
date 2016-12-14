@@ -17,7 +17,7 @@ function optimize!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true,
     func = get_optim_target(gp, noise=noise, mean=mean, kern=kern)
     init = get_params(gp;  noise=noise, mean=mean, kern=kern)  # Initial hyperparameter values
     results=optimize(func,init; method=method, kwargs...)                     # Run optimizer
-    set_params!(gp, results.minimizer, noise=noise,mean=mean,kern=kern)
+    set_params!(gp, Optim.minimizer(results), noise=noise,mean=mean,kern=kern)
     update_mll!(gp)
     return results
 end
