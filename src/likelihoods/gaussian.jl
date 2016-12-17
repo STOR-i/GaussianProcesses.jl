@@ -8,7 +8,8 @@ p(y|μ,σ²) = 1/(√(2πσ²))*exp(-(x-μ)²/2σ²)
 """
 type GaussLik <: Likelihood
     σ::Float64     # standard deviation
-    GaussLik(lσ::Float64) = new(exp(lσ))
+    priors::Array          # Array of priors for likelihood parameters
+    GaussLik(lσ::Float64) = new(exp(lσ),[])
 end
 
 #log of probability density

@@ -18,6 +18,7 @@ l = StuTLik(3,0.1)
 gp = GPMC{Float64}(X', vec(Y), m, k, l)
 
 #set the priors (need a better interface)
+GaussianProcesses.set_priors!(gp.lik,[Distributions.Normal(-2.0,4.0)])
 GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(-2.0,4.0),Distributions.Normal(-2.0,4.0)])
 
 optimize!(gp)
@@ -57,12 +58,12 @@ plot(layer(x=xtest,y=fmean,ymin=quant[:,1],ymax=quant[:,2],Geom.line,Geom.ribbon
 #need to check the posterior as well
 function test(hyp::Vector{Float64})
     GaussianProcesses.set_params!(gp, hyp)
-    GaussianProcesses.update_ll!(gp)
-    return gp.ll
+    GaussianProcesses.update_lpost!(gp)
+    return gp.lp
 end
 
 v = GaussianProcesses.get_params(gp);
-GaussianProcesses.update_ll_and_dll!(gp,Array(Float64,gp.nobsv,gp.nobsv))
+GaussianProcesses.update_lpost_and_dlpost!(gp,Array(Float64,gp.nobsv,gp.nobsv))
 Calculus.gradient(test,v)
-gp.dll
+gp.dlp
 

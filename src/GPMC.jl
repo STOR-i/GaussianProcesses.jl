@@ -148,19 +148,19 @@ end
 #log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)
 function initialise_lpost!(gp::GPMC)
     initialise_ll!(gp)
-    gp.lp = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.k) 
+    gp.lp = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.k) 
 end    
 
 #log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)
 function update_lpost!(gp::GPMC)
     update_ll!(gp)
-    gp.lp = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.k) 
+    gp.lp = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.k) 
 end    
 
 #dlog p(θ,v|y) ∝ dlog p(y|v,θ) + dlog p(v) +  dlog p(θ)
 function update_lpost_and_dlpost!(gp::GPMC, Kgrad::MatF64; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     update_ll_and_dll!(gp::GPMC, Kgrad; lik=lik, mean=mean, kern=kern)
-    gp.dlp = gp.dll + [-gp.v;zeros(num_params(gp.lik)+num_params(gp.m));prior_gradlogpdf(gp.k)] 
+    gp.dlp = gp.dll + [-gp.v;prior_gradlogpdf(gp.lik);zeros(num_params(gp.m));prior_gradlogpdf(gp.k)] 
 end    
 
 

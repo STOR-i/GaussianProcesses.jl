@@ -14,7 +14,8 @@ Constructor for the Student-t likelihood (aka non-standardized Student's t-distr
 type StuTLik <: Likelihood
     ν::Int64    #degrees of freedom
     σ::Float64  #scale
-    StuTLik(ν::Int64,lσ::Float64) = new(ν,exp(lσ))
+    priors::Array          # Array of priors for likelihood parameters
+    StuTLik(ν::Int64,lσ::Float64) = new(ν,exp(lσ),[])
 end
 
 #log of probability density
