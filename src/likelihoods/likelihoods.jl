@@ -11,6 +11,12 @@ function show(io::IO, lik::Likelihood, depth::Int = 0)
     print(io, "\n")
 end
 
+include("bernoulli.jl")
+include("exponential.jl")
+include("gaussian.jl")
+include("studentT.jl")
+include("poisson.jl")
+
 ################
 #Priors
 ################
@@ -35,9 +41,19 @@ function prior_gradlogpdf(lik::Likelihood)
         return [Distributions.gradlogpdf(prior,param) for (prior, param) in zip(lik.priors,get_params(lik))]
     end    
 end
+################
+#Predict observations at test locations
+###############
 
-include("bernoulli.jl")
-include("exponential.jl")
-include("gaussian.jl")
-include("studentT.jl")
-include("poisson.jl")
+#computes the mean and variance of p(y|f) using quadrature
+function predict_obs(lik::Likelihood, fmean::Vector{Float64},fvar::Vector{Float64}) 
+    n_gaussHermite = 20
+    nodes, weights = gausshermite(n_gaussHermite)
+    weights /= sqrt(pi)
+    f = fmean + nodes.*sqrt(2.0*fvar) 
+    μ = weights.*mean_lik(lik, f)
+    σ² = weights.*(var_lik(lik, f) +mean_lik(lik, f).^2)  - μ.^2
+    return μ, σ²
+end
+
+

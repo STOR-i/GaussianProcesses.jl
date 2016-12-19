@@ -18,5 +18,9 @@ function dlog_dens_df(bernoulli::BernLik, f::Vector{Float64}, y::Vector{Bool})
     return Float64[yi? φ(fi)/Φ(fi) : -φ(fi)/(1.0 - Φ(fi)) for (fi,yi) in zip(f,y)]
 end                   
 
+#mean and variance under likelihood
+mean_lik(bernoulli::BernLik, f::Vector{Float64}) = Float64[Φ(fi) for fi in f]
+var_lik(bernoulli::BernLik, f::Vector{Float64}) = Float64[Φ(fi)*(1-Φ(fi)) for fi in f]
+
 get_params(bernoulli::BernLik) = []
 num_params(bernoulli::BernLik) = 0

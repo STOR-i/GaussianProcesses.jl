@@ -40,6 +40,10 @@ function dlog_dens_dθ(studentT::StuTLik, f::Vector{Float64}, y::Vector{Float64}
     return σ*[-1/σ+(ν+1)*(yi-fi)^2/(ν*σ^3 + σ*(yi-fi)^2) for (fi,yi) in zip(f,y)]
 end                   
 
+#mean and variance under likelihood
+mean_lik(studentT::StuTLik, f::Vector{Float64}) = f
+var_lik(studentT::StuTLik, f::Vector{Float64}) = studentT.σ^2*(studentT.ν/(studentT.ν-2.0))*ones(length(f))   
+    
 
 function set_params!(studentT::StuTLik, hyp::Vector{Float64})
     length(hyp) == 1 || throw(ArgumentError("Student-t likelihood has only one free parameter"))

@@ -9,7 +9,7 @@ Y = [rand(Distributions.Exponential(sin(X[i]).^2)) for i in 1:n]
 
 #build the model
 k = Mat(3/2,0.0,0.0)
-l = Exponential()
+l = ExpLik()
 gp = GPMC{Float64}(X', vec(Y), MeanZero(), k, l)
 
 #set the priors (need a better interface)
@@ -38,7 +38,7 @@ for i in 1:size(samples,2)
     samp = rand(gp,xtest,50) 
     fsamples = hcat(fsamples,samp)
 end    
-
+fsamples = fsamples[:,2:end]
 
 rateSamples = exp(fsamples)
 fmean = mean(rateSamples,2); 

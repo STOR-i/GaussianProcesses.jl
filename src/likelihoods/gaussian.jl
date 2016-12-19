@@ -27,6 +27,10 @@ function dlog_dens_dθ(gauss::GaussLik, f::Vector{Float64}, y::Vector{Float64})
     return gauss.σ*[-1/gauss.σ + 1/gauss.σ^3*(yi-fi).^2 for (fi,yi) in zip(f,y)]
 end                   
 
+#mean and variance under likelihood
+mean_lik(gauss::GaussLik, f::Vector{Float64}) = f
+var_lik(gauss::GaussLik, f::Vector{Float64}) = ones(length(f))*gauss.σ^2
+
 
 function set_params!(gauss::GaussLik, hyp::Vector{Float64})
     length(hyp) == 1 || throw(ArgumentError("Gaussian/Normal likelihood has only one free parameter"))

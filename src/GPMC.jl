@@ -148,19 +148,32 @@ end
 #log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)
 function initialise_lpost!(gp::GPMC)
     initialise_ll!(gp)
-    gp.lp = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.k) 
+    prior = 0.0 
+    if num_params(gp.lik)>0
+        prior = prior_logpdf(gp.lik)
+    end    
+    gp.lp = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior + prior_logpdf(gp.k) 
 end    
 
 #log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)
 function update_lpost!(gp::GPMC)
     update_ll!(gp)
-    gp.lp = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.k) 
+    prior = 0.0 
+    if num_params(gp.lik)>0
+        prior = prior_logpdf(gp.lik)
+    end    
+    gp.lp = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior + prior_logpdf(gp.k) 
 end    
 
 #dlog p(θ,v|y) ∝ dlog p(y|v,θ) + dlog p(v) +  dlog p(θ)
 function update_lpost_and_dlpost!(gp::GPMC, Kgrad::MatF64; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     update_ll_and_dll!(gp::GPMC, Kgrad; lik=lik, mean=mean, kern=kern)
-    gp.dlp = gp.dll + [-gp.v;prior_gradlogpdf(gp.lik);zeros(num_params(gp.m));prior_gradlogpdf(gp.k)] 
+    if num_params(gp.lik)>0
+        gp.dlp = gp.dll + [-gp.v;prior_gradlogpdf(gp.lik);zeros(num_params(gp.m));prior_gradlogpdf(gp.k)] 
+    else
+        gp.dlp = gp.dll + [-gp.v;zeros(num_params(gp.m));prior_gradlogpdf(gp.k)] 
+    end
+
 end    
 
 
@@ -170,17 +183,17 @@ end
 
     # Arguments:
     * `gp::GP`: Gaussian Process object
-    * `X::Matrix{Float64}`:  matrix of points for which one would would like to predict the value of the process.
+    * `X::Matrix{Float64}`:  matrix of points for which one would would like to predict the value of the latent process, f.
                            (each column of the matrix is a point)
-
+    * `obs::Bool`: Returns predicted observations 'y' calculated at test points X, set to 'false' by default    
     # Returns:
     * `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
                                                         process at the specified points
     """ ->
-function predict{M<:MatF64}(gp::GPMC, x::M; full_cov::Bool=false)
+function predict{M<:MatF64}(gp::GPMC, x::M; obs::Bool=false, full_cov::Bool=false)
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
     if full_cov
-        return _predict(gp, x)
+        return μ, σ2 = _predict(gp, x)
     else
         ## Calculate prediction for each point independently
             μ = Array(Float64, size(x,2))
@@ -192,10 +205,13 @@ function predict{M<:MatF64}(gp::GPMC, x::M; full_cov::Bool=false)
         end
         return μ, σ2
     end
+    if obs
+        return μy, σ2y = predict_obs(gp.lik, μ, σ2)
+    end
 end
 
 # 1D Case for prediction
-predict{V<:VecF64}(gp::GPMC, x::V; full_cov::Bool=false) = predict(gp, x'; full_cov=full_cov)
+predict{V<:VecF64}(gp::GPMC, x::V; obs::Bool=false, full_cov::Bool=false) = predict(gp, x', obs=obs; full_cov=full_cov)
 
 ## compute predictions
 function _predict{M<:MatF64}(gp::GPMC, X::M)
