@@ -193,7 +193,7 @@ end
 function predict{M<:MatF64}(gp::GPMC, x::M; obs::Bool=false, full_cov::Bool=false)
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
     if full_cov
-        return μ, σ2 = _predict(gp, x)
+        μ, σ2 = _predict(gp, x)
     else
         ## Calculate prediction for each point independently
             μ = Array(Float64, size(x,2))
@@ -203,15 +203,15 @@ function predict{M<:MatF64}(gp::GPMC, x::M; obs::Bool=false, full_cov::Bool=fals
             μ[k] = m[1]
             σ2[k] = max(full(sig)[1,1], 0.0)
         end
-        return μ, σ2
     end
     if obs
-        return μy, σ2y = predict_obs(gp.lik, μ, σ2)
+       μ, σ2 = predict_obs(gp.lik, μ, σ2)
     end
+    return μ, σ2
 end
 
 # 1D Case for prediction
-predict{V<:VecF64}(gp::GPMC, x::V; obs::Bool=false, full_cov::Bool=false) = predict(gp, x', obs=obs; full_cov=full_cov)
+predict{V<:VecF64}(gp::GPMC, x::V; obs::Bool=false, full_cov::Bool=false) = predict(gp, x'; obs=obs, full_cov=full_cov)
 
 ## compute predictions
 function _predict{M<:MatF64}(gp::GPMC, X::M)
