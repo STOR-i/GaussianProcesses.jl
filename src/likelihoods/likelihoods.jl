@@ -46,13 +46,19 @@ end
 ###############
 
 #computes the mean and variance of p(y|f) using quadrature
-function predict_obs(lik::Likelihood, fmean::Vector{Float64},fvar::Vector{Float64}) 
+function predict_obs(lik::Likelihood, fmean::Vector{Float64}, fvar::Vector{Float64}) 
     n_gaussHermite = 20
     nodes, weights = gausshermite(n_gaussHermite)
     weights /= sqrt(pi)
-    f = fmean + nodes*sqrt(2.0*fvar) 
-    μ = weights*mean_lik(lik, f)
-    σ² = weights*(var_lik(lik, f) +mean_lik(lik, f).^2)  - μ.^2
+    f = fmean .+ sqrt(2.0*fvar)*nodes'
+    
+    mLik = Array(Float64,size(f)); vLik = Array(Float64,size(f));
+    for i in 1:n_gaussHermite
+        mLik[:,i] = mean_lik(lik, f[:,i]) 
+        vLik[:,i] = var_lik(lik, f[:,i])
+    end    
+    μ = mLik*weights
+    σ² = (vLik + mLik.^2)*weights - μ.^2
     return μ, σ²
 end
 

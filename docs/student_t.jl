@@ -25,6 +25,7 @@ optimize!(gp)
 xtest = collect(linspace(-4.0,4.0,20));
 fmean, fvar = predict(gp,xtest);
 
+
 plot(layer(x=xtest,y=fmean,ymin=exp(fmean-1.96sqrt(fvar)),ymax=exp(fmean+1.96sqrt(fvar)),Geom.line,Geom.ribbon),layer(x=X,y=Y,Geom.point))
 
 #MCMC
@@ -32,26 +33,6 @@ samples = mcmc(gp;mcrange=Klara.BasicMCRange(nsteps=50000, thinning=10, burnin=1
 
 plot(y=samples[end,:],Geom.line) #check MCMC mixing
 
-#Plot posterior samples
-
-xtest = linspace(-4,4,100);
-fsamples = Array(Float64,100);
-for i in 1:size(samples,2)
-    GaussianProcesses.set_params!(gp,samples[:,i])
-    GaussianProcesses.update_ll!(gp)
-    samp = rand(gp,xtest,5)
-    fsamples = hcat(fsamples,samp)
-end    
-fsamples = fsamples[:,2:end]
-
-fmean = mean(fsamples,2); 
-
-quant = Array(Float64,100,2);
-for i in 1:100
-    quant[i,:] = quantile(fsamples[i,:],[0.05,0.95])
-end
-
-plot(layer(x=xtest,y=fmean,ymin=quant[:,1],ymax=quant[:,2],Geom.line,Geom.ribbon),layer(x=vec(X),y=Y,Geom.point))
 
 ########
 

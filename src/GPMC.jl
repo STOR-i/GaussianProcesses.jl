@@ -204,7 +204,7 @@ function predict{M<:MatF64}(gp::GPMC, x::M; obs::Bool=false, full_cov::Bool=fals
             σ2[k] = max(full(sig)[1,1], 0.0)
         end
     end
-    if obs
+    if obs #need to handle full_cov case
        μ, σ2 = predict_obs(gp.lik, μ, σ2)
     end
     return μ, σ2
