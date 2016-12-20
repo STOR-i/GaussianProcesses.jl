@@ -244,6 +244,7 @@ function rand!{M<:MatF64}(gp::GPMC, X::M, A::DenseMatrix)
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobsv, n_sample)))
 end
 
+#Samples random function values f
 function rand{M<:MatF64}(gp::GPMC, X::M, n::Int)
     nobsv=size(X,2)
     A = Array(Float64, nobsv, n)

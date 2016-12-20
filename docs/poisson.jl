@@ -1,12 +1,14 @@
-#An example of non-Gaussian regression using exponential observations
+#An example of non-Gaussian regression using poisson observations
 
 using Gadfly
 using GaussianProcesses
+srand(201216)
+
 
 n = 20
 X = linspace(-3,3,n)
-Y = [rand(Distributions.Poisson(sin(X[i]).^2)) for i in 1:n]
-
+Y = [rand(Distributions.Poisson(exp(2*cos(0.5*X[i])))) for i in 1:n]
+#Y = exp(sin(X)+cos(X))
 #plot the data
 plot(x=X,y=Y,Geom.point)
 
@@ -36,7 +38,7 @@ for i in 1:size(samples,2)
     samp = rand(gp,xtest,5) 
     fsamples = hcat(fsamples,samp)
 end    
-
+fsamples = fsamples[:,2:end]
 
 rateSamples = exp(fsamples)
 fmean = mean(rateSamples,2); 
@@ -52,11 +54,21 @@ plot(layer(x=xtest,y=fmean,ymin=quant[:,1],ymax=quant[:,2],Geom.line,Geom.ribbon
 #need to check the posterior as well
 function test(hyp::Vector{Float64})
     GaussianProcesses.set_params!(gp, hyp)
-    GaussianProcesses.update_ll!(gp)
-    return gp.ll
+    GaussianProcesses.update_lpost!(gp)
+    return gp.lp
 end
 
 v = GaussianProcesses.get_params(gp);
-GaussianProcesses.update_ll_and_dll!(gp,Array(Float64,gp.nobsv,gp.nobsv))
+GaussianProcesses.update_lpost_and_dlpost!(gp,Array(Float64,gp.nobsv,gp.nobsv))
 Calculus.gradient(test,v)
-gp.dll
+gp.dlp
+
+
+################################
+#Predict
+
+
+xtest = linspace(-3,3,20);
+ymean,yvar = predict(gp,xtest;obs=true);
+plot(layer(x=xtest,y=ymean,Geom.point,Theme(default_color=color("red"))),
+     layer(x=vec(X),y=Y,Geom.point,Theme(default_color=color("blue"))))
