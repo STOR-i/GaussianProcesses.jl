@@ -215,6 +215,7 @@ include("mat.jl")               # Matern covariance function
 include("periodic.jl")          # Periodic covariance function
 include("poly.jl")              # Polnomial covariance function
 include("noise.jl")             # White noise covariance function
+include("const.jl")             # Constant (bias) covariance function
 
 # Composite kernels
 include("sum_kernel.jl")        # Sum of kernels
