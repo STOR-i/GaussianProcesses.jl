@@ -36,15 +36,43 @@ plot(y=samples[end,:],Geom.line) #check MCMC mixing
 
 ########
 
-#need to check the posterior as well
-function test(hyp::Vector{Float64})
-    GaussianProcesses.set_params!(gp, hyp)
+#Plot posterior samples
+xtest = linspace(minimum(gp.X),maximum(gp.X),50);
+ymean = [];
+fsamples = [];
+for i in 1:size(samples,2)
+    GaussianProcesses.set_params!(gp,samples[:,i])
     GaussianProcesses.update_lpost!(gp)
-    return gp.lp
+    push!(ymean, predict(gp,xtest,obs=true)[1])
+    push!(fsamples,rand(gp,xtest))
 end
 
-v = GaussianProcesses.get_params(gp);
-GaussianProcesses.update_lpost_and_dlpost!(gp,Array(Float64,gp.nobsv,gp.nobsv))
-Calculus.gradient(test,v)
-gp.dlp
+
+layers = []
+for f in fsamples
+    push!(layers, layer(x=xtest,y=f,Geom.line))
+end
+
+plot(layers...,Guide.xlabel("X"),Guide.ylabel("f"))
+
+quant = Array(Float64,50,2);
+for i in 1:50
+    quant[i,:] = quantile(rateSamples[i,:],[0.05,0.95])
+end
+
+plot(layer(x=xtest,y=fmean,ymin=quant[:,1],ymax=quant[:,2],Geom.line,Geom.ribbon),layer(x=vec(X),y=Y,Geom.point))
+
+################################
+#Predict
+
+layers = []
+for ym in ymean
+    push!(layers, layer(x=xtest,y=ym,Geom.line))
+end
+
+plot(layers...,Guide.xlabel("X"),Guide.ylabel("y"))
+
+
+plot(layer(x=xtest,y=mean(ymean),Geom.line),
+     layer(x=X,y=Y,Geom.point))
 
