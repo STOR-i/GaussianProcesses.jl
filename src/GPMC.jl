@@ -219,9 +219,17 @@ function _predict{M<:MatF64}(gp::GPMC, X::M)
     cK = cov(gp.k, X, gp.X)
     Lck = whiten(gp.cK, cK')
     fmu =  mean(gp.m,X) + Lck'gp.v     # Predictive mean
-    Sigma_raw = cov(gp.k, X) - Lck'Lck # Predictive covariance 
-    # Hack to get stable covariance
-    fSigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+1e-6*sum(diag(Sigma_raw))/n*eye(n)) end
+    Sigma_raw = cov(gp.k, X) - Lck'Lck # Predictive covariance
+    # Add jitter to get stable covariance
+    while true
+        Sigma_raw = try
+            PDMat(Sigma_raw)
+            break
+        catch
+            PDMat(Sigma_raw+1e-8*sum(diag(Sigma_raw))/n*eye(n))
+        end
+    end
+    fSigma = PDMat(Sigma_raw)
     return fmu, fSigma
 end
 
@@ -235,7 +243,16 @@ function rand!{M<:MatF64}(gp::GPMC, X::M, A::DenseMatrix)
         # Prior mean and covariance
         μ = mean(gp.m, X);
         Σraw = cov(gp.k, X);
-        Σ = try PDMat(Σraw) catch; PDMat(Σraw+1e-8*sum(diag(Σraw))/nobsv*eye(nobsv)) end  
+        # Add jitter to get stable covariance
+        while true
+            Σraw = try
+                PDMat(Σraw)
+                break
+            catch
+                PDMat(Σraw+1e-8*sum(diag(Σraw))/nobsv*eye(nobsv))
+            end
+        end
+        Σ = Σraw
     else
         # Posterior mean and covariance
         μ, Σ = predict(gp, X; full_cov=true)

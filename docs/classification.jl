@@ -3,6 +3,7 @@
 using Gadfly
 using GaussianProcesses
 
+srand(112233)
 X = rand(20)
 X = sort(X)
 y = sin(10*X)
@@ -17,31 +18,46 @@ lik = BernLik()
 
 gp = GPMC{Bool}(X',vec(y),mZero,kern,lik)     
 
-optimize!(gp)
-GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(-2.0,4.0),Distributions.Normal(-2.0,4.0)])
+#optimize!(gp)
+GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(0.0,2.0),Distributions.Normal(0.0,2.0)])
 
 #mcmc doesn't seem to mix well
 samples = mcmc(gp;mcrange=Klara.BasicMCRange(nsteps=50000, thinning=10, burnin=10000))
 
 plot(y=samples[end,:],Geom.line) #check MCMC mixing
 
-xtest = linspace(0,1,50);
-fsamples = Array(Float64,50);
+xtest = linspace(minimum(gp.X),maximum(gp.X),50);
+ymean = []
+fsamples = []
 for i in 1:size(samples,2)
     GaussianProcesses.set_params!(gp,samples[:,i])
     GaussianProcesses.update_ll!(gp)
-    samp = rand(gp,xtest,5) 
-    fsamples = hcat(fsamples,samp)
+    push!(ymean, predict(gp,xtest,obs=true)[1])
+    push!(fsamples,rand(gp,xtest))
+    #fsamples = hcat(fsamples,samp)
 end
 
-fsamples = fsamples[:,2:end]
 fmean = mean(fsamples,2); 
 plot(layer(x=xtest,y=fmean,Geom.line),layer(x=vec(X),y=y,Geom.point))
-#plot(layer(x=xtest,y=convert(Vector{Bool},fmean[:].>0),Geom.line),layer(x=vec(X),y=y,Geom.point))
+
+layers = []
+for f in fsamples
+    push!(layers, layer(x=xtest,y=f,Geom.line))
+end
+
+plot(layers...,Guide.xlabel("X"),Guide.ylabel("f"))
+
+
 #######################
 #Predict 
 
-xtest = linspace(0,1,10);
-ymean, yvar = predict(gp,xtest;obs=true)
-plot(layer(x=xtest,y=ymean,Geom.point,Theme(default_color=color("red"))),
-     layer(x=vec(X),y=y,Geom.point,Theme(default_color=color("blue"))))
+layers = []
+for ym in ymean
+    push!(layers, layer(x=xtest,y=ym,Geom.line))
+end
+
+plot(layers...,Guide.xlabel("X"),Guide.ylabel("y"))
+
+
+
+
