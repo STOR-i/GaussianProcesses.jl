@@ -71,6 +71,6 @@ function get_optim_target(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=
         lpost_and_dlpost!(hyp::Vector{Float64}, grad::Vector{Float64})
     end
 
-    func = DifferentiableFunction(lpost, dlpost!, lpost_and_dlpost!)
+    func = OnceDifferentiable(lpost, dlpost!, lpost_and_dlpost!)
     return func
 end

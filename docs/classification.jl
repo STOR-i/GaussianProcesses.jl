@@ -18,7 +18,7 @@ lik = BernLik()
 
 gp = GPMC{Bool}(X',vec(y),mZero,kern,lik)     
 
-#optimize!(gp)
+optimize!(gp)
 GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(0.0,2.0),Distributions.Normal(0.0,2.0)])
 
 #mcmc doesn't seem to mix well
@@ -27,8 +27,8 @@ samples = mcmc(gp;mcrange=Klara.BasicMCRange(nsteps=50000, thinning=10, burnin=1
 plot(y=samples[end,:],Geom.line) #check MCMC mixing
 
 xtest = linspace(minimum(gp.X),maximum(gp.X),50);
-ymean = []
-fsamples = []
+ymean = [];
+fsamples = [];
 for i in 1:size(samples,2)
     GaussianProcesses.set_params!(gp,samples[:,i])
     GaussianProcesses.update_ll!(gp)
@@ -36,9 +36,6 @@ for i in 1:size(samples,2)
     push!(fsamples,rand(gp,xtest))
     #fsamples = hcat(fsamples,samp)
 end
-
-fmean = mean(fsamples,2); 
-plot(layer(x=xtest,y=fmean,Geom.line),layer(x=vec(X),y=y,Geom.point))
 
 layers = []
 for f in fsamples
@@ -59,5 +56,6 @@ end
 plot(layers...,Guide.xlabel("X"),Guide.ylabel("y"))
 
 
-
+plot(layer(x=xtest,y=mean(ymean),Geom.line),
+     layer(x=X,y=y,Geom.point))
 
