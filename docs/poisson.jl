@@ -7,8 +7,8 @@ srand(201216)
 
 n = 20
 X = linspace(-3,3,n)
-Y = [rand(Distributions.Poisson(exp(2*cos(0.5*X[i])))) for i in 1:n]
-#Y = exp(sin(X)+cos(X))
+Y = [rand(Distributions.Poisson(exp(2*cos(2*X[i])))) for i in 1:n]
+
 #plot the data
 plot(x=X,y=Y,Geom.point)
 
@@ -40,18 +40,24 @@ for i in 1:size(samples,2)
     #fsamples = hcat(fsamples,samp)
 end
 
-layers = []
-for f in fsamples
-    push!(layers, layer(x=xtest,y=f,Geom.line))
-end
-plot(layers...,Guide.xlabel("X"),Guide.ylabel("f"))
-
 rateSamples = Array(Float64,length(fsamples),50);
 for i in 1:length(fsamples) rateSamples[i,:] = exp(fsamples[i]) end
 
 fmean = mean(rateSamples,1); 
 
-plot(layer(x=xtest,y=fmean,ymin=fmean-2*std(rateSamples,1),ymax=fmean+2*std(rateSamples,1),Geom.line,Geom.ribbon),layer(x=vec(X),y=Y,Geom.point))
+layers = []
+for f in fsamples
+    push!(layers, layer(x=xtest,y=f,Geom.line))
+end
+
+plot(layers...,Guide.xlabel("X"),Guide.ylabel("f"))
+
+quant = Array(Float64,50,2);
+for i in 1:50
+    quant[i,:] = quantile(rateSamples[i,:],[0.05,0.95])
+end
+
+plot(layer(x=xtest,y=fmean,ymin=quant[:,1],ymax=quant[:,2],Geom.line,Geom.ribbon),layer(x=vec(X),y=Y,Geom.point))
 
 ################################
 #Predict
@@ -66,4 +72,5 @@ plot(layers...,Guide.xlabel("X"),Guide.ylabel("y"))
 
 plot(layer(x=xtest,y=mean(ymean),Geom.line),
      layer(x=X,y=Y,Geom.point))
+
 
