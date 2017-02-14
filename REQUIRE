@@ -1,5 +1,5 @@
 julia 0.5
-Optim 0.7-
+Optim 0.7-0.7.5
 PDMats 0.3-
 Distances 0.2-
 ScikitLearnBase 0.0.1
