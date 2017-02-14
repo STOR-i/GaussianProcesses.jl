@@ -45,7 +45,7 @@ function KernelData{K<:Kernel,M<:MatF64}(masked::Masked{K}, X::M)
 end
 function kernel_data_key{K<:Kernel,M<:MatF64}(masked::Masked{K}, X::M)
     k = kernel_data_key(masked.kern, view(X,masked.active_dims,:))
-    return Symbol(k, "_active=", masked.active_dims)
+    return @sprintf("%s_active=%s", k, masked.active_dims)
 end
 
 

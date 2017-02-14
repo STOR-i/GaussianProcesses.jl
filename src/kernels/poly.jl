@@ -22,7 +22,7 @@ function KernelData{M<:MatF64}(k::Poly, X::M)
     Base.LinAlg.copytri!(XtX, 'U')
     LinIsoData(XtX)
 end
-kernel_data_key{M<:MatF64}(k::Poly, X::M) = :LinIsoData
+kernel_data_key{M<:MatF64}(k::Poly, X::M) = "LinIsoData"
 
 _cov(poly::Poly, xTy) = poly.σ2*(poly.c.+xTy).^poly.deg
 function cov{V1<:VecF64,V2<:VecF64}(poly::Poly, x::V1, y::V2)

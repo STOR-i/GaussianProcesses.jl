@@ -10,8 +10,8 @@ type ProdKernel <: Kernel
     end
 end
 function KernelData{M<:MatF64}(prodkern::ProdKernel, X::M)
-    datadict = Dict{Symbol, KernelData}()
-    datakeys = Symbol[]
+    datadict = Dict{String, KernelData}()
+    datakeys = String[]
     for k in prodkern.kerns
         data_type = kernel_data_key(k, X)
         if !haskey(datadict, data_type)
@@ -21,7 +21,8 @@ function KernelData{M<:MatF64}(prodkern::ProdKernel, X::M)
     end
     SumData(datadict, datakeys)
 end
-kernel_data_key{M<:MatF64}(prodkern::ProdKernel, X::M) = :SumData
+kernel_data_key{M<:MatF64}(prodkern::ProdKernel, X::M) = join(["SumData" ;
+     sort(unique(kernel_data_key(k, X) for k in prodkern.kerns))])
 
 function show(io::IO, prodkern::ProdKernel, depth::Int = 0)
     pad = repeat(" ", 2 * depth)

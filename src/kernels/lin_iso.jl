@@ -22,7 +22,7 @@ function KernelData{M<:MatF64}(k::LinIso, X::M)
     Base.LinAlg.copytri!(XtX, 'U') # make sure it's symmetric
     LinIsoData(XtX)
 end
-kernel_data_key{M<:MatF64}(k::LinIso, X::M) = :LinIsoData
+kernel_data_key{M<:MatF64}(k::LinIso, X::M) = "LinIsoData"
 
 _cov(lin::LinIso, xTy) = xTy ./ lin.ℓ2
 function cov{V1<:VecF64,V2<:VecF64}(lin::LinIso, x::V1, y::V2)
