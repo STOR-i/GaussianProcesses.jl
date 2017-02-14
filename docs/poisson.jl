@@ -7,7 +7,8 @@ srand(201216)
 
 n = 20
 X = linspace(-3,3,n)
-Y = [rand(Distributions.Poisson(exp(2*cos(2*X[i])))) for i in 1:n]
+f = 2*cos(2*X)
+Y = [rand(Distributions.Poisson(exp(f[i]))) for i in 1:n]
 
 #plot the data
 plot(x=X,y=Y,Geom.point)
@@ -19,7 +20,6 @@ gp = GPMC{Int64}(X', vec(Y), MeanZero(), k, l)
 
 #set the priors (need a better interface)
 GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(-2.0,4.0),Distributions.Normal(-2.0,4.0)])
-
 
 optimize!(gp)
 
@@ -37,27 +37,17 @@ for i in 1:size(samples,2)
     GaussianProcesses.update_lpost!(gp)
     push!(ymean, predict(gp,xtest,obs=true)[1])
     push!(fsamples,rand(gp,xtest))
-    #fsamples = hcat(fsamples,samp)
 end
-
-rateSamples = Array(Float64,length(fsamples),50);
-for i in 1:length(fsamples) rateSamples[i,:] = exp(fsamples[i]) end
-
-fmean = mean(rateSamples,1); 
-
-layers = []
-for f in fsamples
-    push!(layers, layer(x=xtest,y=f,Geom.line))
-end
-
-plot(layers...,Guide.xlabel("X"),Guide.ylabel("f"))
 
 quant = Array(Float64,50,2);
 for i in 1:50
-    quant[i,:] = quantile(rateSamples[i,:],[0.05,0.95])
+    quant[i,:] = quantile(fsamples[i],[0.025,0.975])
 end
 
-plot(layer(x=xtest,y=fmean,ymin=quant[:,1],ymax=quant[:,2],Geom.line,Geom.ribbon),layer(x=vec(X),y=Y,Geom.point))
+plot(layer(x=xtest,y=mean(fsamples),ymin=quant[:,1],ymax=quant[:,2],Geom.line),
+     layer(x=xtest,y=quant[:,1],Geom.line,Theme(default_color=colorant"red")),
+     layer(x=xtest,y=quant[:,2],Geom.line,Theme(default_color=colorant"red")),
+     layer(x=vec(X),y=f,Geom.point))
 
 ################################
 #Predict
