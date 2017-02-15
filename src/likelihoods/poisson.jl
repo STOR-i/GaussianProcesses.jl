@@ -2,6 +2,8 @@
 # Description
 Constructor for the Poisson likelihood
 
+    p(yᵢ=k|fᵢ) = θᵏ × exp(-θ)/k!
+
 # Arguments:
 * `θ::Float64`: rate parameter is the exponential of the latent function, i.e. θ = exp(f)
 """

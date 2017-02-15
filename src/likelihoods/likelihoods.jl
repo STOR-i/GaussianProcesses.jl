@@ -16,6 +16,7 @@ include("exponential.jl")
 include("gaussian.jl")
 include("studentT.jl")
 include("poisson.jl")
+include("binomial.jl")
 
 ################
 #Priors
