@@ -56,6 +56,7 @@ end
 
 plot(layers...,Guide.xlabel("X"),Guide.ylabel("y"))
 
-plot(layer(x=xtest,y=mean(ymean),Geom.line),
-     layer(x=X,y=Y,Geom.point))
+sd = [std(ymean[i]) for i in 1:50]
+
+plot(layer(x=xtest,y=mean(ymean),ymin=mean(ymean)-2*sd,ymax=mean(ymean)+2*sd,Geom.line,Geom.ribbon),layer(x=X,y=Y,Geom.point))
 

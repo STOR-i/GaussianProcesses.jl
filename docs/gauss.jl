@@ -1,4 +1,4 @@
-#This file tests the GP model with a Student's t likelihood
+#This file tests the GP Monte Carlo function against the exact solution from GP regression
 
 using Gadfly
 using GaussianProcesses
@@ -14,15 +14,21 @@ plot(x=X,y=Y,Geom.point)
 #build the model
 m = MeanZero()
 k = Mat(3/2,0.0,0.0)
-l = GaussLik(0.0)
-gp = GPMC{Float64}(X', vec(Y), m, k, l)
+l = GaussLik(log(2.0))
 
-#set the priors (need a better interface)
-GaussianProcesses.set_priors!(gp.lik,[Distributions.Normal(-2.0,4.0)])
+gp1 = GP(X', vec(Y), m, k, log(2.0))
+gp2 = GPMC{Float64}(X', vec(Y), m, k, l)
 
-GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(-2.0,4.0),Distributions.Normal(-2.0,4.0)])
+#compare log-likelihoods
+abs(gp2.ll - gp1.mLL)>eps()
 
-optimize!(gp)
+#compare the gradients as well
+
+
+optimize!(gp1)
+optimize!(gp2)
+
+
 xtest = collect(linspace(-4.0,4.0,20));
 fmean, fvar = predict(gp,xtest);
 

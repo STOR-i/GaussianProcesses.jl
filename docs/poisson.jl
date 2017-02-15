@@ -44,7 +44,7 @@ for i in 1:50
     quant[i,:] = quantile(fsamples[i],[0.025,0.975])
 end
 
-plot(layer(x=xtest,y=mean(fsamples),ymin=quant[:,1],ymax=quant[:,2],Geom.line),
+plot(layer(x=xtest,y=mean(fsamples),Geom.line),
      layer(x=xtest,y=quant[:,1],Geom.line,Theme(default_color=colorant"red")),
      layer(x=xtest,y=quant[:,2],Geom.line,Theme(default_color=colorant"red")),
      layer(x=vec(X),y=f,Geom.point))
