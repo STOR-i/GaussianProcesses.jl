@@ -25,8 +25,24 @@ function mcmc(gp::GPMC;
 
     
     function logpost(hyp::Vector{Float64})  #log-target
-        set_params!(gp, hyp)
-        return update_lpost!(gp)
+        try
+            set_params!(gp, hyp)
+            update_lpost!(gp)
+            return gp.lp
+        catch err
+            if !all(isfinite(hyp))
+                println(err)
+                return -Inf
+            elseif isa(err, ArgumentError)
+                println(err)
+                return -Inf
+            elseif isa(err, Base.LinAlg.PosDefException)
+                println(err)
+                return -Inf
+            else
+                throw(err)
+            end
+        end        
     end
 
     function dlogpost(hyp::Vector{Float64}) #gradient of the log-target
