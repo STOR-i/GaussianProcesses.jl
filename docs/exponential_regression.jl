@@ -8,7 +8,7 @@ X = linspace(-3,3,n)
 Y = [rand(Distributions.Exponential(sin(X[i]).^2)) for i in 1:n]
 
 #build the model
-k = Mat(3/2,0.0,0.0) + Const(1.0)
+k = Mat(3/2,0.0,0.0) #+ Const(1.0)
 l = ExpLik()
 gp = GPMC{Float64}(X', vec(Y), MeanZero(), k, l)
 
