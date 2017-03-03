@@ -1,6 +1,7 @@
 # Plot basic Gaussian Process
 
-using PyPlot, GaussianProcesses
+#using PyPlot, GaussianProcesses
+using GaussianProcesses, Plots
 
 srand(13579)
 # Training data
@@ -13,14 +14,14 @@ mZero = MeanZero()                   #Zero mean function
 kern = SE(0.0,0.0)                   #Sqaured exponential kernel (note that hyperparameters are on the log scale)
 
 gp = GP(x,y,mZero,kern,-1.0)      #Fit the GP, where -1.0 is the log Gaussian noise
-plot(gp)                          #Plot the GP
+plot(gp)
 
-optimize!(gp; method=Optim.BFGS())   #Optimise the hyperparameters
+# optimize!(gp; method=Optim.BFGS())   #Optimise the hyperparameters
 
-plot(gp)   #Plot the GP after the hyperparameters have been optimised 
+# plot(gp)   #Plot the GP after the hyperparameters have been optimised 
 
-# Add observation
-push!(gp, [1.0], [2.0])
+# # Add observation
+# push!(gp, [1.0], [2.0])
 
 
 

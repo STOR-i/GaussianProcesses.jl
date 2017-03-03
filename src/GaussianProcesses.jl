@@ -1,6 +1,7 @@
 module GaussianProcesses
 using Optim, PDMats, Distances
 using Compat
+using RecipesBase
 import Compat: view, cholfact!
 
 import Base: +, *
@@ -20,6 +21,7 @@ include("kernels/kernels.jl")
 include("utils.jl")
 include("GP.jl")
 include("optimize.jl")
+include("plot.jl")
 
 # This approach to loading supported plotting packages is taken from the "KernelDensity" package
 macro glue(pkg)
