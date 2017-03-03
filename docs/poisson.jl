@@ -11,13 +11,11 @@ f = 2*cos(2*X)
 Y = [rand(Distributions.Poisson(exp(f[i]))) for i in 1:n]
 
 #plot the data
-plot(x=X,y=Y,Geom.point)
-
+#plot(x=X,y=Y,Geom.point)
 #build the model
 k = Mat(3/2,0.0,0.0)
 l = PoisLik()
-gp = GPMC{Int64}(X', vec(Y), MeanZero(), k, l)
-
+gp = GPMC(X', vec(Y), MeanZero(), k, l)
 #set the priors (need a better interface)
 GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(-2.0,4.0),Distributions.Normal(-2.0,4.0)])
 

@@ -10,7 +10,7 @@ Y = [rand(Distributions.Exponential(sin(X[i]).^2)) for i in 1:n]
 #build the model
 k = Mat(3/2,0.0,0.0) #+ Const(1.0)
 l = ExpLik()
-gp = GPMC{Float64}(X', vec(Y), MeanZero(), k, l)
+gp = GPMC(X', vec(Y), MeanZero(), k, l)
 
 #set the priors (need a better interface)
 GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(-2.0,4.0),Distributions.Normal(-2.0,4.0)])

@@ -15,7 +15,7 @@ plot(x=X,y=Y,Geom.point)
 #build the model
 k = Mat(3/2,0.0,0.0)
 l = BinLik(n)
-gp = GPMC{Int64}(X', vec(Y), MeanZero(), k, l)
+gp = GPMC(X', vec(Y), MeanZero(), k, l)
 
 #set the priors (need a better interface)
 GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(-2.0,4.0),Distributions.Normal(-2.0,4.0)])

@@ -15,7 +15,7 @@ plot(x=X,y=Y,Geom.point)
 m = MeanZero()
 k = Mat(3/2,0.0,0.0)
 l = StuTLik(3,0.1)
-gp = GPMC{Float64}(X', vec(Y), m, k, l)
+gp = GPMC(X', vec(Y), m, k, l)
 
 #set the priors (need a better interface)
 GaussianProcesses.set_priors!(gp.lik,[Distributions.Normal(-2.0,4.0)])

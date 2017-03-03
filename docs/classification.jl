@@ -16,7 +16,7 @@ mZero = MeanZero()                   #Zero mean function
 kern = SE(0.0,0.0)                   #Sqaured exponential kernel (note that hyperparameters are on the log scale)
 lik = BernLik()
 
-gp = GPMC{Bool}(X',vec(y),mZero,kern,lik)     
+gp = GPMC(X',vec(y),mZero,kern,lik)     
 
 optimize!(gp)
 GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(0.0,2.0),Distributions.Normal(0.0,2.0)])

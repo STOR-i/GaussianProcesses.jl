@@ -55,8 +55,10 @@ type GPMC{T<:Real}
     end
 end
 
+GPMC{T<:Real}(x::Matrix{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPMC{T}(x, y, meanf, kernel, lik)
+
 # Creates GP object for 1D case
-GPMC(x::Vector{Float64}, y::Vector, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPMC(x', y, meanf, kernel, lik)
+GPMC{T<:Real}(x::Vector{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPMC{T}(x', y, meanf, kernel, lik)
 
 
 
@@ -311,21 +313,6 @@ function set_params!(gp::GPMC, hyp::Vector{Float64}; lik::Bool=true, mean::Bool=
         i += n_kern_params
     end
 end
-    
-function push!(gp::GPMC, X::Matrix{Float64}, y::Vector{Float64})
-    warn("push! method is currently inefficient as it refits all observations")
-    if gp.nobsv == 0
-        GaussianProcesses.fit!(gp, X, y)
-    elseif size(X,1) != size(gp.X,1)
-        error("New input observations must have dimensions consistent with existing observations")
-    else
-        GaussianProcesses.fit!(gp, cat(2, gp.X, X), cat(1, gp.y, y))
-    end
-end
-
-push!(gp::GPMC, x::Vector{Float64}, y::Vector{Float64}) = push!(gp, x', y)
-push!(gp::GPMC, x::Float64, y::Float64) = push!(gp, [x], [y])
-push!(gp::GPMC, x::Vector{Float64}, y::Float64) = push!(gp, reshape(x, length(x), 1), [y])
 
 function show(io::IO, gp::GPMC)
     println(io, "GP object:")
