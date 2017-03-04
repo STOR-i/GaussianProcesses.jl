@@ -50,7 +50,7 @@ type GPMC{T<:Real}
         v = zeros(nobsv)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         gp = new(m, k, lik, nobsv, X, y, v, KernelData(k, X), dim)
-        initialise_lpost!(gp)
+        initialise_target!(gp)
         return gp
     end
 end
@@ -148,7 +148,7 @@ end
 
 
 #log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)
-function initialise_lpost!(gp::GPMC)
+function initialise_target!(gp::GPMC)
     initialise_ll!(gp)
     prior = 0.0 
     if num_params(gp.lik)>0
@@ -158,30 +158,22 @@ function initialise_lpost!(gp::GPMC)
 end    
 
 #log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)
-function update_lpost!(gp::GPMC)
+function update_target!(gp::GPMC)
     update_ll!(gp)
-    prior = 0.0 
-    if num_params(gp.lik)>0
-        prior = prior_logpdf(gp.lik)
-    end    
-    gp.lp = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior + prior_logpdf(gp.k) 
+    gp.lp = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.mean) + prior_logpdf(gp.k) 
 end    
 
-#dlog p(θ,v|y) ∝ dlog p(y|v,θ) + dlog p(v) +  dlog p(θ)
-function update_lpost_and_dlpost!(gp::GPMC, Kgrad::MatF64; lik::Bool=true, mean::Bool=true, kern::Bool=true)
+#function to update the log-posterior and its derivative
+function update_target_and_dtarget!(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
+    Kgrad = Array(Float64, gp.nobsv, gp.nobsv)
     update_ll_and_dll!(gp::GPMC, Kgrad; lik=lik, mean=mean, kern=kern)
-    if num_params(gp.lik)>0
-        gp.dlp = gp.dll + [-gp.v;prior_gradlogpdf(gp.lik);zeros(num_params(gp.m));prior_gradlogpdf(gp.k)] 
-    else
-        gp.dlp = gp.dll + [-gp.v;zeros(num_params(gp.m));prior_gradlogpdf(gp.k)] 
-    end
-
+    gp.dlp = gp.dll + [-gp.v;prior_gradlogpdf(gp.lik);prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] 
 end    
 
 
 @doc """
     # Description
-    Calculates the posterior mean and variance of Gaussian Process at specified points
+    Calculates the posterior mean and variance of the Gaussian Process function at specified points
 
     # Arguments:
     * `gp::GP`: Gaussian Process object
@@ -192,7 +184,7 @@ end
     * `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
                                                         process at the specified points
     """ ->
-function predict{M<:MatF64}(gp::GPMC, x::M; obs::Bool=false, full_cov::Bool=false)
+function predictF{M<:MatF64}(gp::GPMC, x::M; full_cov::Bool=false)
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
     if full_cov
         μ, σ2 = _predict(gp, x)
@@ -206,14 +198,21 @@ function predict{M<:MatF64}(gp::GPMC, x::M; obs::Bool=false, full_cov::Bool=fals
             σ2[k] = max(full(sig)[1,1], 0.0)
         end
     end
-    if obs #need to handle full_cov case
-       μ, σ2 = predict_obs(gp.lik, μ, σ2)
-    end
     return μ, σ2
 end
 
 # 1D Case for prediction
-predict{V<:VecF64}(gp::GPMC, x::V; obs::Bool=false, full_cov::Bool=false) = predict(gp, x'; obs=obs, full_cov=full_cov)
+predictF{V<:VecF64}(gp::GPMC, x::V; full_cov::Bool=false) = predictF(gp, x'; full_cov=full_cov)
+
+
+function predictY{M<:MatF64}(gp::GPMC, x::M; full_cov::Bool=false)
+    μ, σ2 = predictF{gp, x; full_cov=full_cov)
+    return predict_obs(gp.lik, μ, σ2)
+end
+
+# 1D Case for prediction
+predictY{V<:VecF64}(gp::GPMC, x::V; full_cov::Bool=false) = predictY(gp, x'; full_cov=full_cov)
+
 
 ## compute predictions
 function _predict{M<:MatF64}(gp::GPMC, X::M)
@@ -257,7 +256,7 @@ function rand!{M<:MatF64}(gp::GPMC, X::M, A::DenseMatrix)
         Σ = Σraw
     else
         # Posterior mean and covariance
-        μ, Σ = predict(gp, X; full_cov=true)
+        μ, Σ = predictF(gp, X; full_cov=true)
     end
     
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobsv, n_sample)))

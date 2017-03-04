@@ -41,7 +41,7 @@ type GP
         dim, nobsv = size(X)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         gp = new(m, k, logNoise, nobsv, X, y, KernelData(k, X), dim)
-        initialise_mll!(gp)
+        initialise_target!(gp)
         return gp
     end
     
@@ -70,7 +70,7 @@ function fit!(gp::GP, X::Matrix{Float64}, y::Vector{Float64})
     gp.y = y
     gp.data = KernelData(gp.k, X)
     gp.dim, gp.nobsv = size(X)
-    initialise_mll!(gp)
+    initialise_target!(gp)
     return gp
 end
 
@@ -90,6 +90,10 @@ function initialise_mll!(gp::GP)
     gp.mLL = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
 
+function initialise_target!(gp::GP)
+    initialise_mll!(gp)
+end    
+
 # modification of initialise_mll! that reuses existing matrices to avoid
 # unnecessary memory allocations, which speeds things up significantly
 function update_mll!(gp::GP)
@@ -106,6 +110,12 @@ function update_mll!(gp::GP)
     gp.alpha = gp.cK \ (gp.y - μ)
     gp.mLL = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
+
+
+#function to udpate the target
+function update_target!(gp::GP)
+    update_mll!(gp)
+end    
 
 @doc """
 get_ααinvcKI!(ααinvcKI::Matrix, cK::AbstractPDMat, α::Vector)
@@ -175,7 +185,9 @@ function update_mll_and_dmll!(gp::GP,
     end
 end
 
-function update_mll_and_dmll!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
+#function to update the marginal log-likelihood and its derivative
+function update_target_and_dtarget!(gp::GP; lik::Bool=true, mean::Bool=true, kern::Bool=true)
+    noise = lik
     Kgrad = Array(Float64, gp.nobsv, gp.nobsv)
     ααinvcKI = Array(Float64, gp.nobsv, gp.nobsv)
     update_mll_and_dmll!(gp, Kgrad, ααinvcKI, noise=noise,mean=mean,kern=kern)
@@ -183,7 +195,7 @@ end
 
 @doc """
 # Description
-Calculates the posterior mean and variance of Gaussian Process at specified points
+Calculates the posterior mean and variance of the Gaussian Process function at specified points
 
 # Arguments:
 * `gp::GP`: Gaussian Process object
@@ -197,7 +209,7 @@ Calculates the posterior mean and variance of Gaussian Process at specified poin
 * `(μ, σ²)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
                                                     process at the specified points
 """ ->
-function predict{M<:MatF64}(gp::GP, x::M; full_cov::Bool=false)
+function predictF{M<:MatF64}(gp::GP, x::M; full_cov::Bool=false)
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
     if full_cov
         return _predict(gp, x)
@@ -215,7 +227,7 @@ function predict{M<:MatF64}(gp::GP, x::M; full_cov::Bool=false)
 end
 
 # 1D Case for prediction
-predict{V<:VecF64}(gp::GP, x::V; full_cov::Bool=false) = predict(gp, x'; full_cov=full_cov)
+predictF{V<:VecF64}(gp::GP, x::V; full_cov::Bool=false) = predictF(gp, x'; full_cov=full_cov)
 
 ## compute predictions
 function _predict{M<:MatF64}(gp::GP, X::M)
@@ -242,7 +254,7 @@ function rand!{M<:MatF64}(gp::GP, X::M, A::DenseMatrix)
         Σ = try PDMat(Σraw) catch; PDMat(Σraw+1e-8*sum(diag(Σraw))/nobsv*eye(nobsv)) end  
     else
         # Posterior mean and covariance
-        μ, Σ = predict(gp, X; full_cov=true)
+        μ, Σ = predictF(gp, X; full_cov=true)
     end
     
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobsv, n_sample)))

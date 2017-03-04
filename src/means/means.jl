@@ -22,6 +22,32 @@ function grad_stack(m::Mean, X::Matrix{Float64})
     return mat
 end
 
+################
+#Priors
+################
+
+function set_priors!(m::Mean, priors::Array)
+    length(priors) == num_params(m) || throw(ArgumentError("$(typeof(m)) has exactly $(num_params(m)) parameters"))
+    m.priors = priors
+end
+
+function prior_logpdf(m::Mean)
+    if m.priors==[]
+        return 0.0
+    else
+        return sum(Distributions.logpdf(prior,param) for (prior, param) in zip(m.priors,get_params(m)))
+    end    
+end
+
+function prior_gradlogpdf(m::Mean)
+    if m.priors==[]
+        return zeros(num_params(m))
+    else
+        return [Distributions.gradlogpdf(prior,param) for (prior, param) in zip(m.priors,get_params(m))]
+    end    
+end
+
+############################################################
 include("mZero.jl")          # Zero mean function
 include("mConst.jl")         # Constant mean function
 include("mLin.jl")           # Linear mean function

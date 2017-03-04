@@ -11,23 +11,22 @@
     # Return:
     * `::Optim.MultivariateOptimizationResults{Float64,1}`: optimization results object
     """ ->
-function optimize!(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true,
+function optimize!(gp; lik::Bool=true, mean::Bool=true, kern::Bool=true,
                    method=LBFGS(), kwargs...)
     func = get_optim_target(gp, lik=lik, mean=mean, kern=kern)
     init = get_params(gp;  lik=lik, mean=mean, kern=kern)  # Initial hyperparameter values
     results = optimize(func,init; method=method, kwargs...)                     # Run optimizer
     set_params!(gp, Optim.minimizer(results), lik=lik,mean=mean,kern=kern)
-    update_lpost!(gp)
+    update_target!(gp)
     return results
 end
 
-function get_optim_target(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
-    Kgrad_buffer = Array(Float64, gp.nobsv, gp.nobsv)
+function get_optim_target(gp; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     
-    function lpost(hyp::Vector{Float64})
+    function ltarget(hyp::Vector{Float64})
         try
             set_params!(gp, hyp; lik=lik, mean=mean, kern=kern)
-            update_lpost!(gp)
+            update_target!(gp)
             return -gp.lp
         catch err
             if !all(isfinite(hyp))
@@ -45,10 +44,10 @@ function get_optim_target(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=
         end        
     end
 
-    function lpost_and_dlpost!(hyp::Vector{Float64}, grad::Vector{Float64})
+    function ltarget_and_dltarget!(hyp::Vector{Float64}, grad::Vector{Float64})
         try
             set_params!(gp, hyp; lik=lik, mean=mean, kern=kern)
-            update_lpost_and_dlpost!(gp, Kgrad_buffer; lik=lik, mean=mean, kern=kern)
+            update_target_and_dtarget!(gp; lik=lik, mean=mean, kern=kern)
             grad[:] = -gp.dlp
             return -gp.lp
         catch err
@@ -67,10 +66,10 @@ function get_optim_target(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=
         end 
     end
     
-    function dlpost!(hyp::Vector{Float64}, grad::Vector{Float64})
-        lpost_and_dlpost!(hyp::Vector{Float64}, grad::Vector{Float64})
+    function dltarget!(hyp::Vector{Float64}, grad::Vector{Float64})
+        ltarget_and_dltarget!(hyp::Vector{Float64}, grad::Vector{Float64})
     end
 
-    func = OnceDifferentiable(lpost, dlpost!, lpost_and_dlpost!)
+    func = OnceDifferentiable(ltarget, dltarget!, ltarget_and_dltarget!)
     return func
 end
