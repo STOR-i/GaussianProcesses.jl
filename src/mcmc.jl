@@ -27,7 +27,7 @@ function mcmc(gp::GPMC;
     function logpost(hyp::Vector{Float64})  #log-target
         try
             set_params!(gp, hyp)
-            update_lpost!(gp)
+            update_target!(gp)
             return gp.lp
         catch err
             if !all(isfinite(hyp))
@@ -47,7 +47,7 @@ function mcmc(gp::GPMC;
 
     function dlogpost(hyp::Vector{Float64}) #gradient of the log-target
         set_params!(gp, hyp)
-        return update_lpost_and_dlpost!(gp, Array(Float64, gp.nobsv, gp.nobsv))
+        return update_target_and_dtarget!(gp)
     end
     
     starting = Dict(:p=>start)

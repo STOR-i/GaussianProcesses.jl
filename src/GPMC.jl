@@ -24,7 +24,7 @@ Fits a Gaussian process to a set of training points. The Gaussian process is def
 # Returns:
 * `gp::GPMC`          : Gaussian process object, fitted to the training data if provided
 """ ->
-type GPMC{T<:Real}
+type GPMC{T<:Real} <: GP 
     m:: Mean                # Mean object
     k::Kernel               # Kernel object
     lik::Likelihood         # Likelihood is Gaussian for GPMC regression
@@ -44,6 +44,9 @@ type GPMC{T<:Real}
     dll::Vector{Float64}    # Gradient of log-likelihood
     lp::Float64             # Log-posterior of general GPMC model
     dlp::Vector{Float64}    # Gradient of log-posterior
+    target::Float64         # Log-target (i.e. Log-posterior)
+    dtarget::Vector{Float64}# Gradient of the log-target (i.e. grad log-posterior)
+
     
     function GPMC{S<:Real}(X::Matrix{Float64}, y::Vector{S}, m::Mean, k::Kernel, lik::Likelihood)
         dim, nobsv = size(X)
@@ -154,20 +157,20 @@ function initialise_target!(gp::GPMC)
     if num_params(gp.lik)>0
         prior = prior_logpdf(gp.lik)
     end    
-    gp.lp = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior + prior_logpdf(gp.k) 
+    gp.target = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior + prior_logpdf(gp.k) 
 end    
 
 #log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)
 function update_target!(gp::GPMC)
     update_ll!(gp)
-    gp.lp = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.mean) + prior_logpdf(gp.k) 
+    gp.target = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.m) + prior_logpdf(gp.k) 
 end    
 
 #function to update the log-posterior and its derivative
 function update_target_and_dtarget!(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     Kgrad = Array(Float64, gp.nobsv, gp.nobsv)
     update_ll_and_dll!(gp::GPMC, Kgrad; lik=lik, mean=mean, kern=kern)
-    gp.dlp = gp.dll + [-gp.v;prior_gradlogpdf(gp.lik);prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] 
+    gp.dtarget = gp.dll + [-gp.v;prior_gradlogpdf(gp.lik);prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] 
 end    
 
 
@@ -206,7 +209,7 @@ predictF{V<:VecF64}(gp::GPMC, x::V; full_cov::Bool=false) = predictF(gp, x'; ful
 
 
 function predictY{M<:MatF64}(gp::GPMC, x::M; full_cov::Bool=false)
-    μ, σ2 = predictF{gp, x; full_cov=full_cov)
+    μ, σ2 = predictF(gp, x; full_cov=full_cov)
     return predict_obs(gp.lik, μ, σ2)
 end
 
@@ -313,26 +316,5 @@ function set_params!(gp::GPMC, hyp::Vector{Float64}; lik::Bool=true, mean::Bool=
     end
 end
 
-function show(io::IO, gp::GPMC)
-    println(io, "GP object:")
-    println(io, "  Dim = $(gp.dim)")
-    println(io, "  Number of observations = $(gp.nobsv)")
-    println(io, "  Mean function:")
-    show(io, gp.m, 2)
-    println(io, "  Kernel:")
-    show(io, gp.k, 2)
-    println(io, "  Likelihood:")
-    show(io, gp.lik, 2)
-    if (gp.nobsv == 0)
-        println("  No observation data")
-    else
-        println(io, "  Input observations = ")
-        show(io, gp.X)
-        print(io,"\n  Output observations = ")
-        show(io, gp.y)
-        print(io,"\n  Log-posterior = ")
-        show(io, round(gp.lp,3))
-    end
-end
 
 

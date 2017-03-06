@@ -13,5 +13,5 @@ end
 
 mean(mZero::MeanZero,x::Matrix{Float64}) =  fill(0.0, size(x,2))
 
-get_params(mZero::MeanZero) = [0.0]
+get_params(mZero::MeanZero) = Float64[]
 num_params(mZero::MeanZero) = 0

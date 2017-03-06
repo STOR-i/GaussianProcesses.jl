@@ -32,7 +32,9 @@ function set_priors!(m::Mean, priors::Array)
 end
 
 function prior_logpdf(m::Mean)
-    if m.priors==[]
+    if num_params(m)==0
+        return 0.0
+    elseif m.priors==[]
         return 0.0
     else
         return sum(Distributions.logpdf(prior,param) for (prior, param) in zip(m.priors,get_params(m)))
@@ -40,7 +42,9 @@ function prior_logpdf(m::Mean)
 end
 
 function prior_gradlogpdf(m::Mean)
-    if m.priors==[]
+    if num_params(m)==0
+        return zeros(num_params(m))
+    elseif m.priors==[]
         return zeros(num_params(m))
     else
         return [Distributions.gradlogpdf(prior,param) for (prior, param) in zip(m.priors,get_params(m))]

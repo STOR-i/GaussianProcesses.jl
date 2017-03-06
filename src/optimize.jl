@@ -11,21 +11,20 @@
     # Return:
     * `::Optim.MultivariateOptimizationResults{Float64,1}`: optimization results object
     """ ->
-function optimize!(gp; lik::Bool=true, mean::Bool=true, kern::Bool=true,
-                   method=LBFGS(), kwargs...)
-    func = get_optim_target(gp, lik=lik, mean=mean, kern=kern)
-    init = get_params(gp;  lik=lik, mean=mean, kern=kern)  # Initial hyperparameter values
+function optimize!(gp; method=LBFGS(), kwargs...)
+    func = get_optim_target(gp)
+    init = get_params(gp)  # Initial hyperparameter values
     results = optimize(func,init; method=method, kwargs...)                     # Run optimizer
-    set_params!(gp, Optim.minimizer(results), lik=lik,mean=mean,kern=kern)
+    set_params!(gp, Optim.minimizer(results))
     update_target!(gp)
     return results
 end
 
-function get_optim_target(gp; lik::Bool=true, mean::Bool=true, kern::Bool=true)
+function get_optim_target(gp)
     
     function ltarget(hyp::Vector{Float64})
         try
-            set_params!(gp, hyp; lik=lik, mean=mean, kern=kern)
+            set_params!(gp, hyp)
             update_target!(gp)
             return -gp.lp
         catch err
@@ -46,8 +45,8 @@ function get_optim_target(gp; lik::Bool=true, mean::Bool=true, kern::Bool=true)
 
     function ltarget_and_dltarget!(hyp::Vector{Float64}, grad::Vector{Float64})
         try
-            set_params!(gp, hyp; lik=lik, mean=mean, kern=kern)
-            update_target_and_dtarget!(gp; lik=lik, mean=mean, kern=kern)
+            set_params!(gp, hyp)
+            update_target_and_dtarget!(gp)
             grad[:] = -gp.dlp
             return -gp.lp
         catch err

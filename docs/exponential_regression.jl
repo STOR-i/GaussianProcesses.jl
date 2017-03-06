@@ -15,18 +15,16 @@ gp = GPMC(X', vec(Y), MeanZero(), k, l)
 #set the priors (need a better interface)
 GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(-2.0,4.0),Distributions.Normal(-2.0,4.0)])
 
-
 optimize!(gp)
 xtest = collect(linspace(-4.0,4.0,20));
 fmean, fvar = predict(gp,xtest);
-
 
 plot(layer(x=xtest,y=exp(fmean),ymin=exp(fmean-1.96sqrt(fvar)),ymax=exp(fmean+1.96sqrt(fvar)),Geom.line,Geom.ribbon),layer(x=X,y=Y,Geom.point))
 
 #MCMC
 samples = mcmc(gp;mcrange=Klara.BasicMCRange(nsteps=50000, thinning=10, burnin=10000))
 
-plot(y=samples[end,:],Geom.line) #check MCMC mixing
+plot(y=samples[:,end],Geom.line) #check MCMC mixing
 
 #Plot posterior samples
 

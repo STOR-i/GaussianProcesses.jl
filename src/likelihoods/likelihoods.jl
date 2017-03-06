@@ -28,7 +28,9 @@ function set_priors!(lik::Likelihood, priors::Array)
 end
 
 function prior_logpdf(lik::Likelihood)
-    if lik.priors==[]
+    if num_params(lik)==0
+        return 0.0
+    elseif lik.priors==[]
         return 0.0
     else
         return sum(Distributions.logpdf(prior,param) for (prior, param) in zip(lik.priors,get_params(lik)))
@@ -36,7 +38,9 @@ function prior_logpdf(lik::Likelihood)
 end
 
 function prior_gradlogpdf(lik::Likelihood)
-    if lik.priors==[]
+    if num_params(lik)==0
+        return zeros(num_params(lik))
+    elseif lik.priors==[]
         return zeros(num_params(lik))
     else
         return [Distributions.gradlogpdf(prior,param) for (prior, param) in zip(lik.priors,get_params(lik))]
