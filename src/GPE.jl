@@ -34,8 +34,8 @@ type GPE <: GP
     # Auxiliary data
     cK::AbstractPDMat       # (k + exp(2*obsNoise))
     alpha::Vector{Float64}  # (k + exp(2*obsNoise))⁻¹y
-    mLL::Float64            # Marginal log-likelihood
-    dmLL::Vector{Float64}   # Gradient marginal log-likelihood
+    target::Float64            # Marginal log-likelihood
+    dtarget::Vector{Float64}   # Gradient marginal log-likelihood
     
     function GPE(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-1e8)
         dim, nobsv = size(X)
@@ -87,7 +87,7 @@ function initialise_mll!(gp::GPE)
     end
     gp.cK = PDMat(Σ)
     gp.alpha = gp.cK \ (gp.y - μ)
-    gp.mLL = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
+    gp.target = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
 
 function initialise_target!(gp::GPE)
@@ -108,7 +108,7 @@ function update_mll!(gp::GPE)
     chol = cholfact!(Symmetric(chol_buffer))
     gp.cK = PDMats.PDMat(Σbuffer, chol)
     gp.alpha = gp.cK \ (gp.y - μ)
-    gp.mLL = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
+    gp.target = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
 
 
@@ -159,27 +159,27 @@ function update_mll_and_dmll!(gp::GPE,
     update_mll!(gp)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
-    gp.dmLL = Array(Float64, noise + mean*n_mean_params + kern*n_kern_params)
+    gp.dtarget = Array(Float64, noise + mean*n_mean_params + kern*n_kern_params)
     logNoise = gp.logNoise
     get_ααinvcKI!(ααinvcKI, gp.cK, gp.alpha)
     
     i=1
     if noise
-        gp.dmLL[i] = exp(2.0*logNoise)*trace(ααinvcKI)
+        gp.dtarget[i] = exp(2.0*logNoise)*trace(ααinvcKI)
         i+=1
     end
 
-    if mean
+    if mean && n_mean_params>0
         Mgrads = grad_stack(gp.m, gp.X)
         for j in 1:n_mean_params
-            gp.dmLL[i] = dot(Mgrads[:,j],gp.alpha)
+            gp.dtarget[i] = dot(Mgrads[:,j],gp.alpha)
             i += 1
         end
     end
     if kern
         for iparam in 1:n_kern_params
             grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
-            gp.dmLL[i] = vecdot(Kgrad,ααinvcKI)/2.0
+            gp.dtarget[i] = vecdot(Kgrad,ααinvcKI)/2.0
             i+=1
         end
     end
@@ -191,6 +191,7 @@ function update_target_and_dtarget!(gp::GPE; lik::Bool=true, mean::Bool=true, ke
     Kgrad = Array(Float64, gp.nobsv, gp.nobsv)
     ααinvcKI = Array(Float64, gp.nobsv, gp.nobsv)
     update_mll_and_dmll!(gp, Kgrad, ααinvcKI, noise=noise,mean=mean,kern=kern)
+    return gp.dtarget
 end
 
 @doc """
@@ -277,8 +278,12 @@ rand{V<:VecF64}(gp::GPE,x::V) = vec(rand(gp,x',1))
 function get_params(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     params = Float64[]
     if noise; push!(params, gp.logNoise); end
-    if mean;  append!(params, get_params(gp.m)); end
-    if kern; append!(params, get_params(gp.k)); end
+    if mean && num_params(gp.m)>0
+        append!(params, get_params(gp.m))
+    end
+    if kern
+        append!(params, get_params(gp.k))
+    end
     return params
 end
 
@@ -330,6 +335,6 @@ function show(io::IO, gp::GPE)
         show(io, gp.y)
         print(io,"\n  Variance of observation noise = $(exp(2*gp.logNoise))")
         print(io,"\n  Marginal Log-Likelihood = ")
-        show(io, round(gp.mLL,3))
+        show(io, round(gp.target,3))
     end
 end

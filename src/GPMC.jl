@@ -11,7 +11,7 @@ Fits a Gaussian process to a set of training points. The Gaussian process is def
 
 
 # Constructors:
-    GP(X, y, m, k, lik)
+    GPMC(X, y, m, k, lik)
     GPMC(; m=MeanZero(), k=SE(0.0, 0.0), lik=Likelihood()) # observation-free constructor
 
 # Arguments:
@@ -317,4 +317,26 @@ function set_params!(gp::GPMC, hyp::Vector{Float64}; lik::Bool=true, mean::Bool=
 end
 
 
+
+function show(io::IO, gp::GPMC)
+    println(io, "GP object:")
+    println(io, "  Dim = $(gp.dim)")
+    println(io, "  Number of observations = $(gp.nobsv)")
+    println(io, "  Mean function:")
+    show(io, gp.m, 2)
+    println(io, "  Kernel:")
+    show(io, gp.k, 2)
+    println(io, "  Likelihood:")
+    show(io, gp.lik, 2)
+    if (gp.nobsv == 0)
+        println("  No observation data")
+    else
+        println(io, "  Input observations = ")
+        show(io, gp.X)
+        print(io,"\n  Output observations = ")
+        show(io, gp.y)
+        print(io,"\n  Log-posterior = ")
+        show(io, round(gp.target,3))
+    end
+end
 
