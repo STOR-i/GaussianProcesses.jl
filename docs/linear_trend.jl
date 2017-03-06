@@ -13,7 +13,7 @@ xpred = collect(-5.0:0.1:5.0);
 
 mLin = MeanLin([0.5])  #Linear mean function
 kern = SE(0.0,0.0)     #Squared exponential kernel function
-gp = GP(x,y,mLin,kern) #Fit the GP
+gp = GPE(x,y,mLin,kern) #Fit the GP
 
 plot(gp)               #Plot the GP
 
