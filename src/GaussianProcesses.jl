@@ -26,7 +26,7 @@ include("utils.jl")
 include("chol_utils.jl")
 include("GP.jl")
 include("GPMC.jl")
-include("mcmc.jl")
+include("mcmc2.jl")
 include("optimize.jl")
 
 # This approach to loading supported plotting packages is taken from the "KernelDensity" package
