@@ -43,7 +43,7 @@ Constructor the Matern kernel, where ν defines the Matern type (i.e. ν = 1/2, 
 # See also
 Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard
 """ ->
-function Mat(ν::Float64,ll::Float64, lσ::Float64)
+function Matern(ν::Float64,ll::Float64, lσ::Float64)
     if ν==1/2
         kern = Mat12Iso(ll, lσ)
     elseif ν==3/2
@@ -55,7 +55,7 @@ function Mat(ν::Float64,ll::Float64, lσ::Float64)
     return kern
 end    
 
-function Mat(ν::Float64,ll::Vector{Float64}, lσ::Float64)
+function Matern(ν::Float64,ll::Vector{Float64}, lσ::Float64)
     if ν==1/2
         kern = Mat12Ard(ll, lσ)
     elseif ν==3/2
@@ -67,3 +67,4 @@ function Mat(ν::Float64,ll::Vector{Float64}, lσ::Float64)
     return kern
 end    
 
+@deprecate Mat Matern
