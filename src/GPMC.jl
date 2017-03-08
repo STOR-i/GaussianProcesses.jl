@@ -24,7 +24,7 @@ Fits a Gaussian process to a set of training points. The Gaussian process is def
 # Returns:
 * `gp::GPMC`          : Gaussian process object, fitted to the training data if provided
 """ ->
-type GPMC{T<:Real} <: GP 
+type GPMC{T<:Real} <: GPBase 
     m:: Mean                # Mean object
     k::Kernel               # Kernel object
     lik::Likelihood         # Likelihood is Gaussian for GPMC regression
@@ -58,12 +58,15 @@ type GPMC{T<:Real} <: GP
     end
 end
 
-GPMC{T<:Real}(x::Matrix{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPMC{T}(x, y, meanf, kernel, lik)
+GPMC{T<:Real}(X::Matrix{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPMC{T}(X, y, meanf, kernel, lik)
+
+# Convenience constructor
+GP{T<:Real}(X::Matrix{Float64}, y::Vector, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(X, y, m, k, lik)
 
 # Creates GP object for 1D case
 GPMC{T<:Real}(x::Vector{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPMC{T}(x', y, meanf, kernel, lik)
 
-
+GP{T<:Real}(x::Vector{Float64}, y::Vector, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(x', y, m, k, lik)
 
 #initiate the log-likelihood function of a general GP model
 function initialise_ll!(gp::GPMC)
@@ -173,39 +176,6 @@ function update_target_and_dtarget!(gp::GPMC; lik::Bool=true, mean::Bool=true, k
     gp.dtarget = gp.dll + [-gp.v;prior_gradlogpdf(gp.lik);prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] 
 end    
 
-
-@doc """
-    # Description
-    Calculates the posterior mean and variance of the Gaussian Process function at specified points
-
-    # Arguments:
-    * `gp::GP`: Gaussian Process object
-    * `X::Matrix{Float64}`:  matrix of points for which one would would like to predict the value of the latent process, f.
-                           (each column of the matrix is a point)
-    * `obs::Bool`: Returns predicted observations 'y' calculated at test points X, set to 'false' by default    
-    # Returns:
-    * `(mu, Sigma)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
-                                                        process at the specified points
-    """ ->
-function predictF{M<:MatF64}(gp::GPMC, x::M; full_cov::Bool=false)
-    size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
-    if full_cov
-        μ, σ2 = _predict(gp, x)
-    else
-        ## Calculate prediction for each point independently
-            μ = Array(Float64, size(x,2))
-            σ2 = similar(μ)
-        for k in 1:size(x,2)
-            m, sig = _predict(gp, x[:,k:k])
-            μ[k] = m[1]
-            σ2[k] = max(full(sig)[1,1], 0.0)
-        end
-    end
-    return μ, σ2
-end
-
-# 1D Case for prediction
-predictF{V<:VecF64}(gp::GPMC, x::V; full_cov::Bool=false) = predictF(gp, x'; full_cov=full_cov)
 
 
 function predictY{M<:MatF64}(gp::GPMC, x::M; full_cov::Bool=false)

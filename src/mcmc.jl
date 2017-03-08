@@ -8,7 +8,7 @@ A function for running a variety of MCMC algorithms for estimating the GP hyperp
 * `sampler::Klara.MCSampler`: MCMC sampler selected from the Klara package
 * `mcrange::Klara.BasicMCRange`: Choose number of MCMC iterations and burnin length, default is nsteps=5000, burnin = 1000
 """ ->
-function mcmc(gp::GP;
+function mcmc(gp::GPBase;
               start::Vector{Float64}=get_params(gp),
               sampler::Klara.MCSampler=Klara.MALA(0.1),
               mcrange::Klara.BasicMCRange=Klara.BasicMCRange(nsteps=5000, burnin=1000))

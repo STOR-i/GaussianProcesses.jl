@@ -19,7 +19,7 @@ Fits a Gaussian process to a set of training points. The Gaussian process is def
 # Returns:
 * `gp::GPE`            : Gaussian process object, fitted to the training data if provided
 """ ->
-type GPE <: GP
+type GPE <: GPBase
     m:: Mean                # Mean object
     k::Kernel               # Kernel object
     logNoise::Float64       # log standard deviation of observation noise
@@ -49,8 +49,13 @@ type GPE <: GP
     
 end
 
+GP(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, args...; kwargs...) = GPE(X, y, m, k, args...; kwargs...)
+
 # Creates GPE object for 1D case
 GPE(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Float64=-1e8) = GPE(x', y, meanf, kernel, logNoise)
+
+GP(x::Vector{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, args...; kwargs...) = GPE(x', y, m, k, args...; kwargs...)
+
 
 @doc """
 # Description
@@ -194,41 +199,6 @@ function update_target_and_dtarget!(gp::GPE; lik::Bool=true, mean::Bool=true, ke
     return gp.dtarget
 end
 
-@doc """
-# Description
-Calculates the posterior mean and variance of the Gaussian Process function at specified points
-
-# Arguments:
-* `gp::GPE`: Gaussian Process object
-* `X::Matrix{Float64}`:  matrix of points for which one would would like to predict the value of the process.
-                       (each column of the matrix is a point)
-
-# Keyword Arguments
-* `full_cov::Bool`: indicates whether full covariance matrix should be returned instead of only variances (default is false)
-
-# Returns:
-* `(μ, σ²)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
-                                                    process at the specified points
-""" ->
-function predictF{M<:MatF64}(gp::GPE, x::M; full_cov::Bool=false)
-    size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
-    if full_cov
-        return _predict(gp, x)
-    else
-        ## Calculate prediction for each point independently
-            μ = Array(Float64, size(x,2))
-            σ2 = similar(μ)
-        for k in 1:size(x,2)
-            m, sig = _predict(gp, x[:,k:k])
-            μ[k] = m[1]
-            σ2[k] = max(full(sig)[1,1], 0.0)
-        end
-        return μ, σ2
-    end
-end
-
-# 1D Case for prediction
-predictF{V<:VecF64}(gp::GPE, x::V; full_cov::Bool=false) = predictF(gp, x'; full_cov=full_cov)
 
 ## compute predictions
 function _predict{M<:MatF64}(gp::GPE, X::M)

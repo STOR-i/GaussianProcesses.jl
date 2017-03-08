@@ -3,15 +3,15 @@
     A function for optimising the GP hyperparameters based on type II maximum likelihood estimation. This function performs gradient based optimisation using the Optim pacakge to which the user is referred to for further details.
 
     # Arguments:
-    * `gp::GP`: Predefined Gaussian process type
+    * `gp::GPBase`: Predefined Gaussian process type
     * `mean::Bool`: Mean function hyperparameters should be optmized
     * `kern::Bool`: Kernel function hyperparameters should be optmized
     * `kwargs`: Keyword arguments for the optimize function from the Optim package
 
     # Return:
     * `::Optim.MultivariateOptimizationResults{Float64,1}`: optimization results object
-    """ ->
-function optimize!(gp::GP; method=LBFGS(), kwargs...)
+    """ 
+function optimize!(gp::GPBase; method=LBFGS(), kwargs...)
     func = get_optim_target(gp)
     init = get_params(gp)  # Initial hyperparameter values
     results = optimize(func,init; method=method, kwargs...)      # Run optimizer
@@ -20,7 +20,7 @@ function optimize!(gp::GP; method=LBFGS(), kwargs...)
     return results
 end
 
-function get_optim_target(gp::GP)
+function get_optim_target(gp::GPBase)
     
     function ltarget(hyp::Vector{Float64})
         try
