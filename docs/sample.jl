@@ -9,7 +9,7 @@ mZero = MeanZero()
 kern = SE(0.0,0.0)*Mat(3/2,2.0,0.5) 
 
 # First sample from GP prior
-gp = GPE(m=mZero,k=kern)     
+gp = GP(m=mZero,k=kern)     
 
 x_path = collect(linspace(-5,5));
 prior=rand(gp,x_path, 10)

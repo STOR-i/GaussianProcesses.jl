@@ -15,6 +15,6 @@ xpred = collect(-5.0:0.1:5.0);
 beta = [0.5 2.0]
 mPoly = MeanPoly(beta)
 kern = SE(0.0,0.0)
-gp = GPE(x,y,mPoly,kern)  #Fit the GP
+gp = GP(x,y,mPoly,kern)  #Fit the GP
 
 plot(gp)   #Plot the GP

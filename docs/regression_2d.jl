@@ -11,7 +11,7 @@ y = vec(sin(x[1,:]).*sin(x[2,:])) + 0.05*rand(n)
 mZero = MeanZero()                    #Zero mean function
 kern = SE(0.0,0.0)        #Matern 5/2 ARD kernel with parameters log(l₁) = 0 log(l₂) = 0 and log(σ) = 0 and SE Iso kernel with parameters log(ℓ) = 0 and log(σ) = 0
 
-gp = GPE(x,y,mZero,kern,-1.0)          # Fit the GP
+gp = GP(x,y,mZero,kern,-1.0)          # Fit the GP
 optimize!(gp)                         # Optimize the hyperparameters
 
 push!(gp, [[2.0; 3.0] [3.0, 4.0]], [2.0, 3.0])
