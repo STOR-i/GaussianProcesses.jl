@@ -48,11 +48,11 @@ type GPMC{T<:Real} <: GPBase
     dtarget::Vector{Float64}# Gradient of the log-target (i.e. grad log-posterior)
 
     
-    function GPMC{S<:Real}(X::Matrix{Float64}, y::Vector{S}, m::Mean, k::Kernel, lik::Likelihood)
+    function (::Type{GPMC{T}}){T<:Real}(X::Matrix{Float64}, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood)
         dim, nobsv = size(X)
         v = zeros(nobsv)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        gp = new(m, k, lik, nobsv, X, y, v, KernelData(k, X), dim)
+        gp = new{T}(m, k, lik, nobsv, X, y, v, KernelData(k, X), dim)
         initialise_target!(gp)
         return gp
     end
@@ -60,13 +60,13 @@ end
 
 GPMC{T<:Real}(X::Matrix{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPMC{T}(X, y, meanf, kernel, lik)
 
-# Convenience constructor
-GP{T<:Real}(X::Matrix{Float64}, y::Vector, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(X, y, m, k, lik)
+# # Convenience constructor
+# GP{T<:Real}(X::Matrix{Float64}, y::Vector, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(X, y, m, k, lik)
 
 # Creates GP object for 1D case
 GPMC{T<:Real}(x::Vector{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPMC{T}(x', y, meanf, kernel, lik)
 
-GP{T<:Real}(x::Vector{Float64}, y::Vector, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(x', y, m, k, lik)
+# GP{T<:Real}(x::Vector{Float64}, y::Vector, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(x', y, m, k, lik)
 
 #initiate the log-likelihood function of a general GP model
 function initialise_ll!(gp::GPMC)
