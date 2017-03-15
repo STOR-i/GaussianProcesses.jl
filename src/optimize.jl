@@ -7,16 +7,16 @@ A function for optimising the GP hyperparameters based on type II maximum likeli
 * `noise::Bool`: Noise hyperparameters should be optmized
 * `mean::Bool`: Mean function hyperparameters should be optmized
 * `kern::Bool`: Kernel function hyperparameters should be optmized
-* `kwargs`: Keyword arguments for the optimize function from the Optim package
+* `options`: Optim.Options object containing the keyword arguments for the optimize function from the Optim package
 
 # Return:
 * `::Optim.MultivariateOptimizationResults{Float64,1}`: optimization results object
 """ ->
 function optimize!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true,
-                    method=ConjugateGradient(), kwargs...)
+    method=ConjugateGradient(), options::Optim.Options{Void} = Optim.Options())
     func = get_optim_target(gp, noise=noise, mean=mean, kern=kern)
-    init = get_params(gp;  noise=noise, mean=mean, kern=kern)  # Initial hyperparameter values
-    results=optimize(func,init; method=method, kwargs...)                     # Run optimizer
+    init = get_params(gp;  noise=noise, mean=mean, kern=kern) # Initial hyperparameter values
+    results=optimize(func,init, method, options) # Run optimizer
     set_params!(gp, Optim.minimizer(results), noise=noise,mean=mean,kern=kern)
     update_mll!(gp)
     return results
