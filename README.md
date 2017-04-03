@@ -100,7 +100,13 @@ gp = GP(x,y,mZero,kern, logObsNoise)      # Fit the GP
   Marginal Log-Likelihood = -9.056
 ```
 
-Plotting is straightforward to apply, but the display will depend on the package loaded at the start of the session (e.g. PyPlot or Gadfly). It's possible to modify the confidence bands (CI) in the 1D plot, which are set to 95% by default. 
+Once we've fit the GP function to the data, we can calculate the predicted mean and variance of of the function at unobserved points. This is done with the `predict` function.
+
+```
+μ, σ² = predict(gp,linspace(0,2π,100))
+```
+
+The predict function is implicitly used when plotting the GP. Plotting is straightforward to apply, but the display will depend on the package loaded at the start of the session (e.g. PyPlot or Gadfly). Note that, at present, the plotting package should be loaded before `GaussianProcesses`. The plot function outputs the predicted mean (blue line) and the uncertainty in the function is given by the confidence bands, which are set to 95% by default. 
 ```julia
 plot(gp)
 ```
