@@ -7,14 +7,14 @@ Fits a Gaussian process to a set of training points. The Gaussian process is def
 
 # Constructors:
     GP(X, y, m, k, logNoise)
-    GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8) # observation-free constructor
+    GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-5.0) # observation-free constructor
 
 # Arguments:
 * `X::Matrix{Float64}`: Input observations
 * `y::Vector{Float64}`: Output observations
 * `m::Mean`           : Mean function
 * `k::kernel`         : Covariance function
-* `logNoise::Float64` : Log of the standard deviation for the observation noise. The default is -1e8, which is equivalent to assuming no observation noise.
+* `logNoise::Float64` : Log of the standard deviation for the observation noise. The default is -5.0, which is equivalent to assuming no observation noise.
 
 # Returns:
 * `gp::GP`            : Gaussian process object, fitted to the training data if provided
@@ -37,7 +37,7 @@ type GP
     mLL::Float64            # Marginal log-likelihood
     dmLL::Vector{Float64}   # Gradient marginal log-likelihood
     
-    function GP(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-1e8)
+    function GP(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-5.0)
         dim, nobsv = size(X)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         gp = new(m, k, logNoise, nobsv, X, y, KernelData(k, X), dim)
@@ -45,12 +45,12 @@ type GP
         return gp
     end
     
-    GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8) =  new(m, k, logNoise, 0)
+    GP(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-5.0) =  new(m, k, logNoise, 0)
     
 end
 
 # Creates GP object for 1D case
-GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Float64=-1e8) = GP(x', y, meanf, kernel, logNoise)
+GP(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Float64=-5.0) = GP(x', y, meanf, kernel, logNoise)
 
 @doc """
 # Description
