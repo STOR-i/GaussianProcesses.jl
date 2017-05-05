@@ -30,7 +30,7 @@
 
     @series begin
         seriestype := :scatter
-        markershape := :x
+        markershape := :circle
         markercolor := :black
         gp.X',gp.y
     end
