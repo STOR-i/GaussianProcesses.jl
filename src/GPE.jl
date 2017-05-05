@@ -225,7 +225,7 @@ function rand!{M<:MatF64}(gp::GPE, X::M, A::DenseMatrix)
         Σ = try PDMat(Σraw) catch; PDMat(Σraw+1e-8*sum(diag(Σraw))/nobsv*eye(nobsv)) end  
     else
         # Posterior mean and covariance
-        μ, Σ = predictF(gp, X; full_cov=true)
+        μ, Σ = predict_f(gp, X; full_cov=true)
     end
     
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobsv, n_sample)))

@@ -21,7 +21,7 @@ Calculates the posterior mean and variance of the Gaussian Process function at s
 * `(μ, σ²)::(Vector{Float64}, Vector{Float64})`: respectively the posterior mean  and variances of the posterior
                                                     process at the specified points
 """ ->
-function predictF{M<:MatF64}(gp::GPBase, x::M; full_cov::Bool=false)
+function predict_f{M<:MatF64}(gp::GPBase, x::M; full_cov::Bool=false)
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
     if full_cov
         return _predict(gp, x)
@@ -39,4 +39,4 @@ function predictF{M<:MatF64}(gp::GPBase, x::M; full_cov::Bool=false)
 end
 
 # 1D Case for prediction
-predictF{V<:VecF64}(gp::GPBase, x::V; full_cov::Bool=false) = predictF(gp, x'; full_cov=full_cov)
+predict_f{V<:VecF64}(gp::GPBase, x::V; full_cov::Bool=false) = predict_f(gp, x'; full_cov=full_cov)

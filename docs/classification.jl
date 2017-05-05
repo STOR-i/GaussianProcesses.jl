@@ -12,8 +12,8 @@ y=convert(Vector{Bool}, y.>0)
 plot(x=X,y=y)
 
 #Select mean, kernel and likelihood function
-mZero = MeanZero()                   #Zero mean function
-kern = SE(0.0,0.0)                   #Sqaured exponential kernel (note that hyperparameters are on the log scale)
+mZero = MeanZero()   #Zero mean function
+kern = SE(0.0,0.0)   #Sqaured exponential kernel (note that hyperparameters are on the log scale)
 lik = BernLik()
 
 gp = GPMC(X',vec(y),mZero,kern,lik)     
@@ -31,18 +31,10 @@ ymean = [];
 fsamples = [];
 for i in 1:size(samples,2)
     GaussianProcesses.set_params!(gp,samples[:,i])
-    GaussianProcesses.update_lpost!(gp)
-    push!(ymean, predict(gp,xtest,obs=true)[1])
-    push!(fsamples,rand(gp,xtest))
-    #fsamples = hcat(fsamples,samp)
+    GaussianProcesses.update_target!(gp)
+    push!(ymean, predict_y(gp,xtest)[1])
 end
 
-layers = []
-for f in fsamples
-    push!(layers, layer(x=xtest,y=f,Geom.line))
-end
-
-plot(layers...,Guide.xlabel("X"),Guide.ylabel("f"))
 
 
 #######################

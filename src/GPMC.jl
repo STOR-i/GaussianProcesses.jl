@@ -178,13 +178,13 @@ end
 
 
 
-function predictY{M<:MatF64}(gp::GPMC, x::M; full_cov::Bool=false)
-    μ, σ2 = predictF(gp, x; full_cov=full_cov)
+function predict_y{M<:MatF64}(gp::GPMC, x::M; full_cov::Bool=false)
+    μ, σ2 = predict_f(gp, x; full_cov=full_cov)
     return predict_obs(gp.lik, μ, σ2)
 end
 
 # 1D Case for prediction
-predictY{V<:VecF64}(gp::GPMC, x::V; full_cov::Bool=false) = predictY(gp, x'; full_cov=full_cov)
+predict_y{V<:VecF64}(gp::GPMC, x::V; full_cov::Bool=false) = predict_y(gp, x'; full_cov=full_cov)
 
 
 ## compute predictions
@@ -229,7 +229,7 @@ function rand!{M<:MatF64}(gp::GPMC, X::M, A::DenseMatrix)
         Σ = Σraw
     else
         # Posterior mean and covariance
-        μ, Σ = predictF(gp, X; full_cov=true)
+        μ, Σ = predict_f(gp, X; full_cov=true)
     end
     
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobsv, n_sample)))
