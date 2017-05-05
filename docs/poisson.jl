@@ -13,10 +13,13 @@ Y = [rand(Distributions.Poisson(exp(f[i]))) for i in 1:n]
 #plot the data
 #plot(x=X,y=Y,Geom.point)
 #build the model
-k = Mat(3/2,0.0,0.0)
+
+k = Matern(3/2,0.0,0.0)
 l = PoisLik()
-gp = GPMC(X', vec(Y), MeanZero(), k, l)
+
+gp = GP(X', vec(Y), MeanZero(), k, l)
 #set the priors (need a better interface)
+
 GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(-2.0,4.0),Distributions.Normal(-2.0,4.0)])
 
 optimize!(gp)
@@ -32,8 +35,8 @@ ymean = [];
 fsamples = [];
 for i in 1:size(samples,2)
     GaussianProcesses.set_params!(gp,samples[:,i])
-    GaussianProcesses.update_lpost!(gp)
-    push!(ymean, predict(gp,xtest,obs=true)[1])
+    GaussianProcesses.update_target!(gp)
+    push!(ymean, predict_y(gp,xtest)[1])
     push!(fsamples,rand(gp,xtest))
 end
 
