@@ -7,14 +7,14 @@ Fits a Gaussian process to a set of training points. The Gaussian process is def
 
 # Constructors:
     GPE(X, y, m, k, logNoise)
-    GPE(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8) # observation-free constructor
+    GPE(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-5.0) # observation-free constructor
 
 # Arguments:
 * `X::Matrix{Float64}`: Input observations
 * `y::Vector{Float64}`: Output observations
 * `m::Mean`           : Mean function
 * `k::kernel`         : Covariance function
-* `logNoise::Float64` : Log of the standard deviation for the observation noise. The default is -1e8, which is equivalent to assuming no observation noise.
+* `logNoise::Float64` : Log of the standard deviation for the observation noise. The default is -5.0, which is equivalent to assuming no observation noise.
 
 # Returns:
 * `gp::GPE`            : Gaussian process object, fitted to the training data if provided
@@ -37,7 +37,7 @@ type GPE <: GPBase
     target::Float64            # Marginal log-likelihood
     dtarget::Vector{Float64}   # Gradient marginal log-likelihood
     
-    function GPE(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-1e8)
+    function GPE(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-5.0)
         dim, nobsv = size(X)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         gp = new(m, k, logNoise, nobsv, X, y, KernelData(k, X), dim)
@@ -45,16 +45,16 @@ type GPE <: GPBase
         return gp
     end
     
-    GPE(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-1e8) =  new(m, k, logNoise, 0)
+    GPE(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-5.0) =  new(m, k, logNoise, 0)
     
 end
 
-GP(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-1e8) = GPE(X, y, m, k, logNoise)
+GP(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-5.0) = GPE(X, y, m, k, logNoise)
 
 # Creates GPE object for 1D case
-GPE(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Float64=-1e8) = GPE(x', y, meanf, kernel, logNoise)
+GPE(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Float64=-5.0) = GPE(x', y, meanf, kernel, logNoise)
 
-GP(x::Vector{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-1e8) = GPE(x', y, m, k, logNoise)
+GP(x::Vector{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-5.0) = GPE(x', y, m, k, logNoise)
 
 
 @doc """

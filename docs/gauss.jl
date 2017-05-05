@@ -16,7 +16,7 @@ gp1 = GP(X', vec(Y), m, k, log(2.0))
 gp2 = GP(X', vec(Y), m, k, l)
 
 #compare log-likelihoods
-abs(gp2.ll - gp1.mLL)>eps()
+abs(gp2.target - gp1.target)>eps()
 
 #compare the gradients as well
 

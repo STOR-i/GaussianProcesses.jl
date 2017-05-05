@@ -42,8 +42,6 @@ type GPMC{T<:Real} <: GPBase
     cK::AbstractPDMat       # (k + exp(2*obsNoise))
     ll::Float64             # Log-likelihood of general GPMC model
     dll::Vector{Float64}    # Gradient of log-likelihood
-    lp::Float64             # Log-posterior of general GPMC model
-    dlp::Vector{Float64}    # Gradient of log-posterior
     target::Float64         # Log-target (i.e. Log-posterior)
     dtarget::Vector{Float64}# Gradient of the log-target (i.e. grad log-posterior)
 
