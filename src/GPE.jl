@@ -49,12 +49,12 @@ type GPE <: GPBase
     
 end
 
-GP(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, args...; kwargs...) = GPE(X, y, m, k, args...; kwargs...)
+GP(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-1e8) = GPE(X, y, m, k, logNoise)
 
 # Creates GPE object for 1D case
 GPE(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Float64=-1e8) = GPE(x', y, meanf, kernel, logNoise)
 
-GP(x::Vector{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, args...; kwargs...) = GPE(x', y, m, k, args...; kwargs...)
+GP(x::Vector{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-1e8) = GPE(x', y, m, k, logNoise)
 
 
 @doc """

@@ -9,11 +9,11 @@ Y = X + sigma*randn(n)
 
 #build the model
 m = MeanZero()
-k = Mat(3/2,0.0,0.0)
+k = Matern(3/2,0.0,0.0)
 l = GaussLik(log(2.0))
 
-gp1 = GPE(X', vec(Y), m, k, log(2.0))
-gp2 = GPMC(X', vec(Y), m, k, l)
+gp1 = GP(X', vec(Y), m, k, log(2.0))
+gp2 = GP(X', vec(Y), m, k, l)
 
 #compare log-likelihoods
 abs(gp2.ll - gp1.mLL)>eps()

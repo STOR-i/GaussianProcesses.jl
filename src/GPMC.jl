@@ -61,12 +61,12 @@ end
 GPMC{T<:Real}(X::Matrix{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPMC{T}(X, y, meanf, kernel, lik)
 
 # # Convenience constructor
-# GP{T<:Real}(X::Matrix{Float64}, y::Vector, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(X, y, m, k, lik)
+GP{T<:Real}(X::Matrix{Float64}, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(X, y, m, k, lik)
 
 # Creates GP object for 1D case
 GPMC{T<:Real}(x::Vector{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPMC{T}(x', y, meanf, kernel, lik)
 
-# GP{T<:Real}(x::Vector{Float64}, y::Vector, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(x', y, m, k, lik)
+GP{T<:Real}(x::Vector{Float64}, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(x', y, m, k, lik)
 
 #initiate the log-likelihood function of a general GP model
 function initialise_ll!(gp::GPMC)
