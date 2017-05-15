@@ -199,6 +199,16 @@ function update_target_and_dtarget!(gp::GPE; lik::Bool=true, mean::Bool=true, ke
     return gp.dtarget
 end
 
+#predict observations
+function predict_y{M<:MatF64}(gp::GPE, x::M; full_cov::Bool=false)
+    μ, σ2 = predict_f(gp, x; full_cov=full_cov)
+    return μ, σ2 + exp(2*gp.logNoise)
+end
+
+# 1D Case for predictions
+predict_y{V<:VecF64}(gp::GPE, x::V; full_cov::Bool=false) = predict_y(gp, x'; full_cov=full_cov)
+
+@deprecate predict predict_y
 
 ## compute predictions
 function _predict{M<:MatF64}(gp::GPE, X::M)

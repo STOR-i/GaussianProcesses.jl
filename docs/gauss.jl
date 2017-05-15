@@ -1,6 +1,6 @@
 #This file tests the GP Monte Carlo function against the exact solution from GP regression
 
-using GaussianProcesses
+using Gadfly, GaussianProcesses
 
 n = 20
 X = linspace(-3,3,n)
@@ -24,4 +24,10 @@ optimize!(gp1)
 optimize!(gp2)
 
 
+xtest = linspace(minimum(gp1.X),maximum(gp1.X),50);
+y1 = predict_y(gp1,xtest)[1]
+y2 = predict_y(gp2,xtest)[1]
 
+plot(layer(x=X,y=Y,Geom.point),
+     layer(x=xtest,y=y1,Geom.point),
+     layer(x=xtest,y=y2,Geom.point))

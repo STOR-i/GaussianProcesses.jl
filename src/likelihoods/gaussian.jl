@@ -41,6 +41,12 @@ get_params(gauss::GaussLik) = Float64[log(gauss.σ)]
 num_params(gauss::GaussLik) = 1
 
 
+#Computes the predictive mean and variance 
+function predict_obs(gauss::GaussLik, fmean::Vector{Float64}, fvar::Vector{Float64}) 
+    return fmean, fvar + gauss.σ^2
+end
+
+
 
 
 

@@ -16,13 +16,13 @@ mZero = MeanZero()   #Zero mean function
 kern = SE(0.0,0.0)   #Sqaured exponential kernel (note that hyperparameters are on the log scale)
 lik = BernLik()
 
-gp = GPMC(X',vec(y),mZero,kern,lik)     
+gp = GP(X',vec(y),mZero,kern,lik)     
 
 optimize!(gp)
 GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(0.0,2.0),Distributions.Normal(0.0,2.0)])
 
 #mcmc doesn't seem to mix well
-samples = mcmc(gp;mcrange=Klara.BasicMCRange(nsteps=50000, thinning=10, burnin=10000))
+samples = mcmc(gp)
 
 plot(y=samples[end,:],Geom.line) #check MCMC mixing
 
