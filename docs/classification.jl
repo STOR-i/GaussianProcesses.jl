@@ -4,19 +4,17 @@ using Gadfly
 using GaussianProcesses
 
 srand(112233)
-X = rand(20)
-X = sort(X)
-y = sin(10*X)
-y=convert(Vector{Bool}, y.>0)
-
-plot(x=X,y=y)
+X = rand(20);
+X = sort(X);
+y = sin(10*X);
+y=convert(Vector{Bool}, y.>0);
 
 #Select mean, kernel and likelihood function
 mZero = MeanZero()   #Zero mean function
 kern = SE(0.0,0.0)   #Sqaured exponential kernel (note that hyperparameters are on the log scale)
 lik = BernLik()
 
-gp = GP(X',vec(y),mZero,kern,lik)     
+@time gp = GP(X',vec(y),mZero,kern,lik)     
 
 optimize!(gp)
 GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(0.0,2.0),Distributions.Normal(0.0,2.0)])

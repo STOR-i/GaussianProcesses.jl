@@ -71,7 +71,7 @@ function initialise_ll!(gp::GPMC)
     # log p(Y|v,θ) 
     gp.μ = mean(gp.m,gp.X)
     Σ = cov(gp.k, gp.X, gp.data)
-    gp.cK = PDMat(Σ + 1e-6*eye(gp.nobsv))
+    gp.cK = PDMat(Σ + 1e-6*I)
     F = unwhiten(gp.cK,gp.v) + gp.μ 
     gp.ll = sum(log_dens(gp.lik,F,gp.y)) #Log-likelihood
 end
@@ -198,7 +198,7 @@ function _predict{M<:MatF64}(gp::GPMC, X::M)
             PDMat(Sigma_raw)
             break
         catch
-            PDMat(Sigma_raw+1e-8*sum(diag(Sigma_raw))/n*eye(n))
+            PDMat(Sigma_raw+(1e-8*sum(diag(Sigma_raw))/n)*I)
         end
     end
     fSigma = PDMat(Sigma_raw)
@@ -221,7 +221,7 @@ function rand!{M<:MatF64}(gp::GPMC, X::M, A::DenseMatrix)
                 PDMat(Σraw)
                 break
             catch
-                PDMat(Σraw+1e-8*sum(diag(Σraw))/nobsv*eye(nobsv))
+                PDMat(Σraw+(1e-8*sum(diag(Σraw))/nobsv)*I)
             end
         end
         Σ = Σraw

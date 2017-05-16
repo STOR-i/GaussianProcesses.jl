@@ -32,7 +32,7 @@ function dL_numeric(hyp::Vector{Float64}, iparam::Int)
         temp_hyp[iparam] = θ
         set_params!(k, temp_hyp)
         Σ = cov(k, X)
-        L = chol(Σ + 1e-8*eye(nobsv))'
+        L = chol(Σ + 1e-8*I)'
         return L[i,j]
     end
         
