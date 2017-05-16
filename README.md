@@ -100,10 +100,11 @@ gp = GP(x,y,mZero,kern, logObsNoise)      # Fit the GP
   Marginal Log-Likelihood = -9.056
 ```
 
-Once we've fit the GP function to the data, we can calculate the predicted mean and variance of of the function at unobserved points. This is done with the `predict` function.
+Once we've fit the GP function to the data, we can calculate the predicted mean and variance of the function, or observations y, at unobserved points Xnew. This is done with the `predict_f` and `predict_y` functions, respectively.
 
 ```
-μ, σ² = predict(gp,linspace(0,2π,100))
+μ, σ² = predict_f(gp,linspace(0,2π,100))
+ymean, ysigma2 = predict_y(gp,linspace(0,2π,100))
 ```
 
 The predict function is implicitly used when plotting the GP. Plotting is straightforward to apply, but the display will depend on the package loaded at the start of the session (e.g. PyPlot or Gadfly). Note that, at present, the plotting package should be loaded before `GaussianProcesses`. The plot function outputs the predicted mean (blue line) and the uncertainty in the function is given by the confidence bands, which are set to 95% by default. 

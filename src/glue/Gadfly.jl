@@ -4,7 +4,7 @@ function plot1D(gp::GPMC; clim::Tuple{Float64, Float64}=(minimum(gp.X), maximum(
 
         sx = (clim[2]-clim[1])/(res-1)
         x=collect(clim[1]:sx:clim[2])
-        mu, Sigma = predict(gp, x)
+        mu, Sigma = predict_f(gp, x)
         conf = CI*sqrt(Sigma)
         u = mu + conf
         l = mu - conf
@@ -26,7 +26,7 @@ function plot2D(gp::GPMC; clim::Tuple{Float64, Float64, Float64, Float64} = (min
             end
         end
 
-        mu = predict(gp,A)[1]
+        mu = predict_f(gp,A)[1]
         z= reshape(mu,res,res)
         Gadfly.plot(z=z,x=collect(clim[1]:sx:clim[2]),y=collect(clim[3]:sy:clim[4]),Gadfly.Geom.contour)
 end

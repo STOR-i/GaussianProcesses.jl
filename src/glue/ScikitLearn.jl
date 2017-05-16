@@ -7,7 +7,7 @@ ScikitLearnBase.is_classifier(::GPMC) = false
 ScikitLearnBase.fit!(gp::GPMC, X::Matrix{Float64}, y::Vector{Float64}) = fit!(gp, X', y)
 
 function ScikitLearnBase.predict(gp::GPMC, X::Matrix{Float64}; eval_MSE::Bool=false)
-    mu, Sigma = predict(gp, X'; full_cov=false)
+    mu, Sigma = predict_y(gp, X'; full_cov=false)
     if eval_MSE
         return mu, Sigma
     else

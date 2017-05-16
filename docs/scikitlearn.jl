@@ -22,8 +22,8 @@ best_gp = gp_cv.best_estimator_;
 
 
 xx = -5:0.1:10
-plot(xx, predict(gp, reshape(collect(xx), length(xx), 1)), label="hand-specified")
-plot(xx, predict(best_gp, reshape(collect(xx), length(xx), 1)), label="gridsearch-optimized")
+plot(xx, predict_y(gp, reshape(collect(xx), length(xx), 1)), label="hand-specified")
+plot(xx, predict_y(best_gp, reshape(collect(xx), length(xx), 1)), label="gridsearch-optimized")
 plot(x, y, "bo")
 legend();
 
@@ -46,7 +46,7 @@ y = true_fun(X) + randn(n_samples) * 0.1
 gp = fit!(GP(logNoise=-10.0), X'', y)
 
 X_test = linspace(0, 1, 100)
-plot(X_test, predict(gp, X_test''), label="Model")
+plot(X_test, predict_y(gp, X_test''), label="Model")
 plot(X_test, true_fun(X_test), label="True function")
 scatter(X, y, label="Samples")
 xlabel("x")

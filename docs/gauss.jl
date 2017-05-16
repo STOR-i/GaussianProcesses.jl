@@ -20,9 +20,13 @@ abs(gp2.target - gp1.target)>eps()
 
 #compare the gradients as well
 
+#maximise the parameters wrt the target
 optimize!(gp1)
 optimize!(gp2)
 
+#MCMC
+samples1 = mcmc(gp1)
+samples2 = mcmc(gp2)
 
 xtest = linspace(minimum(gp1.X),maximum(gp1.X),50);
 y1 = predict_y(gp1,xtest)[1]

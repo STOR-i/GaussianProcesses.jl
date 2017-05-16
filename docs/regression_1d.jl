@@ -12,7 +12,7 @@ y = sin(x) + 0.05*randn(n)
 mZero = MeanZero()                   #Zero mean function
 kern = SE(0.0,0.0)                   #Sqaured exponential kernel (note that hyperparameters are on the log scale)
 
-μ, σ² = predict(gp,linspace(0,2π,100))
+μ, σ² = predict_y(gp,linspace(0,2π,100))
 
 gp = GP(x,y,mZero,kern,-1.0)      #Fit the GP, where -1.0 is the log Gaussian noise
 plot(gp)                          #Plot the GP

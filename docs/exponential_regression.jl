@@ -17,7 +17,7 @@ GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(-2.0,4.0),Distributions
 
 optimize!(gp)
 xtest = collect(linspace(-4.0,4.0,20));
-fmean, fvar = predict(gp,xtest);
+fmean, fvar = predict_y(gp,xtest);
 
 plot(layer(x=xtest,y=exp(fmean),ymin=exp(fmean-1.96sqrt(fvar)),ymax=exp(fmean+1.96sqrt(fvar)),Geom.line,Geom.ribbon),layer(x=X,y=Y,Geom.point))
 

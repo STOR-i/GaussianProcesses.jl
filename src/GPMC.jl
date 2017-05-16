@@ -221,7 +221,7 @@ function rand!{M<:MatF64}(gp::GPMC, X::M, A::DenseMatrix)
                 PDMat(Σraw)
                 break
             catch
-                PDMat(Σraw+(1e-8*sum(diag(Σraw))/nobsv)*I)
+                PDMat(Σraw+(1e8*sum(diag(Σraw))/nobsv)*I)
             end
         end
         Σ = Σraw

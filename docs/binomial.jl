@@ -32,7 +32,7 @@ fsamples = [];
 for i in 1:size(samples,2)
     GaussianProcesses.set_params!(gp,samples[:,i])
     GaussianProcesses.update_lpost!(gp)
-    push!(ymean, predict(gp,xtest,obs=true)[1])
+    push!(ymean, predict_y(gp,xtest)[1])
     push!(fsamples,rand(gp,xtest))
 end
 
