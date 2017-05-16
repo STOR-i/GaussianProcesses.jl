@@ -1,7 +1,7 @@
 using GaussianProcesses, Base.Test
 using GaussianProcesses: get_params, get_param_names, KernelData, EmptyData
 using GaussianProcesses: set_params!, num_params, grad_stack!
-using GaussianProcesses: GP, MeanConst, update_mll!, update_mll_and_dmll!
+using GaussianProcesses: GP, MeanConst, update_target!, update_target_and_dtarget!
 using GaussianProcesses: StationaryARD
 import Calculus
 
@@ -60,17 +60,17 @@ function test_gradient(kern::Kernel, X::Matrix{Float64})
     end
 end
 
-function test_dmLL(kern::Kernel, X::Matrix{Float64}, y::Vector{Float64})
+function test_dtarget(kern::Kernel, X::Matrix{Float64}, y::Vector{Float64})
     gp = GP(X,y,MeanConst(0.0), kern, -3.0)
     init_params = get_params(gp)
     nobsv = size(X,2)
     function f(hyp)
         set_params!(gp, hyp)
-        update_mll!(gp)
-        return gp.mLL
+        update_target!(gp)
+        return gp.target
     end
-    update_mll_and_dmll!(gp)
-    theor_grad = copy(gp.dmLL)
+    update_target_and_dtarget!(gp)
+    theor_grad = copy(gp.dtarget)
     numer_grad = Calculus.gradient(f, init_params)
     set_params!(gp, init_params)
     for i in 1:length(theor_grad)
@@ -85,7 +85,7 @@ function test_masked(kern::Kernel, x::Matrix{Float64}, y::Vector{Float64})
     test_cov(masked, x)
     test_grad_stack(masked, x)
     test_gradient(masked, x)
-    test_dmLL(masked, x, y)
+    test_dtarget(masked, x, y)
 end
 
 # This is a bit of a hack, to remove one parameter
@@ -98,7 +98,7 @@ function test_masked(kern::Union{StationaryARD,LinArd}, x::Matrix{Float64}, y::V
     test_cov(masked, x)
     test_grad_stack(masked, x)
     test_gradient(masked, x)
-    test_dmLL(masked, x, y)
+    test_dtarget(masked, x, y)
 end
 
 function test_Kernel(kern::Kernel, x::Matrix{Float64}, y::Vector{Float64})
@@ -108,7 +108,7 @@ function test_Kernel(kern::Kernel, x::Matrix{Float64}, y::Vector{Float64})
     test_cov(kern, x)
     test_grad_stack(kern, x)
     test_gradient(kern, x)
-    test_dmLL(kern, x, y)
+    test_dtarget(kern, x, y)
     test_masked(kern, x, y)
 end
     

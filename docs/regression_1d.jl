@@ -12,8 +12,6 @@ y = sin(x) + 0.05*randn(n)
 mZero = MeanZero()                   #Zero mean function
 kern = SE(0.0,0.0)                   #Sqaured exponential kernel (note that hyperparameters are on the log scale)
 
-μ, σ² = predict_y(gp,linspace(0,2π,100))
-
 gp = GP(x,y,mZero,kern,-1.0)      #Fit the GP, where -1.0 is the log Gaussian noise
 plot(gp)                          #Plot the GP
 
@@ -29,3 +27,11 @@ push!(gp, [1.0], [2.0])
 
 
 
+d, n = 3, 5
+
+x = 2π * rand(d, n)
+y = Float64[sum(sin(x[:,i])) for i in 1:n]/d
+mZero = MeanZero()
+kern = SE(0.0,0.0)
+
+gp = GP(x, y, mZero, kern)
