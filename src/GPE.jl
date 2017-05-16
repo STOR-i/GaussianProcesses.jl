@@ -82,8 +82,8 @@ end
 fit!(gp::GPE, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 
 
-# Update auxiliarly data in GPE object after changes have been made
-function initialise_mll!(gp::GPE)
+# initialise the marginal log-likelihood
+function initialise_target!(gp::GPE)
     μ = mean(gp.m,gp.X)
     Σ = cov(gp.k, gp.X, gp.data)
     for i in 1:gp.nobsv
@@ -93,15 +93,11 @@ function initialise_mll!(gp::GPE)
     gp.cK = PDMat(Σ)
     gp.alpha = gp.cK \ (gp.y - μ)
     gp.target = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
-end
-
-function initialise_target!(gp::GPE)
-    initialise_mll!(gp)
 end    
 
-# modification of initialise_mll! that reuses existing matrices to avoid
+# modification of initialise_target! that reuses existing matrices to avoid
 # unnecessary memory allocations, which speeds things up significantly
-function update_mll!(gp::GPE)
+function update_target!(gp::GPE)
     Σbuffer = gp.cK.mat
     μ = mean(gp.m,gp.X)
     cov!(Σbuffer, gp.k, gp.X, gp.data)
@@ -116,11 +112,6 @@ function update_mll!(gp::GPE)
     gp.target = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
 
-
-#function to udpate the target
-function update_target!(gp::GPE)
-    update_mll!(gp)
-end    
 
 @doc """
 get_ααinvcKI!(ααinvcKI::Matrix, cK::AbstractPDMat, α::Vector)
@@ -148,8 +139,9 @@ function get_ααinvcKI!{M<:MatF64}(ααinvcKI::M, cK::AbstractPDMat, α::Vector
     LinAlg.BLAS.ger!(1.0, α, α, ααinvcKI)
 end
 
+
 """ Update gradient of marginal log-likelihood """
-function update_mll_and_dmll!(gp::GPE,
+function update_target_and_dtarget!(gp::GPE,
     Kgrad::MatF64,
     ααinvcKI::MatF64
     ; 
@@ -161,16 +153,16 @@ function update_mll_and_dmll!(gp::GPE,
                 @sprintf("Buffer for Kgrad should be a %dx%d matrix, not %dx%d",
                          gp.nobsv, gp.nobsv,
                          size(Kgrad,1), size(Kgrad,2)))
-    update_mll!(gp)
+    update_target!(gp)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
     gp.dtarget = Array(Float64, noise + mean*n_mean_params + kern*n_kern_params)
-    logNoise = gp.logNoise
+
     get_ααinvcKI!(ααinvcKI, gp.cK, gp.alpha)
     
     i=1
     if noise
-        gp.dtarget[i] = exp(2.0*logNoise)*trace(ααinvcKI)
+        gp.dtarget[i] = exp(2.0*gp.logNoise)*trace(ααinvcKI)
         i+=1
     end
 
@@ -190,14 +182,12 @@ function update_mll_and_dmll!(gp::GPE,
     end
 end
 
-#function to update the marginal log-likelihood and its derivative
-function update_target_and_dtarget!(gp::GPE; lik::Bool=true, mean::Bool=true, kern::Bool=true)
-    noise = lik
+function update_target_and_dtarget!(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     Kgrad = Array(Float64, gp.nobsv, gp.nobsv)
     ααinvcKI = Array(Float64, gp.nobsv, gp.nobsv)
-    update_mll_and_dmll!(gp, Kgrad, ααinvcKI, noise=noise,mean=mean,kern=kern)
-    return gp.dtarget
+    update_target_and_dtarget!(gp, Kgrad, ααinvcKI, noise=noise,mean=mean,kern=kern)
 end
+
 
 #predict observations
 function predict_y{M<:MatF64}(gp::GPE, x::M; full_cov::Bool=false)
