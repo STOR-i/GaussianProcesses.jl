@@ -262,7 +262,7 @@ function set_params!(gp::GPE, hyp::Vector{Float64}; noise::Bool=true, mean::Bool
     n_kern_params = num_params(gp.k)
 
     if noise; gp.logNoise = hyp[1]; end
-    i=1  
+    i=2  
     if mean && n_mean_params>0
         set_params!(gp.m, hyp[i:i+n_mean_params-1])
         i += n_mean_params
