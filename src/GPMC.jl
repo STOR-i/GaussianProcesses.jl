@@ -154,11 +154,7 @@ end
 #log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)
 function initialise_target!(gp::GPMC)
     initialise_ll!(gp)
-    prior = 0.0 
-    if num_params(gp.lik)>0
-        prior = prior_logpdf(gp.lik)
-    end    
-    gp.target = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior + prior_logpdf(gp.k) 
+    gp.target = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.m) + prior_logpdf(gp.k) 
 end    
 
 #log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)

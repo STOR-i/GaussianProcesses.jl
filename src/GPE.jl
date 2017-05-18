@@ -34,8 +34,10 @@ type GPE <: GPBase
     # Auxiliary data
     cK::AbstractPDMat       # (k + exp(2*obsNoise))
     alpha::Vector{Float64}  # (k + exp(2*obsNoise))⁻¹y
-    target::Float64            # Marginal log-likelihood
-    dtarget::Vector{Float64}   # Gradient marginal log-likelihood
+    mll::Float64            # Marginal log-likelihood
+    target::Float64            # Log target (Marginal log-likelihood + log priors)
+    dmll::Vector{Float64}      # Gradient of marginal log-likelihood
+    dtarget::Vector{Float64}   # Gradient log-target (gradient of marginal log-likelihood + gradient of log priors)
     
     function GPE(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-5.0)
         dim, nobsv = size(X)
@@ -83,7 +85,7 @@ fit!(gp::GPE, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 
 
 # initialise the marginal log-likelihood
-function initialise_target!(gp::GPE)
+function initialise_mll!(gp::GPE)
     μ = mean(gp.m,gp.X)
     Σ = cov(gp.k, gp.X, gp.data)
     for i in 1:gp.nobsv
@@ -92,12 +94,12 @@ function initialise_target!(gp::GPE)
     end
     gp.cK = PDMat(Σ)
     gp.alpha = gp.cK \ (gp.y - μ)
-    gp.target = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
+    gp.mll = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end    
 
 # modification of initialise_target! that reuses existing matrices to avoid
 # unnecessary memory allocations, which speeds things up significantly
-function update_target!(gp::GPE)
+function update_mll!(gp::GPE)
     Σbuffer = gp.cK.mat
     μ = mean(gp.m,gp.X)
     cov!(Σbuffer, gp.k, gp.X, gp.data)
@@ -109,7 +111,7 @@ function update_target!(gp::GPE)
     chol = cholfact!(Symmetric(chol_buffer))
     gp.cK = PDMats.PDMat(Σbuffer, chol)
     gp.alpha = gp.cK \ (gp.y - μ)
-    gp.target = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
+    gp.mll = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
 
 
@@ -141,7 +143,7 @@ end
 
 
 """ Update gradient of marginal log-likelihood """
-function update_target_and_dtarget!(gp::GPE,
+function update_mll_and_dmll!(gp::GPE,
     Kgrad::MatF64,
     ααinvcKI::MatF64
     ; 
@@ -156,37 +158,58 @@ function update_target_and_dtarget!(gp::GPE,
     update_target!(gp)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
-    gp.dtarget = Array(Float64, noise + mean*n_mean_params + kern*n_kern_params)
+    gp.dmll = Array(Float64, noise + mean*n_mean_params + kern*n_kern_params)
 
     get_ααinvcKI!(ααinvcKI, gp.cK, gp.alpha)
     
     i=1
     if noise
-        gp.dtarget[i] = exp(2.0*gp.logNoise)*trace(ααinvcKI)
+        gp.dmll[i] = exp(2.0*gp.logNoise)*trace(ααinvcKI)
         i+=1
     end
 
     if mean && n_mean_params>0
         Mgrads = grad_stack(gp.m, gp.X)
         for j in 1:n_mean_params
-            gp.dtarget[i] = dot(Mgrads[:,j],gp.alpha)
+            gp.dmll[i] = dot(Mgrads[:,j],gp.alpha)
             i += 1
         end
     end
     if kern
         for iparam in 1:n_kern_params
             grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
-            gp.dtarget[i] = vecdot(Kgrad,ααinvcKI)/2.0
+            gp.dmll[i] = vecdot(Kgrad,ααinvcKI)/2.0
             i+=1
         end
     end
 end
 
+
+
+
+#log p(θ|y) ∝ log p(y|θ) + log p(θ)
+function initialise_target!(gp::GPE)
+    initialise_mll!(gp)
+        #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
+    gp.target = gp.mll   + prior_logpdf(gp.m) + prior_logpdf(gp.k) #+ prior_logpdf(gp.lik)
+end    
+
+#log p(θ|y) ∝ log p(y|θ) + log p(θ)
+function update_target!(gp::GPE)
+    update_mll!(gp)
+    #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
+    gp.target = gp.mll  + prior_logpdf(gp.m) + prior_logpdf(gp.k) #+ prior_logpdf(gp.lik)
+end    
+
+#function to update the log-posterior and its derivative
 function update_target_and_dtarget!(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     Kgrad = Array(Float64, gp.nobsv, gp.nobsv)
     ααinvcKI = Array(Float64, gp.nobsv, gp.nobsv)
-    update_target_and_dtarget!(gp, Kgrad, ααinvcKI, noise=noise,mean=mean,kern=kern)
+    update_mll_and_dmll!(gp, Kgrad, ααinvcKI, noise=noise,mean=mean,kern=kern)
+    #NEED TO FIX DERIVATIVES FOR THE PRIOR
+    gp.dtarget = gp.dmll #+ [prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] #prior_gradlogpdf(gp.lik);
 end
+
 
 
 #predict observations
