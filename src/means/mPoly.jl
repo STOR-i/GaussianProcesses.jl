@@ -12,7 +12,8 @@ type MeanPoly <: Mean
     β::Matrix{Float64}    # Polynomial coefficients
     dim::Int              # Dimension
     deg::Int              # Polynomial degree
-    MeanPoly(β::Matrix{Float64}) = new(β,size(β, 1), size(β, 2))
+    priors::Array          # Array of priors for mean parameters
+    MeanPoly(β::Matrix{Float64}) = new(β,size(β, 1), size(β, 2),[])
 end
 
 function mean(mPoly::MeanPoly,x::Matrix{Float64})

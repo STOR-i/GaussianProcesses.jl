@@ -283,7 +283,7 @@ end
 
 
 function show(io::IO, gp::GPMC)
-    println(io, "GP object:")
+    println(io, "GP Monte Carlo object:")
     println(io, "  Dim = $(gp.dim)")
     println(io, "  Number of observations = $(gp.nobsv)")
     println(io, "  Mean function:")

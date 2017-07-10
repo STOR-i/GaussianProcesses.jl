@@ -12,7 +12,8 @@ k(x,x') = σ²(1+√3*d/L^2)exp(-√3*d/L^2), where d = |x-x'| and L = diag(ℓ�
 type Mat32Ard <: MaternARD
     iℓ2::Vector{Float64}     # Inverse squared length scale
     σ2::Float64              # Signal variance
-    Mat32Ard(ll::Vector{Float64}, lσ::Float64) = new(exp(-2.0*ll), exp(2.0*lσ))
+    priors::Array          # Array of priors for kernel parameters
+    Mat32Ard(ll::Vector{Float64}, lσ::Float64) = new(exp(-2.0*ll), exp(2.0*lσ),[])
 end
 
 function set_params!(mat::Mat32Ard, hyp::Vector{Float64})

@@ -10,7 +10,8 @@ m(x) = β
 """ ->
 type MeanConst <: Mean
     β::Float64
-    MeanConst(β::Float64) = new(β)
+    priors::Array          # Array of priors for mean parameters
+    MeanConst(β::Float64) = new(β, [])
 end
 
 mean(mConst::MeanConst,x::Matrix{Float64}) =  fill(mConst.β, size(x,2))

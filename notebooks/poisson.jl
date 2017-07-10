@@ -2,9 +2,8 @@
 
 using Gadfly
 using GaussianProcesses
+
 srand(201216)
-
-
 n = 20
 X = linspace(-3,3,n)
 f = 2*cos(2*X)

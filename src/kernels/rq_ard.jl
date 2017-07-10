@@ -14,7 +14,8 @@ type RQArd <: StationaryARD
     iℓ2::Vector{Float64}      # Inverse squared Length scale
     σ2::Float64              # Signal std
     α::Float64               # Shape parameter
-    RQArd(ll::Vector{Float64}, lσ::Float64, lα::Float64) = new(exp(-2.0*ll), exp(2.0*lσ), exp(lα))
+    priors::Array          # Array of priors for kernel parameters
+    RQArd(ll::Vector{Float64}, lσ::Float64, lα::Float64) = new(exp(-2.0*ll), exp(2.0*lσ), exp(lα),[])
 end
 
 function set_params!(rq::RQArd, hyp::Vector{Float64})

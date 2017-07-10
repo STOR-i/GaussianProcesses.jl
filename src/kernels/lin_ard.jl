@@ -12,7 +12,8 @@ k(x,x') = xᵀL⁻²x', where L = diag(ℓ₁,ℓ₂,...)
 type LinArd <: Kernel
     ℓ::Vector{Float64}      # Length Scale
     dim::Int                 # Number of hyperparameters
-    LinArd(ll::Vector{Float64}) = new(exp(ll),size(ll,1))
+    priors::Array          # Array of priors for kernel parameters
+    LinArd(ll::Vector{Float64}) = new(exp(ll),size(ll,1),[])
 end
 
 function cov{V1<:VecF64,V2<:VecF64}(lin::LinArd, x::V1, y::V2)

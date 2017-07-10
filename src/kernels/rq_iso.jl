@@ -14,7 +14,8 @@ type RQIso <: Isotropic
     ℓ2::Float64      # Length scale 
     σ2::Float64      # Signal std
     α::Float64       # shape parameter
-    RQIso(ll::Float64, lσ::Float64, lα::Float64) = new(exp(2*ll), exp(2*lσ), exp(lα))
+    priors::Array          # Array of priors for kernel parameters
+    RQIso(ll::Float64, lσ::Float64, lα::Float64) = new(exp(2*ll), exp(2*lσ), exp(lα),[])
 end
 
 function set_params!(rq::RQIso, hyp::Vector{Float64})

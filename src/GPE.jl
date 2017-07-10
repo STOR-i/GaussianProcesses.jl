@@ -312,7 +312,7 @@ push!(gp::GPE, x::Float64, y::Float64) = push!(gp, [x], [y])
 push!(gp::GPE, x::Vector{Float64}, y::Float64) = push!(gp, reshape(x, length(x), 1), [y])
 
 function show(io::IO, gp::GPE)
-    println(io, "GPE object:")
+    println(io, "GP Exact object:")
     println(io, "  Dim = $(gp.dim)")
     println(io, "  Number of observations = $(gp.nobsv)")
     println(io, "  Mean function:")

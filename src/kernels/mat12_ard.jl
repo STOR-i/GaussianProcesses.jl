@@ -12,7 +12,8 @@ k(x,x') = σ²exp(-d/L), where d = |x-x'| and L = diag(ℓ₁,ℓ₂,...)
 type Mat12Ard <: MaternARD
     iℓ2::Vector{Float64}     # Inverse squared Length scale
     σ2::Float64              # Log of signal std
-    Mat12Ard(ll::Vector{Float64}, lσ::Float64) = new(exp(-2.0*ll),exp(2.0*lσ))
+    priors::Array          # Array of priors for kernel parameters
+    Mat12Ard(ll::Vector{Float64}, lσ::Float64) = new(exp(-2.0*ll),exp(2.0*lσ),[])
 end
 
 function set_params!(mat::Mat12Ard, hyp::Vector{Float64})

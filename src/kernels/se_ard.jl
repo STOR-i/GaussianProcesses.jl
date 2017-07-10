@@ -12,7 +12,8 @@ k(x,x') = σ²exp(-(x-x')ᵀL⁻²(x-x')/2), where L = diag(ℓ₁,ℓ₂,...)
 type SEArd <: StationaryARD
     iℓ2::Vector{Float64}      # Inverse squared Length scale
     σ2::Float64              # Signal variance
-    SEArd(ll::Vector{Float64}, lσ::Float64) = new(exp(-2.0*ll),exp(2.0*lσ))
+    priors::Array          # Array of priors for kernel parameters
+    SEArd(ll::Vector{Float64}, lσ::Float64) = new(exp(-2.0*ll),exp(2.0*lσ),[])
 end
 
 function set_params!(se::SEArd, hyp::Vector{Float64})

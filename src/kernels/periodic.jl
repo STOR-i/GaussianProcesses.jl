@@ -14,7 +14,8 @@ type Periodic <: Isotropic
     ℓ2::Float64
     σ2::Float64
     p::Float64      # Log of period
-    Periodic(ll::Float64, lσ::Float64, lp::Float64) = new(exp(2*ll), exp(2*lσ), exp(lp))
+    priors::Array          # Array of priors for kernel parameters
+    Periodic(ll::Float64, lσ::Float64, lp::Float64) = new(exp(2*ll), exp(2*lσ), exp(lp),[])
 end
 
 get_params(pe::Periodic) = Float64[log(pe.ℓ2)/2.0, log(pe.σ2)/2.0, log(pe.p)]

@@ -8,7 +8,8 @@ k(x,x') = σ²
 """
 type Const <: Kernel
     σ2::Float64      # Signal std
-    Const(lσ::Float64) = new(exp(2*lσ))
+    priors::Array          # Array of priors for kernel parameters
+    Const(lσ::Float64) = new(exp(2*lσ),[])
 end
 
 function set_params!(cons::Const, hyp::Vector{Float64})

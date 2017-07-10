@@ -16,8 +16,10 @@ lik = BernLik()
 
 @time gp = GP(X',vec(y),mZero,kern,lik)     
 
-optimize!(gp)
+
 GaussianProcesses.set_priors!(gp.k,[Distributions.Normal(0.0,2.0),Distributions.Normal(0.0,2.0)])
+
+optimize!(gp)
 
 #mcmc doesn't seem to mix well
 samples = mcmc(gp)
@@ -37,7 +39,6 @@ end
 
 #######################
 #Predict 
-
 layers = []
 for ym in ymean
     push!(layers, layer(x=xtest,y=ym,Geom.line))
