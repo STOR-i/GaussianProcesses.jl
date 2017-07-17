@@ -38,3 +38,4 @@ end
 
 # 1D Case for prediction
 predict_f{V<:VecF64}(gp::GPBase, x::V; full_cov::Bool=false) = predict_f(gp, x'; full_cov=full_cov)
+

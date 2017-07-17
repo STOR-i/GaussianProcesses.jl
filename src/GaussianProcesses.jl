@@ -1,8 +1,9 @@
 module GaussianProcesses
-using Optim, PDMats, Distances, Distributions, Klara, FastGaussQuadrature
+using Optim, PDMats, Distances, Klara, FastGaussQuadrature
 using Compat
 import Compat: view, cholfact!
-
+using Distributions
+import Distributions: logpdf, gradlogpdf
 import Base: +, *
 import Base: rand, rand!, mean, cov, push!
 
@@ -11,8 +12,10 @@ import Base: rand, rand!, mean, cov, push!
 
 export GPBase, GP, GPE, GPMC, predict_f, predict_y, Kernel, SumKernel, ProdKernel, Masked, FixedKern, fix, Noise, Const, SE, SEIso, SEArd, Periodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Matern, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, #kernel functions
     MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, #mean functions
-    GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik, predict_obs, #likelihood functions
-    mcmc, optimize!                                           #inference functions
+    GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
+    mcmc, optimize!,                                           #inference functions
+    set_priors!                                                #set the priors
+
 
 typealias MatF64 AbstractMatrix{Float64}
 typealias VecF64 AbstractVector{Float64}

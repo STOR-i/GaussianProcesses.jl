@@ -83,8 +83,39 @@ end
 
 fit!(gp::GPE, x::Vector{Float64}, y::Vector{Float64}) = fit!(gp, x', y)
 
+#———————————————————————————————————————————————————————————
+#Fast memory allocation function
 
-# initialise the marginal log-likelihood
+@doc """
+get_ααinvcKI!(ααinvcKI::Matrix, cK::AbstractPDMat, α::Vector)
+
+# Description
+Computes α*α'-cK\eye(nobsv) in-place, avoiding any memory allocation
+
+# Arguments:
+* `ααinvcKI::Matrix` the matrix to be overwritten
+* `cK::AbstractPDMat` the covariance matrix of the GPE (supplied by gp.cK)
+* `α::Vector` the alpha vector of the GPE (defined as cK \ (Y-μ), and supplied by gp.alpha)
+* nobsv
+"""
+function get_ααinvcKI!{M<:MatF64}(ααinvcKI::M, cK::AbstractPDMat, α::Vector)
+    nobsv = length(α)
+    size(ααinvcKI) == (nobsv, nobsv) || throw(ArgumentError, 
+                @sprintf("Buffer for ααinvcKI should be a %dx%d matrix, not %dx%d",
+                         nobsv, nobsv,
+                         size(ααinvcKI,1), size(ααinvcKI,2)))
+    ααinvcKI[:,:] = 0.0
+    @inbounds for i in 1:nobsv
+        ααinvcKI[i,i] = -1.0
+    end
+    A_ldiv_B!(cK.chol, ααinvcKI)
+    LinAlg.BLAS.ger!(1.0, α, α, ααinvcKI)
+end
+
+#———————————————————————————————————————————————————————————————-
+#Functions for calculating the log-target
+
+""" Initialise the marginal log-likelihood """
 function initialise_mll!(gp::GPE)
     μ = mean(gp.m,gp.X)
     Σ = cov(gp.k, gp.X, gp.data)
@@ -112,33 +143,6 @@ function update_mll!(gp::GPE)
     gp.cK = PDMats.PDMat(Σbuffer, chol)
     gp.alpha = gp.cK \ (gp.y - μ)
     gp.mll = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
-end
-
-
-@doc """
-get_ααinvcKI!(ααinvcKI::Matrix, cK::AbstractPDMat, α::Vector)
-
-# Description
-Computes α*α'-cK\eye(nobsv) in-place, avoiding any memory allocation
-
-# Arguments:
-* `ααinvcKI::Matrix` the matrix to be overwritten
-* `cK::AbstractPDMat` the covariance matrix of the GPE (supplied by gp.cK)
-* `α::Vector` the alpha vector of the GPE (defined as cK \ (Y-μ), and supplied by gp.alpha)
-* nobsv
-"""
-function get_ααinvcKI!{M<:MatF64}(ααinvcKI::M, cK::AbstractPDMat, α::Vector)
-    nobsv = length(α)
-    size(ααinvcKI) == (nobsv, nobsv) || throw(ArgumentError, 
-                @sprintf("Buffer for ααinvcKI should be a %dx%d matrix, not %dx%d",
-                         nobsv, nobsv,
-                         size(ααinvcKI,1), size(ααinvcKI,2)))
-    ααinvcKI[:,:] = 0.0
-    @inbounds for i in 1:nobsv
-        ααinvcKI[i,i] = -1.0
-    end
-    A_ldiv_B!(cK.chol, ααinvcKI)
-    LinAlg.BLAS.ger!(1.0, α, α, ααinvcKI)
 end
 
 
@@ -185,8 +189,6 @@ function update_mll_and_dmll!(gp::GPE,
 end
 
 
-
-
 #log p(θ|y) ∝ log p(y|θ) + log p(θ)
 function initialise_target!(gp::GPE)
     initialise_mll!(gp)
@@ -211,8 +213,9 @@ function update_target_and_dtarget!(gp::GPE; noise::Bool=true, mean::Bool=true, 
 end
 
 
+#———————————————————————————————————————————————————————————–
+#Predict observations
 
-#predict observations
 function predict_y{M<:MatF64}(gp::GPE, x::M; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
     return μ, σ2 + exp(2*gp.logNoise)
@@ -235,7 +238,7 @@ function _predict{M<:MatF64}(gp::GPE, X::M)
     return (mu, Sigma)
 end
 
-
+#———————————————————————————————————————————————————————————
 # Sample from the GPE 
 function rand!{M<:MatF64}(gp::GPE, X::M, A::DenseMatrix)
     nobsv = size(X,2)
@@ -267,6 +270,8 @@ rand{V<:VecF64}(gp::GPE, x::V, n::Int) = rand(gp, x', n)
 rand{M<:MatF64}(gp::GPE,X::M) = vec(rand(gp,X,1))
 rand{V<:VecF64}(gp::GPE,x::V) = vec(rand(gp,x',1))
 
+#—————————————————————————————————————————————————————–
+#Functions for setting and calling the parameters of the GP object
 
 function get_params(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     params = Float64[]
@@ -295,7 +300,9 @@ function set_params!(gp::GPE, hyp::Vector{Float64}; noise::Bool=true, mean::Bool
         i += n_kern_params
     end
 end
-    
+
+#———————————————————————————————————————————————————————————-
+#Push function
 function push!(gp::GPE, X::Matrix{Float64}, y::Vector{Float64})
     warn("push! method is currently inefficient as it refits all observations")
     if gp.nobsv == 0
@@ -311,6 +318,10 @@ push!(gp::GPE, x::Vector{Float64}, y::Vector{Float64}) = push!(gp, x', y)
 push!(gp::GPE, x::Float64, y::Float64) = push!(gp, [x], [y])
 push!(gp::GPE, x::Vector{Float64}, y::Float64) = push!(gp, reshape(x, length(x), 1), [y])
 
+
+
+#—————————————————————————————————————————————————————————————
+#Show function
 function show(io::IO, gp::GPE)
     println(io, "GP Exact object:")
     println(io, "  Dim = $(gp.dim)")

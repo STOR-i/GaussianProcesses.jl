@@ -18,9 +18,9 @@ include("studentT.jl")
 include("poisson.jl")
 include("binomial.jl")
 
-################
+#———————————————————————————————————————————————————————————————-
 #Priors
-################
+
 
 function set_priors!(lik::Likelihood, priors::Array)
     length(priors) == num_params(lik) || throw(ArgumentError("$(typeof(lik)) has exactly $(num_params(lik)) parameters"))
@@ -33,7 +33,7 @@ function prior_logpdf(lik::Likelihood)
     elseif lik.priors==[]
         return 0.0
     else
-        return sum(Distributions.logpdf(prior,param) for (prior, param) in zip(lik.priors,get_params(lik)))
+        return sum(logpdf(prior,param) for (prior, param) in zip(lik.priors,get_params(lik)))
     end    
 end
 
@@ -43,14 +43,15 @@ function prior_gradlogpdf(lik::Likelihood)
     elseif lik.priors==[]
         return zeros(num_params(lik))
     else
-        return [Distributions.gradlogpdf(prior,param) for (prior, param) in zip(lik.priors,get_params(lik))]
+        return [gradlogpdf(prior,param) for (prior, param) in zip(lik.priors,get_params(lik))]
     end    
 end
-################
-#Predict observations at test locations
-###############
 
-#Computes the predictive mean and variance given a Gaussian distribution for f.
+#————————————————————————————————————————————
+#Predict observations at test locations
+
+
+""" Computes the predictive mean and variance given a Gaussian distribution for f """
 function predict_obs(lik::Likelihood, fmean::Vector{Float64}, fvar::Vector{Float64}) 
     n_gaussHermite = 20
     nodes, weights = gausshermite(n_gaussHermite)
