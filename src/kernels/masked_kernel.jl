@@ -78,3 +78,8 @@ function grad_slice!{K<:Kernel, M1<:MatF64, M2<:MatF64}(
     dK::M1, masked::Masked{K}, X::M2, data::EmptyData, iparam::Int)
     return grad_slice!(dK, masked.kern, view(X,masked.active_dims,:), data, iparam)
 end
+
+# priors
+get_priors{K<:Kernel}(masked::Masked{K}) = get_priors(masked.kern)
+set_priors!{K<:Kernel}(masked::Masked{K}, priors) = set_priors!(masked.kern, priors)
+

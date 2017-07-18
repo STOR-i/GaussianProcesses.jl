@@ -22,6 +22,7 @@ function fix(k::Kernel, par::Symbol)
     deleteat!(free, tofix)
     return FixedKern(k, free)
 end
+
 function fix(k::FixedKern, par::Symbol)
     free = k.free
     names = get_param_names(k)
@@ -81,4 +82,27 @@ function addcov!{M<:AbstractArray{Float64,2}}(
     cK::AbstractArray{Float64,2}, 
     fk::FixedKern, X::M, data::KernelData)
     return addcov!(cK, fk.kern, X, data)
+end
+
+#Priors
+
+function get_priors(fk::FixedKern)
+    if isempty(fk.kern.priors) return []
+    else
+        return get_priors(fk.kern)[fk.free]
+    end
+end
+
+function set_priors!(fk::FixedKern, priors)
+    p = get_priors(fk.kern)
+    p[fk.free] = priors
+    set_priors!(fk.kern, p)
+end
+
+function prior_logpdf(k::FixedKern)
+    return 0.0
+end
+
+function prior_gradlogpdf(k::FixedKern)
+    return zeros(num_params(k))
 end
