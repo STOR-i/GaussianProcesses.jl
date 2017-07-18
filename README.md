@@ -72,7 +72,7 @@ GaussianProcesses.GP
 
 ## Notebooks
 
-Sample code is available from the [notebooks](https://github.com/STOR-i/GaussianProcesses.jl/notebooks)
+Sample code is available from the [notebooks](https://github.com/STOR-i/GaussianProcesses.jl/tree/master/notebooks)
 
 ## Related packages
 
