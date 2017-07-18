@@ -141,3 +141,25 @@ function +(k1::SumKernel, k2::SumKernel)
 end
 +(k1::Kernel, k2::Kernel) = SumKernel(k1,k2)
 +(k1::Kernel, k2::SumKernel) = +(k2,k1)
+
+######################
+#Priors
+####################
+
+function set_priors!(sumkern::SumKernel, priors::Array)
+    i, n = 1, num_params(sumkern)
+    length(hyp) == num_params(sumkern) || throw(ArgumentError("SumKernel object requires $(n) hyperparameters"))
+    for k in sumkern.kerns
+        np = num_params(k)
+        set_priors!(k, hyp[i:(i+np-1)])
+        i += np
+    end
+end
+
+function get_priors(sumkern::SumKernel)
+    p = []
+    for k in sumkern.kerns
+        append!(p, get_priors(k))
+    end
+    p
+end

@@ -184,24 +184,28 @@ num_params(k::Kernel)=throw(ArgumentError("Undefined number of parameters"))
 #Priors
 ################
 
+get_priors(k::Kernel) = k.priors
+
 function set_priors!(k::Kernel, priors::Array)
     length(priors) == num_params(k) || throw(ArgumentError("$(typeof(k)) has exactly $(num_params(k)) parameters"))
     k.priors = priors
 end
 
 function prior_logpdf(k::Kernel)
-    if k.priors==[]
+    priors=get_priors(k)
+    if priors==[]
         return 0.0
     else
-        return sum(logpdf(prior,param) for (prior, param) in zip(k.priors,get_params(k)))
+        return sum(logpdf(prior,param) for (prior, param) in zip(priors,get_params(k)))
     end    
 end
 
 function prior_gradlogpdf(k::Kernel)
-    if k.priors==[]
+    priors=get_priors(k)
+    if priors==[]
         return zeros(num_params(k))
     else
-        return [gradlogpdf(prior,param) for (prior, param) in zip(k.priors,get_params(k))]
+        return [gradlogpdf(prior,param) for (prior, param) in zip(priors,get_params(k))]
     end    
 end
 

@@ -161,3 +161,26 @@ function *(k1::ProdKernel, k2::ProdKernel)
 end
 *(k1::Kernel, k2::Kernel) = ProdKernel(k1,k2)
 *(k1::Kernel, k2::ProdKernel) = *(k2,k1)
+
+######################
+#Priors
+####################
+
+function set_priors!(prodkern::ProdKernel, priors::Array)
+    i, n = 1, num_params(prodkern)
+    length(hyp) == num_params(prodkern) || throw(ArgumentError("ProdKernel object requires $(n) hyperparameters"))
+    for k in prodkern.kerns
+        np = num_params(k)
+        set_priors!(k, hyp[i:(i+np-1)])
+        i += np
+    end
+end
+
+function get_priors(prodkern::ProdKernel)
+    p = []
+    for k in prodkern.kerns
+        append!(p, get_priors(k))
+    end
+    p
+end
+
