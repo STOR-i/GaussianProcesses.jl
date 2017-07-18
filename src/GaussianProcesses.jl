@@ -14,7 +14,7 @@ export GPBase, GP, GPE, GPMC, predict_f, predict_y, Kernel, SumKernel, ProdKerne
     MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, #mean functions
     GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
     mcmc, optimize!,                                           #inference functions
-    set_priors!                                                #set the priors
+    set_priors!,set_params!, update_target!                                                
 
 
 typealias MatF64 AbstractMatrix{Float64}
