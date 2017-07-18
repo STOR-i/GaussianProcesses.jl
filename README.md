@@ -12,11 +12,23 @@ For an extensive review of Gaussian Processes there is an excellent book [Gaussi
 
 ## Installation
 
-GaussianProcesses requires Julia version 0.5 or above. To install GaussianProcesses run the following command inside a Julia session:
+GaussianProcesses.jl requires Julia version 0.5 or above. To install GaussianProcesses.jl run the following command inside a Julia session:
 
 ```julia
 julia> Pkg.add("GaussianProcesses")
 ```
+## Functionality
+
+The package allows the user to fit exact **Gaussian process** models when the observations are Gaussian distributed about the latent function (i.e. $y \sim \mathcal{N}(f(\mathbf{x}),\sigma^2)$). In the case where the *observations are non-Gaussian*, the posterior distribution of the latent function is intractable. The package allows for Monte Carlo sampling from the posterior.
+
+The main function of the package is `GP`, which fits the Gaussian process
+```
+gp = GP(X',vec(y),mZero,kern)
+gp = GP(X',vec(y),mZero,kern,lik)
+```
+to Gaussian and non-Gaussian data respectively.
+
+The package has a number of *mean*, *kernel* and *likelihood* functions available. See the documentation for further details.
 
 ## Documentation
 
