@@ -19,14 +19,14 @@ julia> Pkg.add("GaussianProcesses")
 ```
 ## Functionality
 
-The package allows the user to fit exact **Gaussian process** models when the observations are Gaussian distributed about the latent function (i.e. $y \sim \mathcal{N}(f(\mathbf{x}),\sigma^2)$). In the case where the *observations are non-Gaussian*, the posterior distribution of the latent function is intractable. The package allows for Monte Carlo sampling from the posterior.
+The package allows the user to fit exact **Gaussian process** models when the observations are Gaussian distributed about the latent function. In the case where the *observations are non-Gaussian*, the posterior distribution of the latent function is intractable. The package allows for Monte Carlo sampling from the posterior.
 
 The main function of the package is `GP`, which fits the Gaussian process
 ```
-gp = GP(X',vec(y),mZero,kern)
-gp = GP(X',vec(y),mZero,kern,lik)
+gp = GP(X',y,mean,kernel)
+gp = GP(X',y,mean,kernel,likelihood)
 ```
-to Gaussian and non-Gaussian data respectively.
+for Gaussian and non-Gaussian data respectively.
 
 The package has a number of *mean*, *kernel* and *likelihood* functions available. See the documentation for further details.
 
