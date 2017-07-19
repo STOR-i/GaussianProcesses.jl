@@ -222,7 +222,8 @@ include("noise.jl")             # White noise covariance function
 include("const.jl")             # Constant (bias) covariance function
 
 # Composite kernels
-include("sum_kernel.jl")        # Sum of kernels
-include("prod_kernel.jl")       # Product of kernels
+include("composite_kernel.jl")  # Composite kernels
+
+# Wrapped kernels
 include("masked_kernel.jl")     # Masked kernels (apply to subset of X dims)
 include("fixed_kernel.jl")      # Fixed kernels (fix some hyperparameters)

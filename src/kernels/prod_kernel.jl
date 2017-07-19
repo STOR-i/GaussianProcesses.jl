@@ -1,4 +1,4 @@
-type ProdKernel <: Kernel
+type ProdKernel <: CompositeKernel
     kerns::Vector{Kernel}
     function ProdKernel(args...)
         kerns = Array(Kernel, length(args))
@@ -9,28 +9,9 @@ type ProdKernel <: Kernel
         return new(kerns)
     end
 end
-function KernelData{M<:MatF64}(prodkern::ProdKernel, X::M)
-    datadict = Dict{String, KernelData}()
-    datakeys = String[]
-    for k in prodkern.kerns
-        data_type = kernel_data_key(k, X)
-        if !haskey(datadict, data_type)
-            datadict[data_type] = KernelData(k, X)
-        end
-        push!(datakeys, data_type)
-    end
-    SumData(datadict, datakeys)
-end
-kernel_data_key{M<:MatF64}(prodkern::ProdKernel, X::M) = join(["SumData" ;
-     sort(unique(kernel_data_key(k, X) for k in prodkern.kerns))])
 
-function show(io::IO, prodkern::ProdKernel, depth::Int = 0)
-    pad = repeat(" ", 2 * depth)
-    println(io, "$(pad)Type: $(typeof(prodkern))")
-    for k in prodkern.kerns
-        show(io, k, depth+1)
-    end
-end
+subkernels(prodkern::ProdKernel) = prodkern.kerns
+get_param_names(prodkern::ProdKernel) = composite_param_names(prodkern.kerns, :pk)
 
 function cov{V1<:VecF64,V2<:VecF64}(prodkern::ProdKernel, x::V1, y::V2)
     p = 1.0
@@ -49,45 +30,18 @@ function cov{M<:MatF64}(prodkern::ProdKernel, X::M)
     return p
 end
 
-function cov!{M<:MatF64}(s::MatF64, prodkern::ProdKernel, X::M, data::SumData)
+function cov!{M<:MatF64}(s::MatF64, prodkern::ProdKernel, X::M, data::CompositeData)
     s[:,:] = 1.0
     for (ikern,kern) in enumerate(prodkern.kerns)
         multcov!(s, kern, X, data.datadict[data.keys[ikern]])
     end
     return s
 end
-function cov{M<:MatF64}(prodkern::ProdKernel, X::M, data::SumData)
+
+function cov{M<:MatF64}(prodkern::ProdKernel, X::M, data::CompositeData)
     d, nobsv = size(X)
     s = Array(Float64, nobsv, nobsv)
     cov!(s, prodkern, X, data)
-end
-
-function get_params(prodkern::ProdKernel)
-    p = Array(Float64, 0)
-    for k in prodkern.kerns
-        append!(p, get_params(k))
-    end
-    p
-end
-
-get_param_names(prodkern::ProdKernel) = composite_param_names(prodkern.kerns, :pk)
-
-function num_params(prodkern::ProdKernel)
-    n = 0
-    for k in prodkern.kerns
-        n += num_params(k)
-    end
-    n
-end
-
-function set_params!(prodkern::ProdKernel, hyp::Vector{Float64})
-    i, n = 1, num_params(prodkern)
-    length(hyp) == num_params(prodkern) || throw(ArgumentError("ProdKernel object requires $(n) hyperparameters"))
-    for k in prodkern.kerns
-        np = num_params(k)
-        set_params!(k, hyp[i:(i+np-1)])
-        i += np
-    end
 end
 
 #=# This function is extremely inefficient=#
@@ -115,7 +69,7 @@ end
         s += np
     end
 end
-@inline function dKij_dθp{M<:MatF64}(prodkern::ProdKernel, X::M, data::SumData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(prodkern::ProdKernel, X::M, data::CompositeData, i::Int, j::Int, p::Int, dim::Int)
     cKij = cov(prodkern, X[:,i], X[:,j])
     s=0
     for (ikern,kern) in enumerate(prodkern.kerns)
@@ -128,7 +82,7 @@ end
     end
 end
 function grad_slice!{M1<:MatF64, M2<:MatF64}(
-    dK::M1, prodkern::ProdKernel, X::M2, data::SumData, iparam::Int)
+    dK::M1, prodkern::ProdKernel, X::M2, data::CompositeData, iparam::Int)
     istart=0
     for (ikern,kern) in enumerate(prodkern.kerns)
         np = num_params(kern)
@@ -161,26 +115,3 @@ function *(k1::ProdKernel, k2::ProdKernel)
 end
 *(k1::Kernel, k2::Kernel) = ProdKernel(k1,k2)
 *(k1::Kernel, k2::ProdKernel) = *(k2,k1)
-
-######################
-#Priors
-####################
-
-function set_priors!(prodkern::ProdKernel, priors::Array)
-    i, n = 1, num_params(prodkern)
-    length(hyp) == num_params(prodkern) || throw(ArgumentError("ProdKernel object requires $(n) hyperparameters"))
-    for k in prodkern.kerns
-        np = num_params(k)
-        set_priors!(k, hyp[i:(i+np-1)])
-        i += np
-    end
-end
-
-function get_priors(prodkern::ProdKernel)
-    p = []
-    for k in prodkern.kerns
-        append!(p, get_priors(k))
-    end
-    p
-end
-

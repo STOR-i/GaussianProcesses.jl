@@ -1,4 +1,4 @@
-type SumKernel <: Kernel
+type SumKernel <: CompositeKernel
     kerns::Vector{Kernel}
     function SumKernel(args...)
         kerns = Array(Kernel, length(args))
@@ -10,33 +10,8 @@ type SumKernel <: Kernel
     end
 end
 
-type SumData <: KernelData
-    datadict::Dict{String, KernelData}
-    keys::Vector{String}
-end
-
-function KernelData{M<:MatF64}(sumkern::SumKernel, X::M)
-    datadict = Dict{String, KernelData}()
-    datakeys = String[]
-    for k in sumkern.kerns
-        data_type = kernel_data_key(k, X)
-        if !haskey(datadict, data_type)
-            datadict[data_type] = KernelData(k, X)
-        end
-        push!(datakeys, data_type)
-    end
-    SumData(datadict, datakeys)
-end
-kernel_data_key{M<:MatF64}(sumkern::SumKernel, X::M) = join(["SumData" ;
-     sort(unique(kernel_data_key(k, X) for k in sumkern.kerns))])
-
-function show(io::IO, sumkern::SumKernel, depth::Int = 0)
-    pad = repeat(" ", 2 * depth)
-    println(io, "$(pad)Type: $(typeof(sumkern))")
-    for k in sumkern.kerns
-        show(io, k, depth+1)
-    end
-end
+subkernels(sumkern::SumKernel) = sumkern.kerns
+get_param_names(sumkern::SumKernel) = composite_param_names(sumkern.kerns, :pk)
 
 function cov{V1<:VecF64,V2<:VecF64}(sumkern::SumKernel, x::V1, y::V2)
     s = 0.0
@@ -46,49 +21,22 @@ function cov{V1<:VecF64,V2<:VecF64}(sumkern::SumKernel, x::V1, y::V2)
     return s
 end
 
-function addcov!{M<:MatF64}(s::MatF64, sumkern::SumKernel, X::M, data::SumData)
+function addcov!{M<:MatF64}(s::MatF64, sumkern::SumKernel, X::M, data::CompositeData)
     for (ikern,kern) in enumerate(sumkern.kerns)
         addcov!(s, kern, X, data.datadict[data.keys[ikern]])
     end
     return s
 end
-function cov!{M<:MatF64}(s::MatF64, sumkern::SumKernel, X::M, data::SumData)
+function cov!{M<:MatF64}(s::MatF64, sumkern::SumKernel, X::M, data::CompositeData)
     s[:,:] = 0.0
     addcov!(s, sumkern, X, data)
 end
-function cov{M<:MatF64}(sumkern::SumKernel, X::M, data::SumData)
+function cov{M<:MatF64}(sumkern::SumKernel, X::M, data::CompositeData)
     d, nobsv = size(X)
     s = zeros(nobsv, nobsv)
     cov!(s, sumkern, X, data)
 end
     
-function get_params(sumkern::SumKernel)
-    p = Array(Float64, 0)
-    for k in sumkern.kerns
-        append!(p, get_params(k))
-    end
-    p
-end
-
-get_param_names(sumkern::SumKernel) = composite_param_names(sumkern.kerns, :sk)
-
-function num_params(sumkern::SumKernel)
-    n = 0
-    for k in sumkern.kerns
-        n += num_params(k)
-    end
-    n
-end
-
-function set_params!(sumkern::SumKernel, hyp::Vector{Float64})
-    i, n = 1, num_params(sumkern)
-    length(hyp) == num_params(sumkern) || throw(ArgumentError("SumKernel object requires $(n) hyperparameters"))
-    for k in sumkern.kerns
-        np = num_params(k)
-        set_params!(k, hyp[i:(i+np-1)])
-        i += np
-    end
-end
 
 function grad_kern{V1<:VecF64,V2<:VecF64}(sumkern::SumKernel, x::V1, y::V2)
      dk = Array(Float64, 0)
@@ -108,7 +56,7 @@ end
         s += np
     end
 end
-@inline function dKij_dθp{M<:MatF64}(sumkern::SumKernel, X::M, data::SumData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp{M<:MatF64}(sumkern::SumKernel, X::M, data::CompositeData, i::Int, j::Int, p::Int, dim::Int)
     s=0
     for (ikern,kern) in enumerate(sumkern.kerns)
         np = num_params(kern)
@@ -118,7 +66,8 @@ end
         s += np
     end
 end
-function grad_slice!{M<:MatF64}(dK::MatF64, sumkern::SumKernel, X::M, data::SumData, p::Int)
+
+function grad_slice!{M<:MatF64}(dK::MatF64, sumkern::SumKernel, X::M, data::CompositeData, p::Int)
     s=0
     for (ikern,kern) in enumerate(sumkern.kerns)
         np = num_params(kern)
@@ -135,31 +84,11 @@ function +(k1::SumKernel, k2::Kernel)
     kerns = [k1.kerns; k2]
     SumKernel(kerns...)
 end
+
 function +(k1::SumKernel, k2::SumKernel)
     kerns = [k1.kerns; k2.kerns]
     SumKernel(kerns...)
 end
+
 +(k1::Kernel, k2::Kernel) = SumKernel(k1,k2)
 +(k1::Kernel, k2::SumKernel) = +(k2,k1)
-
-######################
-#Priors
-####################
-
-function set_priors!(sumkern::SumKernel, priors::Array)
-    i, n = 1, num_params(sumkern)
-    length(hyp) == num_params(sumkern) || throw(ArgumentError("SumKernel object requires $(n) hyperparameters"))
-    for k in sumkern.kerns
-        np = num_params(k)
-        set_priors!(k, hyp[i:(i+np-1)])
-        i += np
-    end
-end
-
-function get_priors(sumkern::SumKernel)
-    p = []
-    for k in sumkern.kerns
-        append!(p, get_priors(k))
-    end
-    p
-end
