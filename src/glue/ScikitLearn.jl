@@ -2,11 +2,11 @@
 
 import ScikitLearnBase
 
-ScikitLearnBase.is_classifier(::GPMC) = false
+ScikitLearnBase.is_classifier(::GPE) = false
 
-ScikitLearnBase.fit!(gp::GPMC, X::Matrix{Float64}, y::Vector{Float64}) = fit!(gp, X', y)
+ScikitLearnBase.fit!(gp::GPE, X::Matrix{Float64}, y::Vector{Float64}) = fit!(gp, X', y)
 
-function ScikitLearnBase.predict(gp::GPMC, X::Matrix{Float64}; eval_MSE::Bool=false)
+function ScikitLearnBase.predict(gp::GPE, X::Matrix{Float64}; eval_MSE::Bool=false)
     mu, Sigma = predict_y(gp, X'; full_cov=false)
     if eval_MSE
         return mu, Sigma
@@ -16,7 +16,7 @@ function ScikitLearnBase.predict(gp::GPMC, X::Matrix{Float64}; eval_MSE::Bool=fa
 end
 
 # This is a default - arbitrary scoring functions can be passed to GridSearchCV
-function ScikitLearnBase.score(gp::GPMC, x, y)
+function ScikitLearnBase.score(gp::GPE, x, y)
     # I use MSE here for simplicity. Is that equivalent to the likelihood for
     # gaussian processes?
     # It would make sense to use the marginal likelihood for hyperparameter
@@ -24,7 +24,7 @@ function ScikitLearnBase.score(gp::GPMC, x, y)
     return -mean((ScikitLearnBase.predict(gp, x) - y) .^ 2)
 end
 
-ScikitLearnBase.clone(gp::GPMC) = GPMC(; m=ScikitLearnBase.clone(gp.m),                                   k=ScikitLearnBase.clone(gp.k),
+ScikitLearnBase.clone(gp::GPE) = GPE(; m=ScikitLearnBase.clone(gp.m),                                   k=ScikitLearnBase.clone(gp.k),
                                    logNoise=gp.logNoise)
 
 # Means and Kernels are small objects, and they are not fit to the data (except
@@ -45,7 +45,7 @@ function add_prefix(pref, di)
     return newdi
 end
 
-function ScikitLearnBase.get_params(gp::GPMC)
+function ScikitLearnBase.get_params(gp::GPE)
     merge(add_prefix(:m_, ScikitLearnBase.get_params(gp.m)),
           add_prefix(:k_, ScikitLearnBase.get_params(gp.k)),
           Dict(:logNoise=>gp.logNoise))
@@ -58,7 +58,7 @@ function ScikitLearnBase.get_params(obj::Union{Mean, Kernel})
     return Dict(zip(names, params))
 end
 
-function ScikitLearnBase.set_params!(gp::GPMC; params...)
+function ScikitLearnBase.set_params!(gp::GPE; params...)
     m_params = Dict()
     k_params = Dict()
     for (name, value) in params

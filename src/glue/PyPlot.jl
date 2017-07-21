@@ -1,7 +1,7 @@
 import PyPlot
 
 
-function plot1D(gp::GPMC; clim::Tuple{Float64, Float64}=(minimum(gp.X), maximum(gp.X)), CI::Float64=1.96, res::Int=1000, fname::AbstractString="")
+function plot1D(gp::GPBase; clim::Tuple{Float64, Float64}=(minimum(gp.X), maximum(gp.X)), CI::Float64=1.96, res::Int=1000, fname::AbstractString="")
 
     sx = (clim[2]-clim[1])/(res-1)
     x=collect(clim[1]:sx:clim[2])
@@ -27,7 +27,7 @@ function plot1D(gp::GPMC; clim::Tuple{Float64, Float64}=(minimum(gp.X), maximum(
 end
 
 
-function plot2D(gp::GPMC; clim::Tuple{Float64, Float64, Float64, Float64} = (minimum(gp.X[1,:]), maximum(gp.X[1,:]), minimum(gp.X[2,:]), maximum(gp.X[2,:])), res::Int=50, fname::AbstractString="")
+function plot2D(gp::GPBase; clim::Tuple{Float64, Float64, Float64, Float64} = (minimum(gp.X[1,:]), maximum(gp.X[1,:]), minimum(gp.X[2,:]), maximum(gp.X[2,:])), res::Int=50, fname::AbstractString="")
     
     x = linspace(clim[1], clim[2], res)
     y = linspace(clim[3], clim[4], res)
@@ -48,7 +48,7 @@ function plot2D(gp::GPMC; clim::Tuple{Float64, Float64, Float64, Float64} = (min
     end
 end
 
-function PyPlot.plot(gp::GPMC; kwargs...)
+function PyPlot.plot(gp::GPBase; kwargs...)
     d, n = size(gp.X)
     PyPlot.close()
     if d>2
