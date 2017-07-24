@@ -1,7 +1,7 @@
 import Base.show
 # Main GaussianProcess type
 
-abstract GPBase
+abstract type GPBase end
 
 @doc """
 # Description

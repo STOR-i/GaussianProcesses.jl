@@ -2,7 +2,7 @@
 
 import Base.show
 
-abstract Kernel
+abstract type Kernel end
 
 """
 Data to be used with a kernel object to
@@ -11,7 +11,7 @@ calculate a covariance matrix, which is independent of kernel hyperparameters.
 # See also
 `EmptyData`
 """
-abstract KernelData
+abstract type KernelData end
 
 """
 Default KernelData type which is empty.

@@ -1,4 +1,4 @@
-abstract CompositeKernel <: Kernel
+abstract type CompositeKernel <: Kernel end
 
 subkernels(k::CompositeKernel) = throw(MethodError(subkernels, (k,)))
 
