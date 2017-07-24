@@ -15,7 +15,7 @@ type BinLik <: Likelihood
 end
 
 function log_dens(binomial::BinLik, f::Vector{Float64}, y::Vector{Int64})
-    θ = exp(f)./(1.0+exp(f))
+    θ = exp.(f)./(1.0+exp.(f))
     return Float64[lgamma(binomial.n+1.0) - lgamma(yi+1.0) - lgamma(binomial.n-yi+1.0) + yi*log(θi) + (binomial.n-yi)*log(1-θi) for (θi,yi) in zip(θ,y)]
 end
 

@@ -24,8 +24,8 @@ function dlog_dens_df(poisson::PoisLik, f::Vector{Float64}, y::Vector{Int64})
 end                   
 
 #mean and variance under likelihood
-mean_lik(poisson::PoisLik, f::Vector{Float64}) = exp(f)
-var_lik(poisson::PoisLik, f::Vector{Float64}) = exp(f)
+mean_lik(poisson::PoisLik, f::Vector{Float64}) = exp.(f)
+var_lik(poisson::PoisLik, f::Vector{Float64}) = exp.(f)
 
 get_params(poisson::PoisLik) = []
 num_params(poisson::PoisLik) = 0

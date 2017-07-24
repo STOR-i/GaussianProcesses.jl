@@ -25,7 +25,7 @@ metric(pe::Periodic) = Euclidean()
 
 function set_params!(pe::Periodic, hyp::Vector{Float64})
     length(hyp) == 3 || throw(ArgumentError("Periodic function has only three parameters"))
-    pe.ℓ2, pe.σ2 = exp(2.0*hyp[1:2])
+    pe.ℓ2, pe.σ2 = exp.(2.0*hyp[1:2])
     pe.p = exp(hyp[3])
 end
 

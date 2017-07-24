@@ -11,7 +11,7 @@ k(x,x') = xᵀx'/ℓ²
 type LinIso <: Kernel
     ℓ2::Float64      # Log of Length scale
     priors::Array          # Array of priors for kernel parameters
-    LinIso(ll::Float64) = new(exp(2.0*ll),[])
+    LinIso(ll::Float64) = new(exp.(2.0*ll),[])
 end
 
 type LinIsoData <: KernelData

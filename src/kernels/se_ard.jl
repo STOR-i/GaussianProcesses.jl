@@ -13,17 +13,17 @@ type SEArd <: StationaryARD
     iℓ2::Vector{Float64}      # Inverse squared Length scale
     σ2::Float64              # Signal variance
     priors::Array          # Array of priors for kernel parameters
-    SEArd(ll::Vector{Float64}, lσ::Float64) = new(exp(-2.0*ll),exp(2.0*lσ),[])
+    SEArd(ll::Vector{Float64}, lσ::Float64) = new(exp.(-2.0*ll),exp(2.0*lσ),[])
 end
 
 function set_params!(se::SEArd, hyp::Vector{Float64})
     length(hyp) == num_params(se) || throw(ArgumentError("SEArd only has $(num_params(se)) parameters"))
     d = length(se.iℓ2)
-    se.iℓ2 = exp(-2.0*hyp[1:d])
+    se.iℓ2 = exp.(-2.0*hyp[1:d])
     se.σ2 = exp(2.0*hyp[d+1])
 end
 
-get_params(se::SEArd) = [-log(se.iℓ2)/2.0; log(se.σ2)/2.0]
+get_params(se::SEArd) = [-log.(se.iℓ2)/2.0; log(se.σ2)/2.0]
 get_param_names(k::SEArd) = [get_param_names(k.iℓ2, :ll); :lσ]
 num_params(se::SEArd) = length(se.iℓ2) + 1
 

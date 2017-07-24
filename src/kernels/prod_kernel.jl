@@ -1,7 +1,7 @@
 type ProdKernel <: CompositeKernel
     kerns::Vector{Kernel}
     function ProdKernel(args...)
-        kerns = Array(Kernel, length(args))
+        kerns = Array{Kernel}(length(args))
         for (i,k) in enumerate(args)
             isa(k, Kernel) || throw(ArgumentError("All arguments of ProdKernel must be Kernel objects"))
             kerns[i] = k
@@ -40,13 +40,13 @@ end
 
 function cov{M<:MatF64}(prodkern::ProdKernel, X::M, data::CompositeData)
     d, nobsv = size(X)
-    s = Array(Float64, nobsv, nobsv)
+    s = Array{Float64}( nobsv, nobsv)
     cov!(s, prodkern, X, data)
 end
 
 #=# This function is extremely inefficient=#
 #=function grad_kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})=#
-#=     dk = Array(Float64, 0)=#
+#=     dk = Array{Float64}( 0)=#
 #=      for k in prodkern.kerns=#
 #=          p = 1.0=#
 #=          for j in prodkern.kerns[find(k.!=prodkern.kerns)]=#

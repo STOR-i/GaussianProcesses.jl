@@ -11,7 +11,7 @@ function show(io::IO, compkern::CompositeKernel, depth::Int = 0)
 end
 
 function get_params(compkern::CompositeKernel)
-    p = Array(Float64, 0)
+    p = Array{Float64}( 0)
     for k in subkernels(compkern)
         append!(p, get_params(k))
     end

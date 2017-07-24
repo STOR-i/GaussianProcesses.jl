@@ -14,7 +14,7 @@ end
 
 function set_params!(cons::Const, hyp::Vector{Float64})
     length(hyp) == 1 || throw(ArgumentError("Constant kernel only has one parameters"))
-    cons.σ2 = exp(2.0*hyp)
+    cons.σ2 = exp.(2.0*hyp)
 end
 
 get_params(cons::Const) = Float64[log(cons.σ2)/2.0]

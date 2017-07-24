@@ -9,4 +9,5 @@ X = rand(d,n)
 kern = SEArd(logℓ, logσ)
 data = KernelData(kern, X)
 
-@test_approx_eq distance(kern, X, data) distance(kern, X)
+@test distance(kern, X, data) ≈ distance(kern, X)
+

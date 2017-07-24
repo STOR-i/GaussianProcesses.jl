@@ -13,7 +13,7 @@ type LinArd <: Kernel
     ℓ::Vector{Float64}      # Length Scale
     dim::Int                 # Number of hyperparameters
     priors::Array          # Array of priors for kernel parameters
-    LinArd(ll::Vector{Float64}) = new(exp(ll),size(ll,1),[])
+    LinArd(ll::Vector{Float64}) = new(exp.(ll),size(ll,1),[])
 end
 
 function cov{V1<:VecF64,V2<:VecF64}(lin::LinArd, x::V1, y::V2)
@@ -27,7 +27,7 @@ end
 
 function KernelData{M<:MatF64}(k::LinArd, X::M)
     dim,n=size(X)
-    XtX_d = Array(Float64,n,n,dim)
+    XtX_d = Array{Float64}(n,n,dim)
     for d in 1:dim
         XtX_d[:,:,d] = view(X,d,:) * view(X,d,:)'
         Base.LinAlg.copytri!(view(XtX_d,:,:,d), 'U')
@@ -55,13 +55,13 @@ function cov{M<:MatF64}(lin::LinArd, X::M, data::LinArdData)
     return K
 end
 
-get_params(lin::LinArd) = log(lin.ℓ)
+get_params(lin::LinArd) = log.(lin.ℓ)
 get_param_names(lin::LinArd) = get_param_names(lin.ℓ, :ll)
 num_params(lin::LinArd) = lin.dim
 
 function set_params!(lin::LinArd, hyp::Vector{Float64})
     length(hyp) == lin.dim || throw(ArgumentError("Linear ARD kernel has $(lin.dim) parameters"))
-    lin.ℓ = exp(hyp)
+    lin.ℓ = exp.(hyp)
 end
 
 @inline dk_dll(lin::LinArd, xy::Float64, d::Int) = -2.0*xy/lin.ℓ[d]^2

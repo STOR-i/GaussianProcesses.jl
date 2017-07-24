@@ -7,37 +7,37 @@ import Calculus
 
 function test_cov(kern::Kernel, X::Matrix{Float64})
     spec = GaussianProcesses.cov(kern, X)
-    gen = invoke(GaussianProcesses.cov, (Kernel, Matrix{Float64}), kern, X)
-    @test_approx_eq spec gen
+    gen = invoke(GaussianProcesses.cov, Tuple{Kernel, Matrix{Float64}}, kern, X)
+    @test spec ≈ gen
     dim,n=size(X)
     i = rand(1:n)
     j = rand(1:n)
     cK_ij = GaussianProcesses.cov(kern, X[:,i], X[:,j])
-    @test_approx_eq cK_ij spec[i,j]
+    @test cK_ij ≈ spec[i,j]
     cK_added = zeros(n,n)
     GaussianProcesses.addcov!(cK_added, kern, X)
-    @test_approx_eq spec cK_added
+    @test spec ≈ cK_added
     cK_added[:,:] = 0.0
     GaussianProcesses.addcov!(cK_added, kern, X, KernelData(kern,X))
-    @test_approx_eq spec cK_added
+    @test spec ≈ cK_added
     cK_prod = ones(n,n)
     GaussianProcesses.multcov!(cK_prod, kern, X)
-    @test_approx_eq spec cK_prod
+    @test spec ≈ cK_prod
     cK_prod[:,:] = 1.0
     GaussianProcesses.multcov!(cK_prod, kern, X, KernelData(kern,X))
-    @test_approx_eq spec cK_prod
+    @test spec ≈ cK_prod
 end
 
 function test_grad_stack(kern::Kernel, X::Matrix{Float64})
     n = num_params(kern)
     data = KernelData(kern, X)
     d, nobsv = size(X)
-    stack1 = Array(Float64, nobsv, nobsv, n)
-    stack2 = Array(Float64, nobsv, nobsv, n)
+    stack1 = Array{Float64}( nobsv, nobsv, n)
+    stack2 = Array{Float64}( nobsv, nobsv, n)
     
     grad_stack!(stack1, kern, X, data)
-    invoke(grad_stack!, (AbstractArray, Kernel, Matrix{Float64}, EmptyData), stack2, kern, X, EmptyData())
-    @test_approx_eq stack1 stack2
+    invoke(grad_stack!, Tuple{AbstractArray, Kernel, Matrix{Float64}, EmptyData}, stack2, kern, X, EmptyData())
+    @test stack1 ≈ stack2
 end
 
 function test_gradient(kern::Kernel, X::Matrix{Float64})
@@ -49,7 +49,7 @@ function test_gradient(kern::Kernel, X::Matrix{Float64})
         s = sum(cov(kern, X))
         return s
     end
-    stack = Array(Float64, nobsv, nobsv, num_params(kern))
+    stack = Array{Float64}(nobsv, nobsv, num_params(kern))
     grad_stack!(stack, kern, X, data)
     theor_grad = vec(sum(stack, [1,2]))
     numer_grad = Calculus.gradient(f, init_params)

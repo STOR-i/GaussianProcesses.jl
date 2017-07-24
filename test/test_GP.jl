@@ -5,7 +5,7 @@ using GaussianProcesses: distance, KernelData
 d, n = 3, 10
 
 x = 2π * rand(d, n)
-y = Float64[sum(sin(x[:,i])) for i in 1:n]/d
+y = Float64[sum(sin.(x[:,i])) for i in 1:n]/d
 mZero = MeanZero()
 kern = SE(0.0,0.0)
 
@@ -16,7 +16,7 @@ gp = GP(x, y, mZero, kern)
 # are the same as the output observations
 function test_pred_matches_obs(gp::GPE)
     y_pred, sig = predict_y(gp, x)
-    @test_approx_eq_eps maximum(abs(gp.y - y_pred)) 0.0 1e-4
+    @test maximum(abs.(gp.y - y_pred)) ≈ 0.0 atol=0.0001
 end
 
 test_pred_matches_obs(gp)

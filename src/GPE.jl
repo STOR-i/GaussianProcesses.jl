@@ -162,7 +162,7 @@ function update_mll_and_dmll!(gp::GPE,
     update_target!(gp)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
-    gp.dmll = Array(Float64, noise + mean*n_mean_params + kern*n_kern_params)
+    gp.dmll = Array{Float64}( noise + mean*n_mean_params + kern*n_kern_params)
 
     get_ααinvcKI!(ααinvcKI, gp.cK, gp.alpha)
     
@@ -205,8 +205,8 @@ end
 
 #function to update the log-posterior and its derivative
 function update_target_and_dtarget!(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
-    Kgrad = Array(Float64, gp.nobsv, gp.nobsv)
-    ααinvcKI = Array(Float64, gp.nobsv, gp.nobsv)
+    Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
+    ααinvcKI = Array{Float64}( gp.nobsv, gp.nobsv)
     update_mll_and_dmll!(gp, Kgrad, ααinvcKI, noise=noise,mean=mean,kern=kern)
     #NEED TO FIX DERIVATIVES FOR THE PRIOR
     gp.dtarget = gp.dmll #+ [prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] #prior_gradlogpdf(gp.lik);
@@ -259,7 +259,7 @@ end
 
 function rand{M<:MatF64}(gp::GPE, X::M, n::Int)
     nobsv=size(X,2)
-    A = Array(Float64, nobsv, n)
+    A = Array{Float64}( nobsv, n)
     return rand!(gp, X, A)
 end
 

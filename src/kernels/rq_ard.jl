@@ -15,18 +15,18 @@ type RQArd <: StationaryARD
     σ2::Float64              # Signal std
     α::Float64               # Shape parameter
     priors::Array          # Array of priors for kernel parameters
-    RQArd(ll::Vector{Float64}, lσ::Float64, lα::Float64) = new(exp(-2.0*ll), exp(2.0*lσ), exp(lα),[])
+    RQArd(ll::Vector{Float64}, lσ::Float64, lα::Float64) = new(exp.(-2.0*ll), exp(2.0*lσ), exp(lα),[])
 end
 
 function set_params!(rq::RQArd, hyp::Vector{Float64})
     length(hyp) == num_params(rq) || throw(ArgumentError("RQArd kernel has $(num_params(rq_ard)) parameters"))
     d = length(rq.iℓ2)
-    rq.iℓ2 = exp(-2.0*hyp[1:d])
+    rq.iℓ2 = exp.(-2.0*hyp[1:d])
     rq.σ2 = exp(2.0*hyp[d+1])
     rq.α = exp(hyp[d+2])
 end
 
-get_params(rq::RQArd) = [-log(rq.iℓ2)/2.0; log(rq.σ2)/2.0; log(rq.α)]
+get_params(rq::RQArd) = [-log.(rq.iℓ2)/2.0; log(rq.σ2)/2.0; log(rq.α)]
 get_param_names(rq::RQArd) = [get_param_names(rq.iℓ2, :ll); :lσ; :lα]
 num_params(rq::RQArd) = length(rq.iℓ2) + 2
 

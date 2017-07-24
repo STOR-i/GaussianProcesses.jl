@@ -19,7 +19,7 @@ function dL_exact(hyp::Vector{Float64}, iparam::Int)
     nobsv = size(X, 2)
     data = KernelData(k, X)
     Σ = cov(k, X, data)
-    Kgrad = Array(Float64, nobsv, nobsv)
+    Kgrad = Array{Float64}( nobsv, nobsv)
     GaussianProcesses.grad_slice!(Kgrad, k, X, data, iparam)
     return dL(Σ, Kgrad)
 end

@@ -1,7 +1,7 @@
 type SumKernel <: CompositeKernel
     kerns::Vector{Kernel}
     function SumKernel(args...)
-        kerns = Array(Kernel, length(args))
+        kerns = Array{Kernel}(length(args))
         for (i,k) in enumerate(args)
             isa(k, Kernel) || throw(ArgumentError("All arguments of SumKernel must be Kernel objects"))
             kerns[i] = k
@@ -39,7 +39,7 @@ end
     
 
 function grad_kern{V1<:VecF64,V2<:VecF64}(sumkern::SumKernel, x::V1, y::V2)
-     dk = Array(Float64, 0)
+     dk = Array{Float64}(0)
       for k in sumkern.kerns
         append!(dk,grad_kern(k, x, y))
       end

@@ -39,7 +39,7 @@ end
 
 
 function grad_mean(mPoly::MeanPoly, x::Vector{Float64})
-    dM_theta = Array(Float64,mPoly.dim,mPoly.deg)
+    dM_theta = Array{Float64}(mPoly.dim,mPoly.deg)
     
     for i in 1:mPoly.dim
         for j in 1:mPoly.deg

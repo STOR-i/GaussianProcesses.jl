@@ -119,7 +119,7 @@ end
 # May need to customized in subtypes
 function KernelData{M<:MatF64}(k::StationaryARD, X::M)
     dim, nobsv = size(X)
-    dist_stack = Array(Float64, nobsv, nobsv, dim)
+    dist_stack = Array{Float64}( nobsv, nobsv, dim)
     for d in 1:dim
         grad_ls = view(dist_stack, :, :, d)
         pairwise!(grad_ls, SqEuclidean(), view(X, d:d,:))

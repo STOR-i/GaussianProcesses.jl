@@ -58,7 +58,7 @@ function predict_obs(lik::Likelihood, fmean::Vector{Float64}, fvar::Vector{Float
     weights /= sqrt(pi)
     f = fmean .+ sqrt(2.0*fvar)*nodes'
     
-    mLik = Array(Float64,size(f)); vLik = Array(Float64,size(f));
+    mLik = Array{Float64}(size(f)); vLik = Array{Float64}(size(f));
     for i in 1:n_gaussHermite
         mLik[:,i] = mean_lik(lik, f[:,i]) 
         vLik[:,i] = var_lik(lik, f[:,i])

@@ -114,7 +114,7 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
     update_ll!(gp)
     Lv = unwhiten(gp.cK,gp.v)
     
-    gp.dll = Array(Float64,gp.nobsv + lik*n_lik_params + mean*n_mean_params + kern*n_kern_params)
+    gp.dll = Array{Float64}(gp.nobsv + lik*n_lik_params + mean*n_mean_params + kern*n_kern_params)
     dl_df=dlog_dens_df(gp.lik, Lv + gp.μ, gp.y)
 
     U = triu(gp.cK.chol.factors)
@@ -165,7 +165,7 @@ end
 
 #function to update the log-posterior and its derivative
 function update_target_and_dtarget!(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
-    Kgrad = Array(Float64, gp.nobsv, gp.nobsv)
+    Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
     update_ll_and_dll!(gp::GPMC, Kgrad; lik=lik, mean=mean, kern=kern)
     gp.dtarget = gp.dll + [-gp.v;prior_gradlogpdf(gp.lik);prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] 
 end    
@@ -232,7 +232,7 @@ end
 #Samples random function values f
 function rand{M<:MatF64}(gp::GPMC, X::M, n::Int)
     nobsv=size(X,2)
-    A = Array(Float64, nobsv, n)
+    A = Array{Float64}( nobsv, n)
     return rand!(gp, X, A)
 end
 

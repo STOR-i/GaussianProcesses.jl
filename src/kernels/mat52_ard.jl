@@ -13,17 +13,17 @@ type Mat52Ard <: MaternARD
     iℓ2::Vector{Float64}   # Log of Length scale 
     σ2::Float64           # Log of signal std
     priors::Array          # Array of priors for kernel parameters
-    Mat52Ard(ll::Vector{Float64}, lσ::Float64) = new(exp(-2.0*ll), exp(2.0*lσ),[])
+    Mat52Ard(ll::Vector{Float64}, lσ::Float64) = new(exp.(-2.0*ll), exp(2.0*lσ),[])
 end
 
 function set_params!(mat::Mat52Ard, hyp::Vector{Float64})
     length(hyp) == num_params(mat) || throw(ArgumentError("Mat52 kernel only has $(num_params(mat)) parameters"))
     d = length(mat.iℓ2)
-    mat.iℓ2 = exp(-2.0*hyp[1:d])
+    mat.iℓ2 = exp.(-2.0*hyp[1:d])
     mat.σ2 = exp(2.0*hyp[d+1])
 end
 
-get_params(mat::Mat52Ard) = [-log(mat.iℓ2)/2.0; log(mat.σ2)/2.0]
+get_params(mat::Mat52Ard) = [-log.(mat.iℓ2)/2.0; log(mat.σ2)/2.0]
 get_param_names(mat::Mat52Ard) = [get_param_names(mat.iℓ2, :ll); :lσ]
 num_params(mat::Mat52Ard) = length(mat.iℓ2) + 1
 

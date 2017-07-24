@@ -125,7 +125,7 @@ grad_stack{M<:MatF64}(k::Kernel, X::M) = grad_stack(k, X, KernelData(k, X))
 function grad_stack{M<:MatF64}(k::Kernel, X::M, data::KernelData)
     n = num_params(k)
     n_obsv = size(X, 2)
-    stack = Array(Float64, n_obsv, n_obsv, n)
+    stack = Array{Float64}( n_obsv, n_obsv, n)
     grad_stack!(stack, k, X, data)
     return stack
 end

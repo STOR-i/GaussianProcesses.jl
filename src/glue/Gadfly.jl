@@ -19,7 +19,7 @@ function plot2D(gp::GPBase; clim::Tuple{Float64, Float64, Float64, Float64} = (m
                 res::Int=50)
         sx = (clim[2]-clim[1])/(res-1)
         sy = (clim[4]-clim[3])/(res-1)
-        A = Array(Float64,2,res^2)
+        A = Array{Float64}(2,res^2)
         for (i,a) in enumerate(clim[1]:sx:clim[2])
             for (j,b) in enumerate(clim[3]:sy:clim[4])
                 A[:,(i-1)*res+j] = [a,b]

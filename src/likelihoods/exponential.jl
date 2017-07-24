@@ -22,8 +22,8 @@ function dlog_dens_df(exponential::ExpLik, f::Vector{Float64}, y::Vector{Float64
 end                   
 
 #mean and variance under likelihood
-mean_lik(exponential::ExpLik, f::Vector{Float64}) = exp(f)
-var_lik(exponential::ExpLik, f::Vector{Float64}) = exp(f).^2
+mean_lik(exponential::ExpLik, f::Vector{Float64}) = exp.(f)
+var_lik(exponential::ExpLik, f::Vector{Float64}) = exp.(f).^2
 
 get_params(exponential::ExpLik) = []
 num_params(exponential::ExpLik) = 0

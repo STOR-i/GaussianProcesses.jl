@@ -25,7 +25,7 @@ function predict_f{M<:MatF64}(gp::GPBase, x::M; full_cov::Bool=false)
         return _predict(gp, x)
     else
         ## Calculate prediction for each point independently
-            μ = Array(Float64, size(x,2))
+            μ = Array{Float64}( size(x,2))
             σ2 = similar(μ)
         for k in 1:size(x,2)
             m, sig = _predict(gp, x[:,k:k])
