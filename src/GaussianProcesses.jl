@@ -17,8 +17,8 @@ export GPBase, GP, GPE, GPMC, predict_f, predict_y, Kernel, CompositeKernel, Sum
     set_priors!,set_params!, update_target!                                                
 
 
-typealias MatF64 AbstractMatrix{Float64}
-typealias VecF64 AbstractVector{Float64}
+const MatF64 = AbstractMatrix{Float64}
+const VecF64 = AbstractVector{Float64}
 
 # all package code should be included here
 include("means/means.jl")
