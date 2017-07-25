@@ -6,7 +6,7 @@ function plot1D(gp::GPBase; clim::Tuple{Float64, Float64}=(minimum(gp.X), maximu
     sx = (clim[2]-clim[1])/(res-1)
     x=collect(clim[1]:sx:clim[2])
     mu, Sigma = predict_f(gp, x)
-    conf = CI*sqrt(Sigma)
+    conf = CI*sqrt.(Sigma)
     u = mu + conf
     l = mu - conf
     
