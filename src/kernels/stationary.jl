@@ -3,8 +3,8 @@
 # cov(k::Stationary, r::Float64) = ::Float64
 # grad_kern!
 
-abstract type Stationary<:Kernel end
-abstract type StationaryData <: KernelData end
+@compat abstract type Stationary <:Kernel end
+@compat abstract type StationaryData <: KernelData end
 
 distance{M<:MatF64}(k::Stationary, X::M) = pairwise(metric(k), X)
 distance{M1<:MatF64,M2<:MatF64}(k::Stationary, X::M1, Y::M2) = pairwise(metric(k), X, Y)
@@ -72,7 +72,7 @@ dk_dlσ(k::Stationary, r::Float64) = 2.0*cov(k,r)
 
 # Isotropic Kernels
 
-abstract type Isotropic <: Stationary end
+@compat abstract type Isotropic <: Stationary end
 
 type IsotropicData <: StationaryData
     R::Matrix{Float64}
@@ -110,7 +110,7 @@ end
 
 # StationaryARD Kernels
 
-abstract type StationaryARD <: Stationary end
+@compat abstract type StationaryARD <: Stationary end
 
 type StationaryARDData <: StationaryData
     dist_stack::Array{Float64, 3}

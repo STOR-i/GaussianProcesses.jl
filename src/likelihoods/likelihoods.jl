@@ -2,7 +2,7 @@
 
 import Base.show
 
-abstract type Likelihood end
+@compat abstract type Likelihood end
 
 function show(io::IO, lik::Likelihood, depth::Int = 0)
     pad = repeat(" ", 2*depth)

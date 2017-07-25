@@ -2,7 +2,7 @@
 
 import Base.show
 
-abstract type Mean end
+@compat abstract type Mean end
 
 function show(io::IO, m::Mean, depth::Int = 0)
     pad = repeat(" ", 2*depth)
