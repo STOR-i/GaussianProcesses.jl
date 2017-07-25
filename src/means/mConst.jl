@@ -14,7 +14,7 @@ type MeanConst <: Mean
     MeanConst(β::Float64) = new(β, [])
 end
 
-mean(mConst::MeanConst,x::Matrix{Float64}) =  fill(mConst.β, size(x,2))
+mean(mConst::MeanConst,x::MatF64) =  fill(mConst.β, size(x,2))
 
 get_params(mConst::MeanConst) = Float64[mConst.β]
 get_param_names(::MeanConst) = [:β]

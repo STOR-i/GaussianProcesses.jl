@@ -18,7 +18,7 @@ function show(io::IO, pm::ProdMean, depth::Int = 0)
     end
 end
 
-function mean(prodmean::ProdMean, x::Matrix{Float64})
+function mean(prodmean::ProdMean, x::MatF64)
     p = 1.0
     for m in prodmean.means
         p = p.*mean(m, x)

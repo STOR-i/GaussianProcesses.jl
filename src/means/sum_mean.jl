@@ -18,7 +18,7 @@ function show(io::IO, sm::SumMean, depth::Int = 0)
     end
 end
 
-function mean(summean::SumMean, x::Matrix{Float64})
+function mean(summean::SumMean, x::MatF64)
     s = 0.0
     for m in summean.means
         s += mean(m, x)

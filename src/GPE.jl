@@ -26,7 +26,7 @@ type GPE <: GPBase
     
     # Observation data
     nobsv::Int              # Number of observations
-    X::Matrix{Float64}      # Input observations
+    X::MatF64               # Input observations
     y::Vector{Float64}      # Output observations
     data::KernelData        # Auxiliary observation data (to speed up calculations)
     dim::Int                # Dimension of inputs
@@ -39,7 +39,7 @@ type GPE <: GPBase
     dmll::Vector{Float64}      # Gradient of marginal log-likelihood
     dtarget::Vector{Float64}   # Gradient log-target (gradient of marginal log-likelihood + gradient of log priors)
     
-    function GPE(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-5.0)
+    function GPE(X::MatF64, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-5.0)
         dim, nobsv = size(X)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         gp = new(m, k, logNoise, nobsv, X, y, KernelData(k, X), dim)

@@ -16,7 +16,7 @@ type MeanPoly <: Mean
     MeanPoly(β::Matrix{Float64}) = new(β,size(β, 1), size(β, 2),[])
 end
 
-function mean(mPoly::MeanPoly,x::Matrix{Float64})
+function mean(mPoly::MeanPoly,x::MatF64)
     dim, nobsv = size(x)
     dim == mPoly.dim || throw(ArgumentError("Observations and mean function have inconsistent dimensions"))
     z = zeros(nobsv)

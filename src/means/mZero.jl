@@ -11,7 +11,7 @@ type MeanZero <: Mean
     MeanZero() = new(0.0)
 end
 
-mean(mZero::MeanZero,x::Matrix{Float64}) =  fill(0.0, size(x,2))
+mean(mZero::MeanZero,x::MatF64) =  fill(0.0, size(x,2))
 
 get_params(mZero::MeanZero) = []
 num_params(mZero::MeanZero) = 0

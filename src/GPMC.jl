@@ -31,7 +31,7 @@ type GPMC{T<:Real} <: GPBase
     
     # Observation data
     nobsv::Int              # Number of observations
-    X::Matrix{Float64}      # Input observations
+    X::MatF64               # Input observations
     y::Vector{T}            # Output observations
     v::Vector{Float64}      # Vector of latent (whitened) variables - N(0,1)
     data::KernelData        # Auxiliary observation data (to speed up calculations)
@@ -46,7 +46,7 @@ type GPMC{T<:Real} <: GPBase
     dtarget::Vector{Float64}# Gradient of the log-target (i.e. grad log-posterior)
 
     
-    function (::Type{GPMC{T}}){T<:Real}(X::Matrix{Float64}, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood)
+    function (::Type{GPMC{T}}){T<:Real}(X::MatF64, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood)
         dim, nobsv = size(X)
         v = zeros(nobsv)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
