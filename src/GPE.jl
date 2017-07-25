@@ -71,7 +71,7 @@ Fits an existing Gaussian process to a set of training points.
 # Returns:
 * `gp::GPE`            : A Gaussian process fitted to the training data
 """ ->
-function fit!(gp::GPE, X::Matrix{Float64}, y::Vector{Float64})
+function fit!(gp::GPE, X::MatF64, y::Vector{Float64})
     length(y) == size(X,2) || throw(ArgumentError("Input and output observations must have consistent dimensions."))
     gp.X = X
     gp.y = y
@@ -303,7 +303,7 @@ end
 
 #———————————————————————————————————————————————————————————-
 #Push function
-function push!(gp::GPE, X::Matrix{Float64}, y::Vector{Float64})
+function push!(gp::GPE, X::MatF64, y::Vector{Float64})
     warn("push! method is currently inefficient as it refits all observations")
     if gp.nobsv == 0
         GaussianProcesses.fit!(gp, X, y)
