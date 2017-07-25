@@ -18,7 +18,7 @@ function show(io::IO, pm::ProdMean, depth::Int = 0)
     end
 end
 
-function mean(prodmean::ProdMean, x::Matrix{Float64})
+function mean(prodmean::ProdMean, x::MatF64)
     p = 1.0
     for m in prodmean.means
         p = p.*mean(m, x)
@@ -27,7 +27,7 @@ function mean(prodmean::ProdMean, x::Matrix{Float64})
 end
 
 function get_params(prodmean::ProdMean)
-    p = Array(Float64, 0)
+    p = Array{Float64}( 0)
     for m in prodmean.means
         append!(p, get_params(m))
     end
@@ -56,7 +56,7 @@ end
 
 
 function grad_mean(prodmean::ProdMean, x::Vector{Float64})
-     dm = Array(Float64, 0)
+     dm = Array{Float64}( 0)
       for m in prodmean.means
           p = 1.0
           for j in prodkern.means[find(k.!=prodkern.means)]

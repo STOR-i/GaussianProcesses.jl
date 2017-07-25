@@ -11,10 +11,11 @@ m(x) = xᵀβ
 type MeanLin <: Mean
     β::Vector{Float64}
     dim::Int
-    MeanLin(β::Vector{Float64}) = new(β, length(β))
+    priors::Array          # Array of priors for mean parameters
+    MeanLin(β::Vector{Float64}) = new(β, length(β),[])
 end
     
-mean(mLin::MeanLin,x::Matrix{Float64}) =  x'mLin.β
+mean(mLin::MeanLin,x::MatF64) =  x'mLin.β
 
 get_params(mLin::MeanLin) = mLin.β
 get_param_names(::MeanLin) = [:β]

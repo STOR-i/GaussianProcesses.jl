@@ -18,7 +18,7 @@ function show(io::IO, sm::SumMean, depth::Int = 0)
     end
 end
 
-function mean(summean::SumMean, x::Matrix{Float64})
+function mean(summean::SumMean, x::MatF64)
     s = 0.0
     for m in summean.means
         s += mean(m, x)
@@ -27,7 +27,7 @@ function mean(summean::SumMean, x::Matrix{Float64})
 end
 
 function get_params(summean::SumMean)
-    p = Array(Float64, 0)
+    p = Array{Float64}(0)
     for m in summean.means
         append!(p, get_params(m))
     end
@@ -55,7 +55,7 @@ function set_params!(summean::SumMean, hyp::Vector{Float64})
 end
 
 function grad_mean(summean::SumMean, x::Vector{Float64})
-     dm = Array(Float64, 0)
+     dm = Array{Float64}(0)
       for m in summean.means
         append!(dm,grad_mean(m, x))
       end

@@ -1,37 +1,34 @@
 @doc """
-# Description
-A function for optimising the GP hyperparameters based on type II maximum likelihood estimation. This function performs gradient based optimisation using the Optim pacakge to which the user is referred to for further details.
+    # Description
+    A function for optimising the GP hyperparameters based on type II maximum likelihood estimation. This function performs gradient based optimisation using the Optim pacakge to which the user is referred to for further details.
 
-# Arguments:
-* `gp::GP`: Predefined Gaussian process type
-* `noise::Bool`: Noise hyperparameters should be optmized
-* `mean::Bool`: Mean function hyperparameters should be optmized
-* `kern::Bool`: Kernel function hyperparameters should be optmized
-* `kwargs`: Keyword arguments for the optimize function from the Optim package
+    # Arguments:
+    * `gp::GPBase`: Predefined Gaussian process type
+    * `mean::Bool`: Mean function hyperparameters should be optmized
+    * `kern::Bool`: Kernel function hyperparameters should be optmized
+    * `kwargs`: Keyword arguments for the optimize function from the Optim package
 
-# Return:
-* `::Optim.MultivariateOptimizationResults{Float64,1}`: optimization results object
-""" ->
-function optimize!(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true,
-                    method=ConjugateGradient(), kwargs...)
-    func = get_optim_target(gp, noise=noise, mean=mean, kern=kern)
-    init = get_params(gp;  noise=noise, mean=mean, kern=kern)  # Initial hyperparameter values
-    results=optimize(func,init; method=method, kwargs...)                     # Run optimizer
-    set_params!(gp, Optim.minimizer(results), noise=noise,mean=mean,kern=kern)
-    update_mll!(gp)
+    # Return:
+    * `::Optim.MultivariateOptimizationResults{Float64,1}`: optimization results object
+    """ 
+function optimize!(gp::GPBase; method=LBFGS(), kwargs...)
+    func = get_optim_target(gp)
+    init = get_params(gp)  # Initial hyperparameter values
+    results = optimize(func,init; method=method, kwargs...)      # Run optimizer
+    set_params!(gp, Optim.minimizer(results))
+    update_target!(gp)
     return results
 end
 
-function get_optim_target(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=true)
-    Kgrad_buffer = Array(Float64, gp.nobsv, gp.nobsv)
-    ααinvcKI_buffer = Array(Float64, gp.nobsv, gp.nobsv)
-    function mll(hyp::Vector{Float64})
+function get_optim_target(gp::GPBase)
+    
+    function ltarget(hyp::Vector{Float64})
         try
-            set_params!(gp, hyp; noise=noise, mean=mean, kern=kern)
-            update_mll!(gp)
-            return -gp.mLL
+            set_params!(gp, hyp)
+            update_target!(gp)
+            return -gp.target
         catch err
-             if !all(isfinite(hyp))
+            if !all(isfinite(hyp))
                 println(err)
                 return Inf
             elseif isa(err, ArgumentError)
@@ -46,14 +43,14 @@ function get_optim_target(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=
         end        
     end
 
-    function mll_and_dmll!(hyp::Vector{Float64}, grad::Vector{Float64})
+    function ltarget_and_dltarget!(hyp::Vector{Float64}, grad::Vector{Float64})
         try
-            set_params!(gp, hyp; noise=noise, mean=mean, kern=kern)
-            update_mll_and_dmll!(gp, Kgrad_buffer, ααinvcKI_buffer; noise=noise, mean=mean, kern=kern)
-            grad[:] = -gp.dmLL
-            return -gp.mLL
+            set_params!(gp, hyp)
+            update_target_and_dtarget!(gp)
+            grad[:] = -gp.dtarget
+            return -gp.target
         catch err
-             if !all(isfinite(hyp))
+            if !all(isfinite(hyp))
                 println(err)
                 return Inf
             elseif isa(err, ArgumentError)
@@ -67,10 +64,11 @@ function get_optim_target(gp::GP; noise::Bool=true, mean::Bool=true, kern::Bool=
             end
         end 
     end
-    function dmll!(hyp::Vector{Float64}, grad::Vector{Float64})
-        mll_and_dmll!(hyp::Vector{Float64}, grad::Vector{Float64})
+    
+    function dltarget!(hyp::Vector{Float64}, grad::Vector{Float64})
+        ltarget_and_dltarget!(hyp::Vector{Float64}, grad::Vector{Float64})
     end
 
-    func = OnceDifferentiable(mll, dmll!, mll_and_dmll!)
+    func = OnceDifferentiable(ltarget, dltarget!, ltarget_and_dltarget!)
     return func
 end

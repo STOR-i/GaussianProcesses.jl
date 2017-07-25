@@ -7,7 +7,7 @@ srand(13579)
 # Training data
 n=10                 #number of training points
 x = 2π * rand(n)              
-y = sin(x) + 0.05*randn(n)
+y = sin.(x) + 0.05*randn(n)
 
 #Select mean and covariance function
 mZero = MeanZero()                   #Zero mean function
@@ -22,6 +22,7 @@ plot(gp)
 
 # # Add observation
 # push!(gp, [1.0], [2.0])
+
 
 
 

@@ -40,6 +40,6 @@ num_pred = [30, 60, 100, 200]  # Number of prediction points
 # Setup GP and benchmark functions
 
 println("Benchmarking predict function....")
-predict_procs = vec(Proc[ GP_Benchmark(d, n, predict) for n in num_train, d in dims ])
+predict_procs = vec(Proc[ GP_Benchmark(d, n, predict_y) for n in num_train, d in dims ])
 predict_table = run(predict_procs, num_pred)
 show(predict_table)

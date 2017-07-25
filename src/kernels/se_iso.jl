@@ -10,16 +10,17 @@ k(x,x') = σ²exp(-(x-x')ᵀ(x-x')/2ℓ²)
 type SEIso <: Isotropic
     ℓ2::Float64      # Length scale
     σ2::Float64      # Signal std
-    SEIso(ll::Float64, lσ::Float64) = new(exp(2*ll), exp(2*lσ))
+    priors::Array          # Array of priors for kernel parameters
+    SEIso(ll::Float64, lσ::Float64) = new(exp(2*ll), exp(2*lσ),[])
 end
 
 function set_params!(se::SEIso, hyp::Vector{Float64})
     length(hyp) == 2 || throw(ArgumentError("Squared exponential only has two parameters"))
-    se.ℓ2, se.σ2 = exp(2.0*hyp)
+    se.ℓ2, se.σ2 = exp.(2.0*hyp)
 end
 
 get_params(se::SEIso) = Float64[log(se.ℓ2)/2.0, log(se.σ2)/2.0]
-get_param_names(::SEIso) = [:ll, :lσ]
+get_param_names(se::SEIso) = [:ll, :lσ]
 num_params(se::SEIso) = 2
 
 metric(se::SEIso) = SqEuclidean()

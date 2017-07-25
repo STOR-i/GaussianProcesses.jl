@@ -14,7 +14,8 @@ type Poly <: Kernel
     c::Float64      # constant
     σ2::Float64      # Signal variance
     deg::Int64       # degree of polynomial
-    Poly(lc::Float64, lσ::Float64, deg::Int64) = new(exp(lc), exp(2.0*lσ), deg)
+    priors::Array          # Array of priors for kernel parameters
+    Poly(lc::Float64, lσ::Float64, deg::Int64) = new(exp(lc), exp(2.0*lσ), deg, [])
 end
 
 function KernelData{M<:MatF64}(k::Poly, X::M)

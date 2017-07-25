@@ -40,7 +40,7 @@ end
 function map_column_pairs{M1<:MatF64,M2<:MatF64}(f::Function, X::M1, Y::M2)
     nobs1 = size(X,2)
     nobs2 = size(Y,2)
-    D= Array(Float64, nobs1, nobs2)
+    D= Array{Float64}( nobs1, nobs2)
     map_column_pairs!(D, f, X, Y)
     return D
 end
@@ -86,7 +86,7 @@ Constructs matrix by applying a function to each pair of columns of an input mat
 """ ->
 function map_column_pairs{M<:MatF64}(f::Function, X::M)
     dim, nobsv = size(X)
-    D = Array(Float64, nobsv, nobsv)
+    D = Array{Float64}(nobsv, nobsv)
     for i in 1:nobsv
         for j in 1:i
             @inbounds D[i,j] = f(X[:,i], X[:,j])

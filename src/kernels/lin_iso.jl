@@ -9,8 +9,9 @@ k(x,x') = xᵀx'/ℓ²
 * `ll::Float64`: Log of the length scale ℓ
 """ ->
 type LinIso <: Kernel
-    ℓ2::Float64      # Log of Length scale 
-    LinIso(ll::Float64) = new(exp(2.0*ll))
+    ℓ2::Float64      # Log of Length scale
+    priors::Array          # Array of priors for kernel parameters
+    LinIso(ll::Float64) = new(exp.(2.0*ll),[])
 end
 
 type LinIsoData <: KernelData

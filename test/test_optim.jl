@@ -10,23 +10,23 @@ y = randn(n) + 0.5
     and that the final mll is better that the initial value
 """
 function test_optim(kern::Kernel, X::Matrix{Float64}, y::Vector{Float64})
-	gp = GP(X,y,MeanConst(0.0), kern, -3.0)
-	init_mLL = gp.mLL
+	gp = GP(X,y,MeanZero(), kern, -3.0)
+	init_target = gp.target
 	optimize!(gp)
-	@assert gp.mLL > init_mLL
+	@assert gp.target > init_target
 end
 
 function test_fixed(kern::Kernel, X::Matrix{Float64}, y::Vector{Float64})
     init_param = get_params(kern)[1]
     fixed=fix(kern, get_param_names(kern)[1])
-	gp = GP(X,y,MeanConst(0.0), fixed, -3.0)
-	init_mLL = gp.mLL
+	gp = GP(X,y,MeanZero(), fixed, -1.0)
+	init_target = gp.target
 	optimize!(gp)
-	@assert gp.mLL > init_mLL
+	@assert gp.target > init_target
 	@assert get_params(kern)[1] == init_param
 end
 
-se = SEIso(1.0, 1.0)
+se = SE(1.0, 1.0)
 test_optim(se, x, y)
-rq = RQIso(1.0, 1.0, 1.0)
+rq = RQ(1.0, 1.0, 1.0)
 test_fixed(rq, x, y)

@@ -12,17 +12,18 @@ k(x,x') = σ²exp(-d/L), where d = |x-x'| and L = diag(ℓ₁,ℓ₂,...)
 type Mat12Ard <: MaternARD
     iℓ2::Vector{Float64}     # Inverse squared Length scale
     σ2::Float64              # Log of signal std
-    Mat12Ard(ll::Vector{Float64}, lσ::Float64) = new(exp(-2.0*ll),exp(2.0*lσ))
+    priors::Array          # Array of priors for kernel parameters
+    Mat12Ard(ll::Vector{Float64}, lσ::Float64) = new(exp.(-2.0*ll),exp(2.0*lσ),[])
 end
 
 function set_params!(mat::Mat12Ard, hyp::Vector{Float64})
     length(hyp) == num_params(mat) || throw(ArgumentError("Mat12 kernel only has $(num_params(mat)) parameters"))
     d = length(mat.iℓ2)
-    mat.iℓ2  = exp(-2.0*hyp[1:d])
+    mat.iℓ2  = exp.(-2.0*hyp[1:d])
     mat.σ2 = exp(2.0*hyp[d+1])
 end
 
-get_params(mat::Mat12Ard) = [-log(mat.iℓ2)/2.0; log(mat.σ2)/2.0]
+get_params(mat::Mat12Ard) = [-log.(mat.iℓ2)/2.0; log(mat.σ2)/2.0]
 get_param_names(mat::Mat12Ard) = [get_param_names(mat.iℓ2, :ll); :lσ]
 num_params(mat::Mat12Ard) = length(mat.iℓ2) + 1
 

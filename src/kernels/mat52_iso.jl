@@ -12,7 +12,8 @@ k(x,x') = σ²(1+√5*d/ℓ + 5d²/3ℓ²)exp(-√5*d/ℓ), where d = |x-x'|
 type Mat52Iso <: MaternIso
     ℓ::Float64      # Length scale 
     σ2::Float64     # Signal std
-    Mat52Iso(ll::Float64, lσ::Float64) = new(exp(ll), exp(2*lσ))
+    priors::Array          # Array of priors for kernel parameters
+    Mat52Iso(ll::Float64, lσ::Float64) = new(exp(ll), exp(2*lσ),[])
 end
 
 function set_params!(mat::Mat52Iso, hyp::Vector{Float64})

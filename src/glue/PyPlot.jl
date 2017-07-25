@@ -1,12 +1,12 @@
 import PyPlot
 
 
-function plot1D(gp::GP; clim::Tuple{Float64, Float64}=(minimum(gp.X), maximum(gp.X)), CI::Float64=1.96, res::Int=1000, fname::AbstractString="")
+function plot1D(gp::GPBase; clim::Tuple{Float64, Float64}=(minimum(gp.X), maximum(gp.X)), CI::Float64=1.96, res::Int=1000, fname::AbstractString="")
 
     sx = (clim[2]-clim[1])/(res-1)
     x=collect(clim[1]:sx:clim[2])
-    mu, Sigma = predict(gp, x)
-    conf = CI*sqrt(Sigma)
+    mu, Sigma = predict_f(gp, x)
+    conf = CI*sqrt.(Sigma)
     u = mu + conf
     l = mu - conf
     
@@ -27,14 +27,14 @@ function plot1D(gp::GP; clim::Tuple{Float64, Float64}=(minimum(gp.X), maximum(gp
 end
 
 
-function plot2D(gp::GP; clim::Tuple{Float64, Float64, Float64, Float64} = (minimum(gp.X[1,:]), maximum(gp.X[1,:]), minimum(gp.X[2,:]), maximum(gp.X[2,:])), res::Int=50, fname::AbstractString="")
+function plot2D(gp::GPBase; clim::Tuple{Float64, Float64, Float64, Float64} = (minimum(gp.X[1,:]), maximum(gp.X[1,:]), minimum(gp.X[2,:]), maximum(gp.X[2,:])), res::Int=50, fname::AbstractString="")
     
     x = linspace(clim[1], clim[2], res)
     y = linspace(clim[3], clim[4], res)
     xgrid = repmat(x', res, 1 )
     ygrid = repmat(y, 1, res )
     
-    mu = predict(gp,[vec(xgrid)';vec(ygrid)'])[1]
+    mu = predict_f(gp,[vec(xgrid)';vec(ygrid)'])[1]
     zgrid  = reshape(mu,res,res)
 
     fig = PyPlot.figure("Contour Plot of Gaussian Process Regression")
@@ -48,7 +48,7 @@ function plot2D(gp::GP; clim::Tuple{Float64, Float64, Float64, Float64} = (minim
     end
 end
 
-function PyPlot.plot(gp::GP; kwargs...)
+function PyPlot.plot(gp::GPBase; kwargs...)
     d, n = size(gp.X)
     PyPlot.close()
     if d>2

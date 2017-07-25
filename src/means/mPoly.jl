@@ -12,10 +12,11 @@ type MeanPoly <: Mean
     β::Matrix{Float64}    # Polynomial coefficients
     dim::Int              # Dimension
     deg::Int              # Polynomial degree
-    MeanPoly(β::Matrix{Float64}) = new(β,size(β, 1), size(β, 2))
+    priors::Array          # Array of priors for mean parameters
+    MeanPoly(β::Matrix{Float64}) = new(β,size(β, 1), size(β, 2),[])
 end
 
-function mean(mPoly::MeanPoly,x::Matrix{Float64})
+function mean(mPoly::MeanPoly,x::MatF64)
     dim, nobsv = size(x)
     dim == mPoly.dim || throw(ArgumentError("Observations and mean function have inconsistent dimensions"))
     z = zeros(nobsv)
@@ -38,7 +39,7 @@ end
 
 
 function grad_mean(mPoly::MeanPoly, x::Vector{Float64})
-    dM_theta = Array(Float64,mPoly.dim,mPoly.deg)
+    dM_theta = Array{Float64}(mPoly.dim,mPoly.deg)
     
     for i in 1:mPoly.dim
         for j in 1:mPoly.deg

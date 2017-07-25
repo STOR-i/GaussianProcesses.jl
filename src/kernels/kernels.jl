@@ -2,7 +2,7 @@
 
 import Base.show
 
-abstract Kernel
+@compat abstract type Kernel end
 
 """
 Data to be used with a kernel object to
@@ -11,7 +11,7 @@ calculate a covariance matrix, which is independent of kernel hyperparameters.
 # See also
 `EmptyData`
 """
-abstract KernelData
+@compat abstract type KernelData end
 
 """
 Default KernelData type which is empty.
@@ -125,7 +125,7 @@ grad_stack{M<:MatF64}(k::Kernel, X::M) = grad_stack(k, X, KernelData(k, X))
 function grad_stack{M<:MatF64}(k::Kernel, X::M, data::KernelData)
     n = num_params(k)
     n_obsv = size(X, 2)
-    stack = Array(Float64, n_obsv, n_obsv, n)
+    stack = Array{Float64}( n_obsv, n_obsv, n)
     grad_stack!(stack, k, X, data)
     return stack
 end
@@ -180,6 +180,36 @@ end
 
 num_params(k::Kernel)=throw(ArgumentError("Undefined number of parameters"))
 
+################
+#Priors
+################
+
+get_priors(k::Kernel) = k.priors
+
+function set_priors!(k::Kernel, priors::Array)
+    length(priors) == num_params(k) || throw(ArgumentError("$(typeof(k)) has exactly $(num_params(k)) parameters"))
+    k.priors = priors
+end
+
+function prior_logpdf(k::Kernel)
+    priors=get_priors(k)
+    if priors==[]
+        return 0.0
+    else
+        return sum(logpdf(prior,param) for (prior, param) in zip(priors,get_params(k)))
+    end    
+end
+
+function prior_gradlogpdf(k::Kernel)
+    priors=get_priors(k)
+    if priors==[]
+        return zeros(num_params(k))
+    else
+        return [gradlogpdf(prior,param) for (prior, param) in zip(priors,get_params(k))]
+    end    
+end
+
+
 include("stationary.jl")
 
 include("lin.jl")               # Linear covariance function
@@ -189,9 +219,11 @@ include("mat.jl")               # Matern covariance function
 include("periodic.jl")          # Periodic covariance function
 include("poly.jl")              # Polnomial covariance function
 include("noise.jl")             # White noise covariance function
+include("const.jl")             # Constant (bias) covariance function
 
 # Composite kernels
-include("sum_kernel.jl")        # Sum of kernels
-include("prod_kernel.jl")       # Product of kernels
+include("composite_kernel.jl")  # Composite kernels
+
+# Wrapped kernels
 include("masked_kernel.jl")     # Masked kernels (apply to subset of X dims)
 include("fixed_kernel.jl")      # Fixed kernels (fix some hyperparameters)

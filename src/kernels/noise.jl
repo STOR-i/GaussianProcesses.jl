@@ -10,7 +10,8 @@ k(x,x') = σ²δ(x-x'), where δ is a Kronecker delta function and equals 1 iff 
 """ ->
 type Noise <: Kernel
     σ2::Float64      # Log of Signal std
-    Noise(lσ::Float64) = new(exp(2.0*lσ))
+    priors::Array          # Array of priors for kernel parameters
+    Noise(lσ::Float64) = new(exp(2.0*lσ),[])
 end
 
 cov(noise::Noise, sameloc::Bool) = noise.σ2*sameloc
