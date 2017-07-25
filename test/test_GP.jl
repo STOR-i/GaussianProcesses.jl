@@ -11,12 +11,11 @@ kern = SE(0.0,0.0)
 
 gp = GP(x, y, mZero, kern)
 
-
 # Function verifies that predictive mean at input observations
 # are the same as the output observations
 function test_pred_matches_obs(gp::GPE)
     y_pred, sig = predict_y(gp, x)
-    @test maximum(abs.(gp.y - y_pred)) ≈ 0.0 atol=0.0001
+    @test isapprox(maximum(abs.(gp.y - y_pred)), 0.0, atol=0.0001)
 end
 
 test_pred_matches_obs(gp)
