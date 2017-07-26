@@ -8,7 +8,7 @@ import Base.show
 Calculates the posterior mean and variance of the Gaussian Process function at specified points
 
 # Arguments:
-* `gp::GPE`: Gaussian Process object
+* `gp::GP`: Gaussian Process object
 * `X::Matrix{Float64}`:  matrix of points for which one would would like to predict the value of the process.
                        (each column of the matrix is a point)
 
