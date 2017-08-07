@@ -28,7 +28,7 @@ function get_optim_target(gp::GPBase)
             update_target!(gp)
             return -gp.target
         catch err
-            if !all(isfinite(hyp))
+            if !all(isfinite.(hyp))
                 println(err)
                 return Inf
             elseif isa(err, ArgumentError)
@@ -50,7 +50,7 @@ function get_optim_target(gp::GPBase)
             grad[:] = -gp.dtarget
             return -gp.target
         catch err
-            if !all(isfinite(hyp))
+            if !all(isfinite.(hyp))
                 println(err)
                 return Inf
             elseif isa(err, ArgumentError)

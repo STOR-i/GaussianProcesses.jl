@@ -51,7 +51,7 @@ end
 #Predict observations at test locations
 
 
-""" Computes the predictive mean and variance given a Gaussian distribution for f """
+""" Computes the predictive mean and variance given a Gaussian distribution for f using quadrature"""
 function predict_obs(lik::Likelihood, fmean::Vector{Float64}, fvar::Vector{Float64}) 
     n_gaussHermite = 20
     nodes, weights = gausshermite(n_gaussHermite)

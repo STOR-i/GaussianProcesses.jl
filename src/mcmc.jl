@@ -19,7 +19,7 @@ function mcmc(gp::GPBase;
             set_params!(gp, hyp)
             return update_target!(gp)
         catch err
-            if !all(isfinite(hyp))
+            if !all(isfinite.(hyp))
                 println(err)
                 return -Inf
             elseif isa(err, ArgumentError)
