@@ -13,7 +13,7 @@ import Base: rand, rand!, mean, cov, push!
 export GPBase, GP, GPE, GPMC, predict_f, predict_y, Kernel, CompositeKernel, SumKernel, ProdKernel, Masked, FixedKern, fix, Noise, Const, SE, SEIso, SEArd, Periodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Matern, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, #kernel functions
     MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, #mean functions
     GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
-    mcmc, optimize!,                                           #inference functions
+    mcmc, optimize!, vi,                                       #inference functions
     set_priors!,set_params!, update_target!                                                
 
 
@@ -31,6 +31,7 @@ include("GPE.jl")
 include("GPMC.jl")
 include("mcmc.jl")
 include("optimize.jl")
+include("vi.jl")
 
 # This approach to loading supported plotting packages is taken from the "KernelDensity" package
 macro glue(pkg)
