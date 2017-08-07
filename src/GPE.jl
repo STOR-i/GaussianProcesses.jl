@@ -115,7 +115,7 @@ end
 #———————————————————————————————————————————————————————————————-
 #Functions for calculating the log-target
 
-""" Initialise the marginal log-likelihood """
+""" GPE: Initialise the marginal log-likelihood """
 function initialise_mll!(gp::GPE)
     μ = mean(gp.m,gp.X)
     Σ = cov(gp.k, gp.X, gp.data)
@@ -146,7 +146,7 @@ function update_mll!(gp::GPE)
 end
 
 
-""" Update gradient of marginal log-likelihood """
+""" GPE: Update gradient of marginal log-likelihood """
 function update_mll_and_dmll!(gp::GPE,
     Kgrad::MatF64,
     ααinvcKI::MatF64
@@ -189,21 +189,21 @@ function update_mll_and_dmll!(gp::GPE,
 end
 
 
-#log p(θ|y) ∝ log p(y|θ) + log p(θ)
+""" GPE: Initialise the target, which is assumed to be the log-posterior, log p(θ|y) ∝ log p(y|θ) +  log p(θ) """
 function initialise_target!(gp::GPE)
     initialise_mll!(gp)
         #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
     gp.target = gp.mll   + prior_logpdf(gp.m) + prior_logpdf(gp.k) #+ prior_logpdf(gp.lik)
 end    
 
-#log p(θ|y) ∝ log p(y|θ) + log p(θ)
+""" GPE: Update the target, which is assumed to be the log-posterior, log p(θ|y) ∝ log p(y|θ) + log p(θ) """ 
 function update_target!(gp::GPE)
     update_mll!(gp)
     #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
     gp.target = gp.mll  + prior_logpdf(gp.m) + prior_logpdf(gp.k) #+ prior_logpdf(gp.lik)
 end    
 
-#function to update the log-posterior and its derivative
+""" GPE: A function to update the target (aka log-posterior) and its derivative """
 function update_target_and_dtarget!(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
     ααinvcKI = Array{Float64}( gp.nobsv, gp.nobsv)
@@ -216,6 +216,7 @@ end
 #———————————————————————————————————————————————————————————–
 #Predict observations
 
+"""Calculate the mean and variance of predictive distribution p(y^*|x^*,D,θ) at test locations x^* """
 function predict_y{M<:MatF64}(gp::GPE, x::M; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
     return μ, σ2 + exp(2*gp.logNoise)
