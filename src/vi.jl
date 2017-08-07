@@ -12,7 +12,7 @@ Minimising the KL divergence is done using the Optim.jl, which the user is refer
     # Return:
     * `samples::Matrix{Float64}`: samples from the variational approximation
     """ 
-function vi(gp::GPBase,nSamps::Int64=100; method=LBFGS(), kwargs...)
+function vi(gp::GPBase, nSamps::Integer=100; method=LBFGS(), kwargs...)
     func = get_optim_target(gp,nSamps)
     init = zeros(2*length(get_params(gp)))  # Initial hyperparameter values
     results = optimize(func,init; method=method, kwargs...)      # Run optimizer
@@ -33,7 +33,7 @@ function get_optim_target(gp::GPBase,nSamps::Int64)
             est_target = mean(target)
             return -(est_target + sum(params[div(end,2)+1:end]))
         catch err
-            if !all(isfinite(params))
+            if !all(isfinite.(params))
                 println(err)
                 return Inf
             elseif isa(err, ArgumentError)
@@ -62,7 +62,7 @@ function get_optim_target(gp::GPBase,nSamps::Int64)
             grad[:] = -est_dtarget
             return -est_dtarget
         catch err
-            if !all(isfinite(params))
+            if !all(isfinite.(params))
                 println(err)
                 return Inf
             elseif isa(err, ArgumentError)
