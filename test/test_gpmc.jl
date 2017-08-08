@@ -1,4 +1,4 @@
-#This file checks that each of the likelihoods works
+#This file checks that each of the likelihoods work
 
 using GaussianProcesses
 import GaussianProcesses: update_target!, update_target_and_dtarget!, set_params!, get_params, Likelihood
@@ -12,16 +12,18 @@ y = Float64[sum(sin.(X[:,i])) for i in 1:n]/d
 mZero = MeanZero()
 kern = SE(0.0,0.0)
 
-#used for numerical gradients
-function objective(para::Vector{Float64})
-    set_params!(gp,para)
-    return update_target!(gp)
-end    
 
 #Test that the GPMC constructor fits to the likelihood and check the target derivatives
 function test_gpmc(z::Vector,lik::Likelihood)
     t = typeof(lik)
     println("\tTesting $(t)...")
+
+    #used for numerical gradients
+    function objective(para::Vector{Float64})
+        set_params!(gp,para)
+        return update_target!(gp)
+    end    
+
 
     gp = GP(X,z,mZero,kern,lik) #Fit GP
 
@@ -31,7 +33,7 @@ function test_gpmc(z::Vector,lik::Likelihood)
     exact_grad = update_target_and_dtarget!(gp) #Test exact gradient
 
     num_grad = Calculus.gradient(θ->objective(θ),params) #Test numerical approx.
-
+    
     @test num_grad ≈ exact_grad
 end
 
