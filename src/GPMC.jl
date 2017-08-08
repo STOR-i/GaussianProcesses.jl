@@ -165,7 +165,8 @@ end
 """ GPMC: A function to update the target (aka log-posterior) and its derivative """
 function update_target_and_dtarget!(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
-    update_ll_and_dll!(gp::GPMC, Kgrad; lik=lik, mean=mean, kern=kern)
+    update_target!(gp)
+    update_ll_and_dll!(gp, Kgrad; lik=lik, mean=mean, kern=kern)
     gp.dtarget = gp.dll + [-gp.v;prior_gradlogpdf(gp.lik);prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] 
 end    
 

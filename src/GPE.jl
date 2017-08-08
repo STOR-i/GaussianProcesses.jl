@@ -207,6 +207,7 @@ end
 function update_target_and_dtarget!(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
     ααinvcKI = Array{Float64}( gp.nobsv, gp.nobsv)
+    update_target!(gp)
     update_mll_and_dmll!(gp, Kgrad, ααinvcKI, noise=noise,mean=mean,kern=kern)
     #NEED TO FIX DERIVATIVES FOR THE PRIOR
     gp.dtarget = gp.dmll #+ [prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] #prior_gradlogpdf(gp.lik);
@@ -219,7 +220,11 @@ end
 """Calculate the mean and variance of predictive distribution p(y^*|x^*,D,θ) at test locations x^* """
 function predict_y{M<:MatF64}(gp::GPE, x::M; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
-    return μ, σ2 + exp(2*gp.logNoise)
+    if full_cov
+        return μ, σ2 + ScalMat(gp.nobsv, exp(2*gp.logNoise))
+    else
+        return μ, σ2 + exp(2*gp.logNoise)
+    end
 end
 
 # 1D Case for predictions
@@ -235,7 +240,7 @@ function _predict{M<:MatF64}(gp::GPE, X::M)
     mu = mean(gp.m,X) + cK*gp.alpha        # Predictive mean
     Sigma_raw = cov(gp.k, X) - Lck'Lck # Predictive covariance
     # Hack to get stable covariance
-    Sigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+(1e-8*sum(diag(Sigma_raw))/n)*I) end 
+    Sigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+(1e-8*sum(diag(Sigma_raw))/n)*I) end
     return (mu, Sigma)
 end
 
