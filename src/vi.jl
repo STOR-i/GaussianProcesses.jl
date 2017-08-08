@@ -12,28 +12,33 @@ Minimising the KL divergence is done using the Optim.jl, which the user is refer
     # Return:
     * `samples::Matrix{Float64}`: samples from the variational approximation
     """ 
-function vi(gp::GPBase, nSamps::Integer=100; method=LBFGS(), kwargs...)
-    func = get_optim_target(gp,nSamps)
+function vi(gp::GPBase; method=LBFGS(), kwargs...)
+    func = get_optim_target(gp)
     init = zeros(2*length(get_params(gp)))  # Initial hyperparameter values
     results = optimize(func,init; method=method, kwargs...)      # Run optimizer
-
     return results
 end
 
-function get_optim_target(gp::GPBase,nSamps::Int64)
+function get_optim_target(gp::GPBase)
     
     function ltarget(params::Vector{Float64})
         try
+            nSamps = 100
+            K = div(length(params),2)
             target = Float64[]
-            samples = params[1:div(end,2)] .+ diagm(params[div(end,2)+1:end])*randn(div(length(params),2),nSamps)
+            eta = randn(K,nSamps)
+            samples = params[1:K] .+ diagm(exp.(params[K+1:end]))*eta
             for s in 1:nSamps
                 set_params!(gp, samples[:,s])
                 append!(target,update_target!(gp))
             end
             est_target = mean(target)
-            return -(est_target + sum(params[div(end,2)+1:end]))
+            return -(est_target +0.5*K*(1+log(2*pi)) +sum(params[K+1:end]))
         catch err
             if !all(isfinite.(params))
+                println(err)
+                return Inf
+            elseif !isfinite(est_target)
                 println(err)
                 return Inf
             elseif isa(err, ArgumentError)
@@ -50,19 +55,25 @@ function get_optim_target(gp::GPBase,nSamps::Int64)
 
     function ltarget_and_dltarget!(params::Vector{Float64}, grad::Vector{Float64})
         try
-            dtarget = Array{Float64}(length(params))
-            samples = params[1:div(end,2)] .+ diagm(params[div(end,2)+1:end])*randn(div(length(params),2),nSamps)
+            nSamps = 100
+            K = div(length(params),2)
+            dtarget = Array{Float64}(K,nSamps)
+            eta = randn(K,nSamps)
+            samples = params[1:K] .+ diagm(exp.(params[K+1:end]))*eta
             for s in 1:nSamps
                 set_params!(gp, samples[:,s])
-                update_target_and_dtarget!(gp)
-                dtarget = hcat(dtarget,gp.dtarget)
+                dtarget[:,s] = update_target_and_dtarget!(gp)
             end
+            dtarget = vcat(dtarget,dtarget.*eta.*exp.(params[K+1:end]))
             est_dtarget = mean(dtarget,2)
-            est_dtarget[div(end,2)+1:end] += 1.0 
+            est_dtarget[K+1:end] += 1.0 
             grad[:] = -est_dtarget
-            return -est_dtarget
+            return grad
         catch err
             if !all(isfinite.(params))
+                println(err)
+                return Inf
+            elseif !all(isfinite.(grad))
                 println(err)
                 return Inf
             elseif isa(err, ArgumentError)
