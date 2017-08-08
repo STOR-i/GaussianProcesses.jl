@@ -14,30 +14,31 @@ kern = SE(0.0,0.0)
 
 #used for numerical gradients
 function objective(para::Vector{Float64})
-    temp_para = copy(para)
     set_params!(gp,para)
-    update_target!(gp)
-    return gp.target
+    return update_target!(gp)
 end    
 
 #Test that the GPMC constructor fits to the likelihood and check the target derivatives
-function test_gpmc(y::Vector,lik::Likelihood)
-    gp = GP(X,y,mZero,kern,lik)
+function test_gpmc(z::Vector,lik::Likelihood)
+    t = typeof(lik)
+    println("\tTesting $(t)...")
 
-    params = randn(length(get_params(gp)))
-    num_grad = Calculus.gradient(θ->objective(θ),params)
+    gp = GP(X,z,mZero,kern,lik) #Fit GP
 
-    set_params!(gp,params)
-    theor_grad = update_target_and_dtarget!(gp)
-    
-    @test num_grad ≈ theor_grad
+    params = randn(length(get_params(gp))) #Sample random parameters
+
+    set_params!(gp,params)                          
+    exact_grad = update_target_and_dtarget!(gp) #Test exact gradient
+
+    num_grad = Calculus.gradient(θ->objective(θ),params) #Test numerical approx.
+
+    @test num_grad ≈ exact_grad
 end
 
 
 #Bernoulli likelihood
 Y = convert(Vector{Bool},[rand(Distributions.Bernoulli(abs(y[i]))) for i in 1:n])
 lik = BernLik()
-    
 test_gpmc(Y,lik)
 
 
