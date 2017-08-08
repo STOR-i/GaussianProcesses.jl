@@ -82,9 +82,7 @@ function update_ll!(gp::GPMC)
     Σbuffer = gp.cK.mat
     gp.μ = mean(gp.m,gp.X)
     cov!(Σbuffer, gp.k, gp.X, gp.data)
-    for i in 1:gp.nobsv
-        Σbuffer[i,i] += 1e-8
-    end
+    Σbuffer += 1e-6*I
     chol_buffer = gp.cK.chol.factors
     copy!(chol_buffer, Σbuffer)
     chol = cholfact!(Symmetric(chol_buffer))
@@ -194,7 +192,7 @@ function _predict{M<:MatF64}(gp::GPMC, X::M)
             PDMat(Sigma_raw)
             break
         catch
-            PDMat(Sigma_raw+(1e-8*sum(diag(Sigma_raw))/n)*I)
+            PDMat(Sigma_raw+(1e-5*sum(diag(Sigma_raw))/n)*I)
         end
     end
     fSigma = PDMat(Sigma_raw)
