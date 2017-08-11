@@ -7,14 +7,14 @@ Fits a Gaussian process to a set of training points. The Gaussian process is def
 
 # Constructors:
     GPE(X, y, m, k, logNoise)
-    GPE(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-5.0) # observation-free constructor
+    GPE(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-2.0) # observation-free constructor
 
 # Arguments:
 * `X::Matrix{Float64}`: Input observations
 * `y::Vector{Float64}`: Output observations
 * `m::Mean`           : Mean function
 * `k::kernel`         : Covariance function
-* `logNoise::Float64` : Log of the standard deviation for the observation noise. The default is -5.0, which is equivalent to assuming no observation noise.
+* `logNoise::Float64` : Log of the standard deviation for the observation noise. The default is -2.0, which is equivalent to assuming no observation noise.
 
 # Returns:
 * `gp::GPE`            : Gaussian process object, fitted to the training data if provided
@@ -39,7 +39,7 @@ type GPE <: GPBase
     dmll::Vector{Float64}      # Gradient of marginal log-likelihood
     dtarget::Vector{Float64}   # Gradient log-target (gradient of marginal log-likelihood + gradient of log priors)
     
-    function GPE(X::MatF64, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-5.0)
+    function GPE(X::MatF64, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-2.0)
         dim, nobsv = size(X)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         gp = new(m, k, logNoise, nobsv, X, y, KernelData(k, X), dim)
@@ -47,16 +47,16 @@ type GPE <: GPBase
         return gp
     end
     
-    GPE(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-5.0) =  new(m, k, logNoise, 0)
+    GPE(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-2.0) =  new(m, k, logNoise, 0)
     
 end
 
-GP(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-5.0) = GPE(X, y, m, k, logNoise)
+GP(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-2.0) = GPE(X, y, m, k, logNoise)
 
 # Creates GPE object for 1D case
-GPE(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Float64=-5.0) = GPE(x', y, meanf, kernel, logNoise)
+GPE(x::Vector{Float64}, y::Vector{Float64}, meanf::Mean, kernel::Kernel, logNoise::Float64=-2.0) = GPE(x', y, meanf, kernel, logNoise)
 
-GP(x::Vector{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-5.0) = GPE(x', y, m, k, logNoise)
+GP(x::Vector{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-2.0) = GPE(x', y, m, k, logNoise)
 
 
 @doc """
@@ -119,7 +119,7 @@ end
 function initialise_mll!(gp::GPE)
     μ = mean(gp.m,gp.X)
     Σ = cov(gp.k, gp.X, gp.data)
-    gp.cK = PDMat(Σ + (exp(2*gp.logNoise) + 1e-6)*I)
+    gp.cK = PDMat(Σ + (exp(2*gp.logNoise) + 1e-5)*I)
     gp.alpha = gp.cK \ (gp.y - μ)
     gp.mll = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end    
@@ -130,7 +130,7 @@ function update_mll!(gp::GPE)
     Σbuffer = gp.cK.mat
     μ = mean(gp.m,gp.X)
     cov!(Σbuffer, gp.k, gp.X, gp.data)
-    Σbuffer += (exp(2*gp.logNoise) + 1e-6)*I
+    Σbuffer += (exp(2*gp.logNoise) + 1e-5)*I
     chol_buffer = gp.cK.chol.factors
     copy!(chol_buffer, Σbuffer)
     chol = cholfact!(Symmetric(chol_buffer))
@@ -256,7 +256,7 @@ function rand!{M<:MatF64}(gp::GPE, X::M, A::DenseMatrix)
         # Prior mean and covariance
         μ = mean(gp.m, X);
         Σraw = cov(gp.k, X);
-        Σ = try PDMat(Σraw) catch; PDMat(Σraw+(1e-8*sum(diag(Σraw))/nobsv)*I) end  
+        Σ = try PDMat(Σraw) catch; PDMat(Σraw+(1e-5*sum(diag(Σraw))/nobsv)*I) end  
     else
         # Posterior mean and covariance
         μ, Σ = predict_f(gp, X; full_cov=true)
