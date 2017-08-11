@@ -13,3 +13,6 @@ include("test_optim.jl")
 
 println("Running test_kernels.jl...")
 include("test_kernels.jl")
+
+println("Running test_gpmc.jl...")
+include("test_gpmc.jl")

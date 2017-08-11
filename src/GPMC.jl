@@ -3,7 +3,7 @@ import Base.show
 
 @doc """
 # Description
-Fits a Gaussian process to a set of training points. The Gaussian process is defined in terms of its likelihood function and mean and covaiance (kernel) functions, which are user defined. We use a Monte Carlo methods to handle the non-Gaussian likelihood. The latent function values are represented by centered (whitened) variables, where:
+Fits a Gaussian process to a set of training points. The Gaussian process, with non-Gaussian observations, is defined in terms of its likelihood function, mean and covaiance (kernel) functions, which are user defined. We use a Monte Carlo method to handle the non-Gaussian likelihood. The latent function values are represented by centered (whitened) variables, where:
         v ~ N(0, I)
         f = Lv + m(x)
         with
@@ -82,9 +82,7 @@ function update_ll!(gp::GPMC)
     Σbuffer = gp.cK.mat
     gp.μ = mean(gp.m,gp.X)
     cov!(Σbuffer, gp.k, gp.X, gp.data)
-    for i in 1:gp.nobsv
-        Σbuffer[i,i] += 1e-8
-    end
+    Σbuffer += 1e-6*I
     chol_buffer = gp.cK.chol.factors
     copy!(chol_buffer, Σbuffer)
     chol = cholfact!(Symmetric(chol_buffer))
@@ -96,7 +94,7 @@ end
 
 
 # dlog p(Y|v,θ)
-""" Update gradient of the log-likelihood """
+""" Update gradient of the log-likelihood dlog p(Y|v,θ) """
 function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
     lik::Bool=true,  # include gradient components for the likelihood parameters
     mean::Bool=true, # include gradient components for the mean parameters
@@ -150,28 +148,28 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
 end
 
 
-
-#log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)
+""" GPMC: Initialise the target, which is assumed to be the log-posterior, log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ) """
 function initialise_target!(gp::GPMC)
     initialise_ll!(gp)
     gp.target = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.m) + prior_logpdf(gp.k) 
 end    
 
-#log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ)
+""" GPMC: Update the target, which is assumed to be the log-posterior, log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ) """
 function update_target!(gp::GPMC)
     update_ll!(gp)
     gp.target = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.m) + prior_logpdf(gp.k) 
 end    
 
-#function to update the log-posterior and its derivative
+""" GPMC: A function to update the target (aka log-posterior) and its derivative """
 function update_target_and_dtarget!(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
-    update_ll_and_dll!(gp::GPMC, Kgrad; lik=lik, mean=mean, kern=kern)
+    update_target!(gp)
+    update_ll_and_dll!(gp, Kgrad; lik=lik, mean=mean, kern=kern)
     gp.dtarget = gp.dll + [-gp.v;prior_gradlogpdf(gp.lik);prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] 
 end    
 
 
-
+#Calculate the mean and variance of predictive distribution p(y^*|x^*,D,θ) at test locations x^*
 function predict_y{M<:MatF64}(gp::GPMC, x::M; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
     return predict_obs(gp.lik, μ, σ2)
@@ -194,7 +192,7 @@ function _predict{M<:MatF64}(gp::GPMC, X::M)
             PDMat(Sigma_raw)
             break
         catch
-            PDMat(Sigma_raw+(1e-8*sum(diag(Sigma_raw))/n)*I)
+            PDMat(Sigma_raw+(1e-5*sum(diag(Sigma_raw))/n)*I)
         end
     end
     fSigma = PDMat(Sigma_raw)

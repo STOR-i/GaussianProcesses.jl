@@ -115,15 +115,11 @@ end
 #———————————————————————————————————————————————————————————————-
 #Functions for calculating the log-target
 
-""" Initialise the marginal log-likelihood """
+""" GPE: Initialise the marginal log-likelihood """
 function initialise_mll!(gp::GPE)
     μ = mean(gp.m,gp.X)
     Σ = cov(gp.k, gp.X, gp.data)
-    for i in 1:gp.nobsv
-        ## add observation noise
-        Σ[i,i] += exp(2*gp.logNoise) + 1e-8
-    end
-    gp.cK = PDMat(Σ)
+    gp.cK = PDMat(Σ + (exp(2*gp.logNoise) + 1e-6)*I)
     gp.alpha = gp.cK \ (gp.y - μ)
     gp.mll = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end    
@@ -134,9 +130,7 @@ function update_mll!(gp::GPE)
     Σbuffer = gp.cK.mat
     μ = mean(gp.m,gp.X)
     cov!(Σbuffer, gp.k, gp.X, gp.data)
-    for i in 1:gp.nobsv
-        Σbuffer[i,i] += exp(2*gp.logNoise) + 1e-8
-    end
+    Σbuffer += (exp(2*gp.logNoise) + 1e-6)*I
     chol_buffer = gp.cK.chol.factors
     copy!(chol_buffer, Σbuffer)
     chol = cholfact!(Symmetric(chol_buffer))
@@ -146,7 +140,7 @@ function update_mll!(gp::GPE)
 end
 
 
-""" Update gradient of marginal log-likelihood """
+""" GPE: Update gradient of marginal log-likelihood """
 function update_mll_and_dmll!(gp::GPE,
     Kgrad::MatF64,
     ααinvcKI::MatF64
@@ -189,36 +183,42 @@ function update_mll_and_dmll!(gp::GPE,
 end
 
 
-#log p(θ|y) ∝ log p(y|θ) + log p(θ)
+""" GPE: Initialise the target, which is assumed to be the log-posterior, log p(θ|y) ∝ log p(y|θ) +  log p(θ) """
 function initialise_target!(gp::GPE)
     initialise_mll!(gp)
         #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
     gp.target = gp.mll   + prior_logpdf(gp.m) + prior_logpdf(gp.k) #+ prior_logpdf(gp.lik)
 end    
 
-#log p(θ|y) ∝ log p(y|θ) + log p(θ)
+""" GPE: Update the target, which is assumed to be the log-posterior, log p(θ|y) ∝ log p(y|θ) + log p(θ) """ 
 function update_target!(gp::GPE)
     update_mll!(gp)
     #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
     gp.target = gp.mll  + prior_logpdf(gp.m) + prior_logpdf(gp.k) #+ prior_logpdf(gp.lik)
 end    
 
-#function to update the log-posterior and its derivative
+""" GPE: A function to update the target (aka log-posterior) and its derivative """
 function update_target_and_dtarget!(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
     ααinvcKI = Array{Float64}( gp.nobsv, gp.nobsv)
+    update_target!(gp)
     update_mll_and_dmll!(gp, Kgrad, ααinvcKI, noise=noise,mean=mean,kern=kern)
-    #NEED TO FIX DERIVATIVES FOR THE PRIOR
-    gp.dtarget = gp.dmll #+ [prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] #prior_gradlogpdf(gp.lik);
+    #NEED TO FIX DERIVATIVES FOR THE PRIOR ON LOGNOISE, currently set to 0.0
+    gp.dtarget = gp.dmll + [0.0;prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] 
 end
 
 
-#———————————————————————————————————————————————————————————–
+#———————————————————————————————————————————————————————————
 #Predict observations
 
+"""Calculate the mean and variance of predictive distribution p(y^*|x^*,D,θ) at test locations x^* """
 function predict_y{M<:MatF64}(gp::GPE, x::M; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
-    return μ, σ2 + exp(2*gp.logNoise)
+    if full_cov
+        return μ, σ2 + ScalMat(gp.nobsv, exp(2*gp.logNoise))
+    else
+        return μ, σ2 + exp(2*gp.logNoise)
+    end
 end
 
 # 1D Case for predictions
@@ -233,9 +233,17 @@ function _predict{M<:MatF64}(gp::GPE, X::M)
     Lck = whiten(gp.cK, cK')
     mu = mean(gp.m,X) + cK*gp.alpha        # Predictive mean
     Sigma_raw = cov(gp.k, X) - Lck'Lck # Predictive covariance
-    # Hack to get stable covariance
-    Sigma = try PDMat(Sigma_raw) catch; PDMat(Sigma_raw+(1e-8*sum(diag(Sigma_raw))/n)*I) end 
-    return (mu, Sigma)
+    # Add jitter to get stable covariance
+    while true
+        Sigma_raw = try
+            PDMat(Sigma_raw)
+            break
+        catch
+            PDMat(Sigma_raw+(1e-5*sum(diag(Sigma_raw))/n)*I)
+        end
+    end
+    Sigma = PDMat(Sigma_raw)
+    return mu, Sigma
 end
 
 #———————————————————————————————————————————————————————————
