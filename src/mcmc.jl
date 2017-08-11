@@ -4,61 +4,57 @@ A function for running a variety of MCMC algorithms for estimating the GP hyperp
 
     # Arguments:
     * `gp::GP`: Predefined Gaussian process type
-        * `sampler::Klara.MCSampler`: MCMC sampler selected from the Klara package
-        * `mcrange::Klara.BasicMCRange`: Choose number of MCMC iterations and burnin length, default is nsteps=5000, burnin = 1000
+        * `nIter::Int`: Number of MCMC iterations
+        * `ε::Real`: Stepsize parameter
+        * `L::Int`: Number of leapfrog steps
         """ ->
-function mcmc(gp::GPBase)
-    
-    function logtarget(hyp::Vector{Float64})  #log-target
-        try
-            set_params!(gp, hyp)
-            return update_target!(gp)
-        catch err
-            if !all(isfinite.(hyp))
-                println(err)
-                return -Inf
-            elseif isa(err, ArgumentError)
-                println(err)
-                return -Inf
-            elseif isa(err, Base.LinAlg.PosDefException)
-                println(err)
-                return -Inf
-            else
-                throw(err)
-            end
-        end        
-    end
+function mcmc(gp::GPBase; nIter::Int=1000, ε::Float64=0.05, L::Int=5)
 
-    function dlogtarget(hyp::Vector{Float64}) #gradient of the log-target
-        try
-            set_params!(gp, hyp)
-            return update_target_and_dtarget!(gp)
-        catch err
-            if !all(isfinite.(hyp))
-                println(err)
-                return -Inf
-            elseif isa(err, ArgumentError)
-                println(err)
-                return -Inf
-            elseif isa(err, Base.LinAlg.PosDefException)
-                println(err)
-                return -Inf
-            else
-                throw(err)
-            end
-        end        
-    end
+    θ = get_params(gp)
+    D = length(θ)
+    post = Array{Float64}(nIter,D)     #posterior samples
+    post[1,:] = θ
     
-    start = get_params(gp)
-    starting = Dict(:p=>start)
-    q = Klara.BasicContMuvParameter(:p, logtarget=logtarget, gradlogtarget=dlogtarget) 
-    model = Klara.likelihood_model(q, false)               #set-up the model
-    tune = Klara.AcceptanceRateMCTuner(0.6, verbose=true)  #set length of tuning (default to burnin length)
-    job = Klara.BasicMCJob(model, Klara.MALA(0.1), Klara.BasicMCRange(nsteps=5000, burnin=1000), starting,tuner=tune)   #set-up MCMC job
-    print(job)                                #display MCMC set-up for the user
-    Klara.run(job)
-    chain = Klara.output(job)
-    set_params!(gp,start)      #reset the parameters stored in the GP to original values
-    return chain.value
+    update_target_and_dtarget!(gp)
+    target, grad = -gp.target, -gp.dtarget
+
+    for t in 1:nIter
+        θ_old, target_old, grad_old = θ, copy(gp.target), copy(grad)
+        
+        ν_old = randn(D)
+
+        ν = ν_old + 0.5 * ε * grad
+        reject = false
+        for l in 1:L
+            θ += ε * ν
+            set_params!(gp,θ)
+            try
+                update_target_and_dtarget!(gp)
+            catch
+                reject =true
+                break
+            end
+            target, grad = -gp.target, -gp.dtarget
+            ν += ε * grad
+        end
+        ν -= 0.5*ε * grad
+
+        if reject
+            post[t,:] = θ_old
+            θ = θ_old
+        end
+        
+        α = target - 0.5 * ν'ν - target_old + 0.5 * ν_old'ν_old
+        u = log(rand())
+
+        if u < α 
+            post[t,:] = θ
+
+        else  
+            post[t,:] = θ_old
+            θ, target, grad = θ_old, target_old, grad_old
+        end
+    end
+    return post
 end    
 

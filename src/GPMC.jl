@@ -66,7 +66,7 @@ GPMC{T<:Real}(x::Vector{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik
 
 GP{T<:Real}(x::Vector{Float64}, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(x', y, m, k, lik)
 
-#initiate the log-likelihood function of a general GP model
+"""Initialise the log-likelihood function of a general GP model"""
 function initialise_ll!(gp::GPMC)
     # log p(Y|v,θ) 
     gp.μ = mean(gp.m,gp.X)
