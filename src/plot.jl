@@ -1,66 +1,49 @@
-@userplot plot
-@userplot contour
-
-@recipe function f(gp::GPBase, β::Float64=0.95)
-    xmin, xmax = minimum(gp.X), maximum(gp.X)
-    sx = (xmax-xmin)/100
-    x = xmin:sx:xmax
-    
-    linecolor --> :black
-    legend := false
-    # x := x
-    xlim := (xmin,xmax)
-    
-    mu, sigma = predict_f(gp, x)
-    y = mu
-    err = invΦ((1+β)/2)*sigma
-    
-    @series begin
-        seriestype := :path
-        ribbon := err
-        fillcolor := :lightblue
-        x,y
+# Plots a 1D or 2D GPE object.
+#
+# Keyword arguments:
+#   - β: level of confidence interval for ribbon (1D only)
+#   - obsv: plot observation points (1D only)
+#   - var: plot predicted variance rather than mean (2D only)
+@recipe function f(gp::GPE; β=0.95, obsv=true, std=false)
+    @assert gp.dim ∈ (1,2)
+    if gp.dim == 1
+        xlims --> (minimum(gp.X), maximum(gp.X))
+        xmin, xmax = d[:xlims]
+        x = linspace(xmin, xmax, 100)
+        mu, sigma = predict_f(gp, x)
+        y = mu
+        err = invΦ((1+β)/2)*sigma
+        
+        @series begin
+            seriestype := :path
+            ribbon := err
+            fillcolor --> :lightblue
+            color --> :black
+            x,y
+        end
+        if obsv
+            @series begin
+                seriestype := :scatter
+                markershape := :circle
+                markercolor := :black
+                gp.X', gp.y
+            end
+        end
+    else
+        xlims --> (minimum(gp.X[1,:]), maximum(gp.X[1,:]))
+        ylims --> (minimum(gp.X[2,:]), maximum(gp.X[2,:]))
+        xmin, xmax = d[:xlims]
+        ymin, ymax = d[:ylims]
+        x = linspace(xmin, xmax, 50)
+        y = linspace(ymin, ymax, 50)
+        xgrid = repmat(x', 50, 1)
+        ygrid = repmat(y, 1, 50)
+        mu, sigma = predict_f(gp,[vec(xgrid)';vec(ygrid)'])
+        if std
+            zgrid  = reshape(sigma,50,50)
+        else
+            zgrid  = reshape(mu,50,50)
+        end
+        x, y, zgrid
     end
-
-    @series begin
-        seriestype := :path
-        color --> :black
-        x,y
-    end
-
-    @series begin
-        seriestype := :scatter
-        markershape := :circle
-        markercolor := :black
-        gp.X',gp.y
-    end
-end
-
-
-@recipe function f(gp::GPBase)
-    if size(gp.X)[1] !=2
-        error("2d plot only")
-    end
-    
-    xmin, xmax = (minimum(gp.X[1,:]), minimum(gp.X[2,:])), (minimum(gp.X[1,:]), maximum(gp.X[2,:]))
-    x = linspace(xmin[1], xmax[1], 50)
-    y = linspace(xmin[1], xmax[2], 50)
-    xgrid = repmat(x', 50, 1 )
-    ygrid = repmat(y, 1, 50 )
-    
-    mu = predict_f(gp,[vec(xgrid)';vec(ygrid)'])[1]
-    zgrid  = reshape(mu,50,50)
-
-    @series begin
-        seriestype := :contour
-        xgrid, ygrid, zgrid
-    end
-
-    @series begin
-        seriestype := :scatter
-        markershape := :circle
-        markercolor := :black
-        gp.X',gp.y
-    end
-
 end
