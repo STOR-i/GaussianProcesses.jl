@@ -16,14 +16,15 @@ function mcmc(gp::GPBase; nIter::Int=1000, ε::Float64=0.05, L::Int=5)
     post[1,:] = θ
     
     update_target_and_dtarget!(gp)
-    target, grad = -gp.target, -gp.dtarget
-
+    target_cur, grad_cur = -gp.target, -gp.dtarget
+    grad = grad_cur
+    target = target_cur
+    
     for t in 1:nIter
-        θ_old, target_old, grad_old = θ, copy(gp.target), copy(grad)
         
         ν_old = randn(D)
 
-        ν = ν_old + 0.5 * ε * grad
+        ν = ν_old + 0.5 * ε * grad_cur
         reject = false
         for l in 1:L
             θ += ε * ν
@@ -40,20 +41,19 @@ function mcmc(gp::GPBase; nIter::Int=1000, ε::Float64=0.05, L::Int=5)
         ν -= 0.5*ε * grad
 
         if reject
-            post[t,:] = θ_old
-            θ = θ_old
+            post[t,:] = θ_cur
+            θ = θ_cur
         end
         
-        α = target - 0.5 * ν'ν - target_old + 0.5 * ν_old'ν_old
+        α = target - 0.5 * ν'ν - target_cur + 0.5 * ν_cur'ν_cur
         u = log(rand())
 
         if u < α 
-            post[t,:] = θ
-
-        else  
-            post[t,:] = θ_old
-            θ, target, grad = θ_old, target_old, grad_old
+            θ_cur = θ
+            target_cur = target
+            grad_cur = grad
         end
+        post[t,:] = θ
     end
     return post
 end    
