@@ -22,9 +22,9 @@ function mcmc(gp::GPBase; nIter::Int=1000, ε::Float64=0.05, L::Int=5)
     
     for t in 1:nIter
         
-        ν_old = randn(D)
+        ν_cur = randn(D)
 
-        ν = ν_old + 0.5 * ε * grad_cur
+        ν = ν_cur + 0.5 * ε * grad_cur
         reject = false
         for l in 1:L
             θ += ε * ν
