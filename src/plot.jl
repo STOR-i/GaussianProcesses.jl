@@ -12,7 +12,7 @@
         x = linspace(xmin, xmax, 100)
         mu, sigma = predict_f(gp, x)
         y = mu
-        err = invΦ((1+β)/2)*sigma
+        err = invΦ((1+β)/2)*sqrt.(sigma)
         
         @series begin
             seriestype := :path
