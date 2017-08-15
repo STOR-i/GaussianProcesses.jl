@@ -4,15 +4,15 @@
 #   - β: level of confidence interval for ribbon (1D only)
 #   - obsv: plot observation points (1D only)
 #   - var: plot predicted variance rather than mean (2D only)
-@recipe function f(gp::GPE; β=0.95, obsv=true, std=false)
+@recipe function f(gp::GPE; β=0.95, obsv=true, var=false)
     @assert gp.dim ∈ (1,2)
     if gp.dim == 1
         xlims --> (minimum(gp.X), maximum(gp.X))
         xmin, xmax = d[:xlims]
         x = linspace(xmin, xmax, 100)
-        mu, sigma = predict_f(gp, x)
-        y = mu
-        err = invΦ((1+β)/2)*sqrt.(sigma)
+        μ, Σ = predict_f(gp, x)
+        y = μ
+        err = invΦ((1+β)/2)*sqrt.(Σ)
         
         @series begin
             seriestype := :path
@@ -38,11 +38,11 @@
         y = linspace(ymin, ymax, 50)
         xgrid = repmat(x', 50, 1)
         ygrid = repmat(y, 1, 50)
-        mu, sigma = predict_f(gp,[vec(xgrid)';vec(ygrid)'])
-        if std
-            zgrid  = reshape(sigma,50,50)
+        μ, Σ = predict_f(gp,[vec(xgrid)';vec(ygrid)'])
+        if var
+            zgrid  = reshape(Σ,50,50)
         else
-            zgrid  = reshape(mu,50,50)
+            zgrid  = reshape(μ,50,50)
         end
         x, y, zgrid
     end
