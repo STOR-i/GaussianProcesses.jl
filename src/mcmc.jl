@@ -13,17 +13,15 @@ function mcmc(gp::GPBase; nIter::Int=1000, ε::Real=0.01, Lmin::Int=5, Lmax::Int
     function calc_target(gp::GPBase,θ::Vector{Float64}) #log-target and its gradient 
         try
             set_params!(gp, θ)
-            return update_target_and_dtarget!(gp)
+            update_target_and_dtarget!(gp)
+            return true
         catch err
             if !all(isfinite.(θ))
-                println(err)
-                return -Inf
+                return false
             elseif isa(err, ArgumentError)
-                println(err)
-                return -Inf
+                return false
             elseif isa(err, Base.LinAlg.PosDefException)
-                println(err)
-                return -Inf
+                return false
             else
                 throw(err)
             end
@@ -44,11 +42,11 @@ function mcmc(gp::GPBase; nIter::Int=1000, ε::Real=0.01, Lmin::Int=5, Lmax::Int
         
         ν_cur = randn(D)        
         ν = ν_cur + 0.5 * ε * grad
+        
         reject = false
         for l in 1:rand(Lmin:Lmax)
             θ += ε * ν
-            calc_target(gp,θ)
-            if any(isnan.(gp.dtarget))
+            if  !calc_target(gp,θ)
                 reject=true
                 break
             end
