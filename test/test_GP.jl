@@ -15,7 +15,7 @@ gp = GP(x, y, mZero, kern)
 # are the same as the output observations
 function test_pred_matches_obs(gp::GPE)
     y_pred, sig = predict_y(gp, x)
-    @test isapprox(maximum(abs.(gp.y - y_pred)), 0.0, atol=0.0001)
+    @test isapprox(maximum(abs.(gp.y - y_pred)), 0.0, atol=0.1)
 end
 
 test_pred_matches_obs(gp)

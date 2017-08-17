@@ -1,5 +1,5 @@
 module GaussianProcesses
-using Optim, PDMats, Distances, Klara, FastGaussQuadrature
+using Optim, PDMats, Distances, FastGaussQuadrature
 using Compat
 using RecipesBase
 import Compat: view, cholfact!
@@ -11,7 +11,7 @@ import Base: rand, rand!, mean, cov, push!
 # Functions that should be available to package
 # users should be explicitly exported here
 
-export GPBase, GP, GPE, GPMC, predict_f, predict_y, Kernel, CompositeKernel, SumKernel, ProdKernel, Masked, FixedKern, fix, Noise, Const, SE, SEIso, SEArd, Periodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Matern, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, #kernel functions
+export GPBase, GP, GPE, GPMC, predict_f, predict_y, Kernel, Likelihood, CompositeKernel, SumKernel, ProdKernel, Masked, FixedKern, fix, Noise, Const, SE, SEIso, SEArd, Periodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Matern, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, #kernel functions
     MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, #mean functions
     GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
     mcmc, optimize!,                                           #inference functions

@@ -1,7 +1,7 @@
 #This file checks that each of the likelihoods work
 
 using GaussianProcesses
-import GaussianProcesses: update_target!, update_target_and_dtarget!, set_params!, get_params, Likelihood
+import GaussianProcesses: update_target_and_dtarget!, get_params
 
 d, n = 3, 20
 ll = rand(d)
