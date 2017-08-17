@@ -1,6 +1,7 @@
 module GaussianProcesses
 using Optim, PDMats, Distances, Klara, FastGaussQuadrature
 using Compat
+using RecipesBase
 import Compat: view, cholfact!
 using Distributions
 import Distributions: logpdf, gradlogpdf
@@ -31,21 +32,9 @@ include("GPE.jl")
 include("GPMC.jl")
 include("mcmc.jl")
 include("optimize.jl")
+include("plot.jl")
 
-# This approach to loading supported plotting packages is taken from the "KernelDensity" package
-macro glue(pkg)
-    path = joinpath(dirname(@__FILE__),"glue",string(pkg,".jl"))
-    init = Symbol(string(pkg,"_init"))
-    quote
-        $(esc(init))() = Base.include($path)
-        isdefined(Main,$(QuoteNode(pkg))) && $(esc(init))()
-    end
-end
-
-@glue Gadfly
-@glue PyPlot
-# This does not require @glue because it uses the interface defined in
 # ScikitLearnBase, which is a skeleton package.
-include("glue/ScikitLearn.jl")
+include("ScikitLearn.jl")
 
 end # module

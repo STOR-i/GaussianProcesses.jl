@@ -97,6 +97,7 @@ function map_column_pairs{M<:MatF64}(f::Function, X::M)
 end
 
 
-# Taken from Distributions package
+# Taken from StatsFuns package
 φ(z::Real) = exp(-0.5*z*z)/√2π
 Φ(z::Real) = 0.5*erfc(-z/√2)
+invΦ(p::Real) = -erfcinv(2*p) * sqrt(2)
