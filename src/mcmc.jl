@@ -8,7 +8,7 @@ A function for running a variety of MCMC algorithms for estimating the GP hyperp
         * `ε::Real`: Stepsize parameter
         * `L::Int`: Number of leapfrog steps
         """ ->
-function mcmc(gp::GPBase; nIter::Int=1000, ε::Real=0.01, Lmin::Int=5, Lmax::Int=15)
+function mcmc(gp::GPBase; nIter::Int=1000, ε::Real=0.01, Lmin::Int=5, Lmax::Int=15, verbose=true)
 
     function calc_target(gp::GPBase,θ::Vector{Float64}) #log-target and its gradient 
         try
@@ -38,6 +38,9 @@ function mcmc(gp::GPBase; nIter::Int=1000, ε::Real=0.01, Lmin::Int=5, Lmax::Int
     target_cur, grad_cur = -gp.target, -gp.dtarget
     
     for t in 1:nIter
+        if verbose & (t % 100 ==0)
+            println("Iteration:",t,", Log-target = ", gp.target)
+        end
         θ, target, grad = θ_cur, target_cur, grad_cur
         
         ν_cur = randn(D)        
