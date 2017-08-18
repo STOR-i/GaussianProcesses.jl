@@ -30,7 +30,7 @@ for Gaussian and non-Gaussian data respectively.
 
 The package has a number of *mean*, *kernel* and *likelihood* functions available. See the documentation for further details.
 
-# Inference
+### Inference
 
 The parameters of the model can be estimated by maximizing the log-likelihood (where the latent function is integrated out) using the `optimize!` function, or in the case of *non-Gaussian data*, an MCMC routine with a Hamiltonian Monte Carlo sampler, can be used to infer the model parameter and latent function. 
 
