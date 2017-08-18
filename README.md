@@ -30,6 +30,16 @@ for Gaussian and non-Gaussian data respectively.
 
 The package has a number of *mean*, *kernel* and *likelihood* functions available. See the documentation for further details.
 
+# Inference
+
+The parameters of the model can be estimated by maximizing the log-likelihood (where the latent function is integrated out) using the `optimize!` function, or in the case of *non-Gaussian data*, an MCMC routine with a Hamiltonian Monte Carlo sampler, can be used to infer the model parameter and latent function. 
+
+```
+optimize!(gp)    # Find parameters which maximize the log-likelihood
+mcmc(gp)         # Sample from the GP posterior
+```
+See the [notebooks](https://github.com/STOR-i/GaussianProcesses.jl/tree/master/notebooks) for examples of the functions used in the package.
+
 ## Documentation
 
 Documentation is accessible in the Julia REPL in help mode. Help mode can be started by typing '?' at the prompt.
