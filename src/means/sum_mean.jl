@@ -1,7 +1,7 @@
 type SumMean <: Mean
     means::Vector{Mean}
     function SumMean(args...)
-        means = Array(Mean, length(args))
+        means = Array{Mean}(length(args))
         for (i,m) in enumerate(args)
             isa(m, Mean) || throw(ArgumentError("All arguments of SumMean must be Mean objects"))
             means[i] = m

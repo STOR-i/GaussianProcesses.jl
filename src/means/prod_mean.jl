@@ -1,7 +1,7 @@
 type ProdMean <: Mean
     means::Vector{Mean}
     function ProdMean(args...)
-        means = Array(Mean, length(args))
+        means = Array{Mean}(length(args))
         for (i,m) in enumerate(args)
             isa(m, Mean) || throw(ArgumentError("All arguments of ProdMean must be Mean objects"))
             means[i] = m
