@@ -14,8 +14,16 @@ type MeanLin <: Mean
     priors::Array          # Array of priors for mean parameters
     MeanLin(β::Vector{Float64}) = new(β, length(β),[])
 end
-    
-mean(mLin::MeanLin,x::MatF64) =  x'mLin.β
+
+function mean(mLin::MeanLin,x::MatF64)
+    dim, nobsv = size(x)
+    dim == mLin.dim || throw(ArgumentError("Observations and mean function have inconsistent dimensions"))
+    z = zeros(nobsv)
+    for i in 1:nobsv
+        z[i] = dot(x[:, i], mLin.β)
+    end
+    return z
+end    
 
 get_params(mLin::MeanLin) = mLin.β
 get_param_names(::MeanLin) = [:β]

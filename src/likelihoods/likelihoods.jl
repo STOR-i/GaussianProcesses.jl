@@ -21,6 +21,7 @@ include("binomial.jl")
 #———————————————————————————————————————————————————————————————-
 #Priors
 
+get_priors(lik::Likelihood) = lik.priors
 
 function set_priors!(lik::Likelihood, priors::Array)
     length(priors) == num_params(lik) || throw(ArgumentError("$(typeof(lik)) has exactly $(num_params(lik)) parameters"))
@@ -28,22 +29,20 @@ function set_priors!(lik::Likelihood, priors::Array)
 end
 
 function prior_logpdf(lik::Likelihood)
-    if num_params(lik)==0
-        return 0.0
-    elseif lik.priors==[]
+    priors == get_priors(lik)
+    if priors==[]
         return 0.0
     else
-        return sum(logpdf(prior,param) for (prior, param) in zip(lik.priors,get_params(lik)))
+        return sum(logpdf(prior,param) for (prior, param) in zip(priors,get_params(lik)))
     end    
 end
 
 function prior_gradlogpdf(lik::Likelihood)
-    if num_params(lik)==0
-        return zeros(num_params(lik))
-    elseif lik.priors==[]
+    priors == get_priors(lik)
+    if priors == []
         return zeros(num_params(lik))
     else
-        return [gradlogpdf(prior,param) for (prior, param) in zip(lik.priors,get_params(lik))]
+        return [gradlogpdf(prior,param) for (prior, param) in zip(priors,get_params(lik))]
     end    
 end
 

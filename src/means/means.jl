@@ -25,28 +25,28 @@ end
 #————————————————————————————————————————————————————————————————
 #Priors
 
+get_priors(m::Mean) = m.priors
+
 function set_priors!(m::Mean, priors::Array)
     length(priors) == num_params(m) || throw(ArgumentError("$(typeof(m)) has exactly $(num_params(m)) parameters"))
     m.priors = priors
 end
 
 function prior_logpdf(m::Mean)
-    if num_params(m)==0
-        return 0.0
-    elseif m.priors==[]
+    priors = get_priors(m)
+    if priors == []
         return 0.0
     else
-        return sum(logpdf(prior,param) for (prior, param) in zip(m.priors,get_params(m)))
+        return sum(logpdf(prior,param) for (prior, param) in zip(priors,get_params(m)))
     end    
 end
 
 function prior_gradlogpdf(m::Mean)
-    if num_params(m)==0
-        return zeros(num_params(m))
-    elseif m.priors==[]
+    priors = get_priors(m)
+    if priors == []
         return zeros(num_params(m))
     else
-        return [gradlogpdf(prior,param) for (prior, param) in zip(m.priors,get_params(m))]
+        return [gradlogpdf(prior,param) for (prior, param) in zip(priors,get_params(m))]
     end    
 end
 
