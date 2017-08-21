@@ -1,5 +1,11 @@
 # News
 
+## Version 0.5.0 (2017-08-21)
+* Introduced new likelihoods for fitting GPs to non-Gaussian data
+* Introduced MCMC routine for sampling
+* Created notebooks
+* Changed plotting functions to use [Plots.jl](https://github.com/JuliaPlots/Plots.jl)
+
 ## Version 0.4.0 (2016-10-04)
 * Julia requirement moved up to version 0.5
 * Major speed improvements for fitting of GP object, and for covariance and gradient calculations
