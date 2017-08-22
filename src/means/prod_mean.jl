@@ -1,59 +1,11 @@
-type ProdMean <: Mean
+type ProdMean <: CompositeMean
     means::Vector{Mean}
-    function ProdMean(args...)
-        means = Array{Mean}(length(args))
-        for (i,m) in enumerate(args)
-            isa(m, Mean) || throw(ArgumentError("All arguments of ProdMean must be Mean objects"))
-            means[i] = m
-        end
-        return new(means)
-    end
+    ProdMean(args::Vararg{Mean}) = new(collect(args))
 end
 
-function show(io::IO, pm::ProdMean, depth::Int = 0)
-    pad = repeat(" ", 2 * depth)
-    println(io, "$(pad)Type: $(typeof(pm))")
-    for m in pm.means
-        show(io, m, depth+1)
-    end
-end
-
-function mean(prodmean::ProdMean, x::MatF64)
-    p = 1.0
-    for m in prodmean.means
-        p = p.*mean(m, x)
-    end
-    return p
-end
-
-function get_params(prodmean::ProdMean)
-    p = Array{Float64}( 0)
-    for m in prodmean.means
-        append!(p, get_params(m))
-    end
-    p
-end
-
+submeans(pm::ProdMean) = pm.means
+mean(pd::ProdMean, x::MatF64) = prod(mean(m,x) for m in submeans(pm))
 get_param_names(prodmean::ProdMean) = composite_param_names(prodmean.means, :pm)
-
-function num_params(prodmean::ProdMean)
-    n = 0
-    for m in prodmean.means
-        n += num_params(m)
-    end
-    n
-end
-
-function set_params!(prodmean::ProdMean, hyp::Vector{Float64})
-    i, n = 1, num_params(prodmean)
-    length(hyp) == num_params(prodmean) || throw(ArgumentError("ProdMean object requires $(n) hyperparameters"))
-    for m in prodmean.means
-        np = num_params(m)
-        set_params!(m, hyp[i:(i+np-1)])
-        i += np
-    end
-end
-
 
 function grad_mean(prodmean::ProdMean, x::Vector{Float64})
      dm = Array{Float64}( 0)
@@ -68,13 +20,7 @@ function grad_mean(prodmean::ProdMean, x::Vector{Float64})
 end
 
 # Multiplication operators
-function *(m1::ProdMean, m2::Mean)
-    means = [m1.means, m2]
-    ProdMean(means...)
-end
-function *(m1::ProdMean, m2::ProdMean)
-    means = [m1.means, m2.means]
-    ProdMean(means...)
-end
+*(m1::ProdMean, m2::Mean) = ProdMean(m1.means..., m2)
+*(m1::ProdMean, m2::ProdMean) = ProdMean(m1.means..., m2.means...)
 *(m1::Mean, m2::Mean) = ProdMean(m1,m2)
-*(m1::Mean, m2::ProdMean) = *(m2,m1)
+*(m1::Mean, m2::ProdMean) = ProdMean(m1, m2.means...)
