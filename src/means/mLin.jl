@@ -10,27 +10,19 @@ m(x) = xᵀβ
 """ ->
 type MeanLin <: Mean
     β::Vector{Float64}
-    dim::Int
-    priors::Array          # Array of priors for mean parameters
-    MeanLin(β::Vector{Float64}) = new(β, length(β),[])
+    priors::Array      # Array of priors for mean parameters
+    MeanLin(β::Vector{Float64}) = new(β, [])
 end
 
-function mean(mLin::MeanLin,x::MatF64)
-    dim, nobsv = size(x)
-    dim == mLin.dim || throw(ArgumentError("Observations and mean function have inconsistent dimensions"))
-    z = zeros(nobsv)
-    for i in 1:nobsv
-        z[i] = dot(x[:, i], mLin.β)
-    end
-    return z
-end    
+mean(mLin::MeanLin, x::VecF64) = dot(mLin.β, x)
+mean(mLin::MeanLin, X::MatF64) = X'mLin.β
 
 get_params(mLin::MeanLin) = mLin.β
 get_param_names(::MeanLin) = [:β]
-num_params(mLin::MeanLin) = mLin.dim
+num_params(mLin::MeanLin) = length(mLin.β)
 
 function set_params!(mLin::MeanLin, hyp::Vector{Float64})
-    length(hyp) == mLin.dim || throw(ArgumentError("Linear mean function only has $(mLin.dim) parameters"))
+    length(hyp) == length(mLin.β) || throw(ArgumentError("Linear mean function only has $(mLin.dim) parameters"))
     mLin.β = hyp
 end
 

@@ -5,15 +5,20 @@ end
 
 submeans(sm::SumMean) = sm.means
 
-mean(summean::SumMean, x::MatF64) = sum(mean(m, x) for m in submeans(summean))
+mean(sm::SumMean, x::VecF64) = sum(mean(m, x) for m in submeans(sm))
+mean(summean::SumMean, X::MatF64) = sum(mean(m, X) for m in submeans(summean))
 
 get_param_names(summean::SumMean) = composite_param_names(summean.means, :sm)
 
-function grad_mean(summean::SumMean, x::Vector{Float64})
-     dm = Array{Float64}(0)
-      for m in summean.means
-        append!(dm,grad_mean(m, x))
-      end
+function grad_mean(sm::SumMean, x::Vector{Float64})
+    np = num_params(sm)
+    dm = Array{Float64}(np)
+    v = 1
+    for m in sm.means
+        np_m = num_params(m)
+        dm[v:v+np_m-1] = grad_mean(m, x)
+        v+=np_m
+    end
     dm
 end
 
