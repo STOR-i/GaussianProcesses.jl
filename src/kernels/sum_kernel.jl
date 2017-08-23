@@ -1,25 +1,13 @@
 type SumKernel <: CompositeKernel
     kerns::Vector{Kernel}
-    function SumKernel(args...)
-        kerns = Array{Kernel}(length(args))
-        for (i,k) in enumerate(args)
-            isa(k, Kernel) || throw(ArgumentError("All arguments of SumKernel must be Kernel objects"))
-            kerns[i] = k
-        end
-        return new(kerns)
-    end
+    SumKernel(args::Vararg{Kernel}) = new(collect(args))
 end
 
 subkernels(sumkern::SumKernel) = sumkern.kerns
 get_param_names(sumkern::SumKernel) = composite_param_names(sumkern.kerns, :pk)
 
-function cov{V1<:VecF64,V2<:VecF64}(sumkern::SumKernel, x::V1, y::V2)
-    s = 0.0
-    for k in sumkern.kerns
-        s += cov(k, x, y)
-    end
-    return s
-end
+cov{V1<:VecF64,V2<:VecF64}(sk::SumKernel, x::V1, y::V2) = sum(cov(k, x, y) for k in subkernels(sk))
+
 
 function addcov!{M<:MatF64}(s::MatF64, sumkern::SumKernel, X::M, data::CompositeData)
     for (ikern,kern) in enumerate(sumkern.kerns)
@@ -80,15 +68,7 @@ function grad_slice!{M<:MatF64}(dK::MatF64, sumkern::SumKernel, X::M, data::Comp
 end
         
 # Addition operators
-function +(k1::SumKernel, k2::Kernel)
-    kerns = [k1.kerns; k2]
-    SumKernel(kerns...)
-end
-
-function +(k1::SumKernel, k2::SumKernel)
-    kerns = [k1.kerns; k2.kerns]
-    SumKernel(kerns...)
-end
-
++(k1::SumKernel, k2::Kernel) = SumKernel(k1.kerns..., k2)
++(k1::SumKernel, k2::SumKernel) = SumKernel(k1.kerns..., k2.kerns...)
 +(k1::Kernel, k2::Kernel) = SumKernel(k1,k2)
-+(k1::Kernel, k2::SumKernel) = +(k2,k1)
++(k1::Kernel, k2::SumKernel) = SumKernel(k1, k2.kerns...)

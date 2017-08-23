@@ -20,13 +20,8 @@ end
 
 get_param_names(compkern::CompositeKernel) = composite_param_names(subkernels(compkern), :sk)
 
-function num_params(compkern::CompositeKernel)
-    n = 0
-    for k in subkernels(compkern)
-        n += num_params(k)
-    end
-    n
-end
+num_params(ck::CompositeKernel) = sum(num_params(k) for k in subkernels(ck))
+
 
 function set_params!(compkern::CompositeKernel, hyp::Vector{Float64})
     i, n = 1, num_params(compkern)
@@ -44,10 +39,10 @@ end
 
 function set_priors!(compkern::CompositeKernel, priors::Array)
     i, n = 1, num_params(compkern)
-    length(hyp) == num_params(compkern) || throw(ArgumentError("CompositeKernel object requires $(n) hyperparameters"))
+    length(priors) == num_params(compkern) || throw(ArgumentError("CompositeKernel object requires $(n) priors"))
     for k in subkernels(compkern)
         np = num_params(k)
-        set_priors!(k, hyp[i:(i+np-1)])
+        set_priors!(k, priors[i:(i+np-1)])
         i += np
     end
 end
