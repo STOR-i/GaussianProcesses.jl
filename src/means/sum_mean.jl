@@ -20,4 +20,4 @@ end
 +(m1::SumMean, m2::Mean) = SumMean(m1.means..., m2)
 +(m1::SumMean, m2::SumMean) = SumMean(m1.means..., m2.means...)
 +(m1::Mean, m2::Mean) = SumMean(m1,m2)
-+(m1::Mean, m2::SumMean) = SumMean(m1, m2.means)
++(m1::Mean, m2::SumMean) = SumMean(m1, m2.means...)
