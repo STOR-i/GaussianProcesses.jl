@@ -120,14 +120,14 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
     gp.dll[1:gp.nobsv] = L'dl_df
     
     i=gp.nobsv+1 
-    if lik  && n_lik_params>0
+    if lik && n_lik_params > 0
         Lgrads = dlog_dens_dθ(gp.lik,Lv + gp.μ, gp.y)
         for j in 1:n_lik_params
             gp.dll[i] = sum(Lgrads[:,j])
             i += 1
         end
     end
-    if mean && n_mean_params>0
+    if mean && n_mean_params > 0
         Mgrads = grad_stack(gp.m, gp.X)
         for j in 1:n_mean_params
             gp.dll[i] = dot(dl_df,Mgrads[:,j])
@@ -165,8 +165,8 @@ function update_target_and_dtarget!(gp::GPMC; lik::Bool=true, mean::Bool=true, k
     Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
     update_target!(gp)
     update_ll_and_dll!(gp, Kgrad; lik=lik, mean=mean, kern=kern)
-    gp.dtarget = gp.dll + [-gp.v;prior_gradlogpdf(gp.lik);prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] 
-end    
+    gp.dtarget = gp.dll + prior_gradlogpdf(gp; lik=lik, mean=mean, kern=kern)
+end
 
 
 #Calculate the mean and variance of predictive distribution p(y^*|x^*,D,θ) at test locations x^*
@@ -278,6 +278,19 @@ function set_params!(gp::GPMC, hyp::Vector{Float64}; lik::Bool=true, mean::Bool=
     end
 end
 
+function prior_gradlogpdf(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
+    grad = -gp.v
+    if lik
+        append!(grad, prior_gradlogpdf(gp.lik))
+    end
+    if mean
+        append!(grad, prior_gradlogpdf(gp.m))
+    end
+    if kern
+        append!(grad, prior_gradlogpdf(gp.k))
+    end
+    return grad
+end
 
 
 function show(io::IO, gp::GPMC)
