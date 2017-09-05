@@ -187,15 +187,15 @@ end
 function initialise_target!(gp::GPE)
     initialise_mll!(gp)
         #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
-    gp.target = gp.mll   + prior_logpdf(gp.m) + prior_logpdf(gp.k) #+ prior_logpdf(gp.lik)
-end    
+    gp.target = gp.mll   + prior_logpdf(gp.m) + prior_logpdf(gp.k)
+end
 
 """ GPE: Update the target, which is assumed to be the log-posterior, log p(θ|y) ∝ log p(y|θ) + log p(θ) """ 
 function update_target!(gp::GPE)
     update_mll!(gp)
     #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
-    gp.target = gp.mll  + prior_logpdf(gp.m) + prior_logpdf(gp.k) #+ prior_logpdf(gp.lik)
-end    
+    gp.target = gp.mll  + prior_logpdf(gp.m) + prior_logpdf(gp.k)
+end
 
 """ GPE: A function to update the target (aka log-posterior) and its derivative """
 function update_target_and_dtarget!(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
@@ -203,13 +203,13 @@ function update_target_and_dtarget!(gp::GPE; noise::Bool=true, mean::Bool=true, 
     ααinvcKI = Array{Float64}( gp.nobsv, gp.nobsv)
     update_target!(gp)
     update_mll_and_dmll!(gp, Kgrad, ααinvcKI, noise=noise,mean=mean,kern=kern)
-    #NEED TO FIX DERIVATIVES FOR THE PRIOR ON LOGNOISE, currently set to 0.0
-    gp.dtarget = gp.dmll + [0.0;prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] 
+    gp.dtarget = gp.dmll + prior_gradlogpdf(gp; noise=noise, mean=mean, kern=kern)
 end
 
 
-#———————————————————————————————————————————————————————————
-#Predict observations
+#——————————————————————#
+# Predict observations #
+#——————————————————————#
 
 """Calculate the mean and variance of predictive distribution p(y^*|x^*,D,θ) at test locations x^* """
 function predict_y{M<:MatF64}(gp::GPE, x::M; full_cov::Bool=false)
@@ -284,7 +284,7 @@ rand{V<:VecF64}(gp::GPE,x::V) = vec(rand(gp,x',1))
 function get_params(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     params = Float64[]
     if noise; push!(params, gp.logNoise); end
-    if mean && num_params(gp.m)>0
+    if mean
         append!(params, get_params(gp.m))
     end
     if kern
@@ -297,8 +297,12 @@ function set_params!(gp::GPE, hyp::Vector{Float64}; noise::Bool=true, mean::Bool
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
 
-    if noise; gp.logNoise = hyp[1]; end
-    i=2  
+    i = 1
+    if noise
+        gp.logNoise = hyp[1];
+        i+=1
+    end
+
     if mean && n_mean_params>0
         set_params!(gp.m, hyp[i:i+n_mean_params-1])
         i += n_mean_params
@@ -309,8 +313,20 @@ function set_params!(gp::GPE, hyp::Vector{Float64}; noise::Bool=true, mean::Bool
     end
 end
 
+function prior_gradlogpdf(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
+    grad = Float64[]
+    if noise; push!(grad, 0.0); end # Noise does not have any priors
+    if mean
+        append!(grad, prior_gradlogpdf(gp.m))
+    end
+    if kern
+        append!(grad, prior_gradlogpdf(gp.k))
+    end
+    return grad
+end
+
 #———————————————————————————————————————————————————————————-
-#Push function
+# Push function
 function push!(gp::GPE, X::MatF64, y::Vector{Float64})
     warn("push! method is currently inefficient as it refits all observations")
     if gp.nobsv == 0
