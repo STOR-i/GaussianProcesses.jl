@@ -208,6 +208,7 @@ function prior_gradlogpdf(k::Kernel)
     return isempty(priors) ? zeros(num_params(k)) : Float64[gradlogpdf(prior,param) for (prior, param) in zip(priors,get_params(k))]
 end
 
+include("gp_params.jl")
 include("stationary.jl")
 include("lin.jl")               # Linear covariance function
 include("se.jl")                # Squared exponential covariance function
