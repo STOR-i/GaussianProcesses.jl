@@ -68,7 +68,7 @@ function multcov!{M<:MatF64}(s::MatF64, k::Stationary, X::M, data::StationaryDat
     end
     return R
 end
-dk_dlσ(k::Stationary, r::Float64) = 2.0*cov(k,r)
+@inline dk_dlθ(k::Stationary, θ::Type{Val{:σ2}}, r::Float64) = 2.0*cov(k,r)
 
 # Isotropic Kernels
 
@@ -97,11 +97,11 @@ function addcov!{M<:MatF64}(s::MatF64, k::Isotropic, X::M, data::IsotropicData)
     end
     return R
 end
-@inline function dKij_dθp{M<:MatF64}(kern::Isotropic,X::M,i::Int,j::Int,p::Int,dim::Int)
-    return dk_dθp(kern, distij(metric(kern),X,i,j,dim),p)
+@inline function dKij_dθ{M<:MatF64}(kern::Isotropic,X::M,i::Int,j::Int,p,dim::Int)
+    return dk_dlθ(kern, p, distij(metric(kern),X,i,j,dim))
 end
-@inline function dKij_dθp{M<:MatF64}(kern::Isotropic,X::M,data::IsotropicData,i::Int,j::Int,p::Int,dim::Int)
-    return dk_dθp(kern, data.R[i,j],p)
+@inline function dKij_dθ{M<:MatF64}(kern::Isotropic,X::M,data::IsotropicData,i::Int,j::Int,p,dim::Int)
+    return dk_dlθ(kern, p, data.R[i,j])
 end
 function grad_kern{V1<:VecF64,V2<:VecF64}(kern::Isotropic, x::V1, y::V2)
     dist=distance(kern,x,y)

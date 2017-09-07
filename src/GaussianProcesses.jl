@@ -2,6 +2,7 @@ module GaussianProcesses
 using Optim, PDMats, Distances, FastGaussQuadrature, Klara
 using Compat
 using RecipesBase
+using NamedTuples
 import Compat: view, cholfact!
 using Distributions
 import Distributions: logpdf, gradlogpdf

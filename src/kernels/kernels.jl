@@ -1,6 +1,7 @@
 # This file contains a list of the currently available covariance functions
 
 import Base.show
+import Base.getindex
 
 @compat abstract type Kernel end
 
@@ -90,24 +91,23 @@ function multcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::KernelData)
     return cK
 end
 
-function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::KernelData, p::Int)
+function grad_slice!{M1<:MatF64,M2<:MatF64,P<:Any}(dK::M1, k::Kernel, X::M2, data::KernelData, p::P)
     dim = size(X,1)
     nobsv = size(X,2)
     @inbounds for j in 1:nobsv
         @simd for i in 1:j
-            dK[i,j] = dKij_dθp(k,X,data,i,j,p,dim)
+            dK[i,j] = dKij_dθ(k,X,data,i,j,p,dim)
             dK[j,i] = dK[i,j]
         end
     end
     return dK
 end
-
-function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::EmptyData, p::Int)
+function grad_slice!{M1<:MatF64,M2<:MatF64,P<:Any}(dK::M1, k::Kernel, X::M2, data::EmptyData, p::P)
     dim = size(X,1)
     nobsv = size(X,2)
     @inbounds for j in 1:nobsv
         @simd for i in 1:j
-            dK[i,j] = dKij_dθp(k,X,i,j,p,dim)
+            dK[i,j] = dKij_dθ(k,X,i,j,p,dim)
             dK[j,i] = dK[i,j]
         end
     end
@@ -146,12 +146,6 @@ end
 get_param_names(n::Int, prefix::Symbol) = [Symbol(prefix, :_, i) for i in 1:n]
 get_param_names(v::Vector, prefix::Symbol) = get_param_names(length(v), prefix)
 
-# Fallback. Yields names like :Matl2Iso_param_1 => 0.5
-# Ideally this is never used, because the names are uninformative.
-get_param_names(obj::Union{Kernel, Mean}) =
-    get_param_names(num_params(obj),
-                    Symbol(typeof(obj).name.name, :_param_))
-
 """ `composite_param_names(objects, prefix)`, where `objects` is a
 vector of kernels/means, calls `get_param_names` on each object and prefixes the
 name returned with `prefix` + object #. Eg.
@@ -185,8 +179,6 @@ function show(io::IO, k::Kernel, depth::Int = 0)
     print(io, "\n")
 end
 
-num_params(k::Kernel) = throw(MethodError(num_params, ()))
-
 ##########
 # Priors #
 ##########
@@ -206,6 +198,20 @@ end
 function prior_gradlogpdf(k::Kernel)
     priors = get_priors(k)
     return isempty(priors) ? zeros(num_params(k)) : Float64[gradlogpdf(prior,param) for (prior, param) in zip(priors,get_params(k))]
+end
+
+###################
+# Parameter Types #
+###################
+@inline getindex(k::Kernel, i::Symbol) = get_value(get_params(k)[i])
+@inline get_optim_params(k::Kernel) = Float64[get_optim_val(par) for par in k.params]
+@inline get_param_names(k::Kernel) = keys(get_params(k))
+@inline num_params(k::Kernel) = length(get_params(k)) # only for univariate so far
+@inline function set_optim_params!(k::Kernel, hyp::Vector{Float64})
+    length(hyp) == num_params(k) || throw(ArgumentError("Kernel only has $(num_params(k)) parameters"))
+    for (i,par) in enumerate(get_params(k))
+        set_optim_val!(par, hyp[i])
+    end
 end
 
 include("gp_params.jl")
