@@ -147,7 +147,6 @@ function update_mll!(gp::GPE)
     gp.mll = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
 
-
 """ GPE: Update gradient of marginal log-likelihood """
 function update_mll_and_dmll!(gp::GPE,
     Kgrad::MatF64,
@@ -167,7 +166,7 @@ function update_mll_and_dmll!(gp::GPE,
     gp.dmll = Array{Float64}( noise + mean*n_mean_params + kern*n_kern_params)
 
     get_ααinvcKI!(ααinvcKI, gp.cK, gp.alpha)
-    
+
     i=1
     if noise
         gp.dmll[i] = exp(2.0*gp.logNoise)*trace(ααinvcKI)
@@ -182,8 +181,8 @@ function update_mll_and_dmll!(gp::GPE,
         end
     end
     if kern
-        for iparam in 1:n_kern_params
-            grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
+        for param in get_param_names(gp.k)
+            grad_slice!(Kgrad, gp.k, gp.X, gp.data, Val{param})
             gp.dmll[i] = vecdot(Kgrad,ααinvcKI)/2.0
             i+=1
         end
