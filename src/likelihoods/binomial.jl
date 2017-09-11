@@ -1,16 +1,18 @@
 """
-    # Description
-    Constructor for the Binomial likelihood
+# Description
+Constructor for the Binomial likelihood
 
-    p(y=k|f,n) = (n!/k!(n-k)!) × pᵏ(1-p)ⁿ⁻ᵏ, for k = 0,1,...,n
-    # Arguments:
-    * `θ::Float64`: probability of a success, where θ = exp(f)/(1+exp(f))
-    * `n::Int64`: number of trials
-    * `k::Int64`: number of successes
+    p(y=k|f) = (n!/k!(n-k)!) × θᵏ(1-θ)ⁿ⁻ᵏ, for k = 0,1,...,n
 
-    """
+where θ = exp(f)/(1+exp(f)), k is the number of successes
+out of `n` Bernoulli trials, and f is the latent Gaussian
+process
+    
+# Arguments:
+* `n::Int64`: (fixed) number of trials
+"""
 type BinLik <: Likelihood
-    n::Int64    #number of trials
+    n::Int64    # number of trials
     BinLik(n::Int64) = new(n)
 end
 

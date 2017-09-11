@@ -18,9 +18,9 @@ include("studentT.jl")
 include("poisson.jl")
 include("binomial.jl")
 
-#———————————————————————————————————————————————————————————————-
-#Priors
-
+##########
+# Priors #
+##########
 function set_priors!(lik::Likelihood, priors::Array)
     length(priors) == num_params(lik) || throw(ArgumentError("$(typeof(lik)) has exactly $(num_params(lik)) parameters"))
     lik.priors = priors
