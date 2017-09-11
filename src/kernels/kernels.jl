@@ -91,32 +91,42 @@ function multcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::KernelData)
     return cK
 end
 
-function grad_slice!{M1<:MatF64,M2<:MatF64,P<:Any}(dK::M1, k::Kernel, X::M2, data::KernelData, p::P)
-    dim = size(X,1)
+function grad_slice!{M1<:MatF64,M2<:MatF64,P<:Any}(dK::M1, k::Kernel, X::M2, θ::P, θp::Int, θdim::Int, data::KernelData)
+    Xdim = size(X,1)
     nobsv = size(X,2)
     @inbounds for j in 1:nobsv
         @simd for i in 1:j
-            dK[i,j] = dKij_dθ(k,X,data,i,j,p,dim)
+            dK[i,j] = dKij_dθp(k,X,Xdim,i,j,θ,θp,θdim,data)
             dK[j,i] = dK[i,j]
         end
     end
     return dK
 end
-function grad_slice!{M1<:MatF64,M2<:MatF64,P<:Any}(dK::M1, k::Kernel, X::M2, data::EmptyData, p::P)
-    dim = size(X,1)
+function grad_slice!(dK, k::Kernel, X, θ::Symbol, θp::Int, data::KernelData)
+    θdim = num_optim_params(get_param(k, θ))
+    θval = Val{θ}
+    grad_slice!(dK, k, X, θval, θp, θdim, data)
+end
+function grad_slice!{M1<:MatF64,M2<:MatF64,P<:Any}(dK::M1, k::Kernel, X::M2, θ::P, θp::Int, θdim::Int)
+    Xdim = size(X,1)
     nobsv = size(X,2)
     @inbounds for j in 1:nobsv
         @simd for i in 1:j
-            dK[i,j] = dKij_dθ(k,X,i,j,p,dim)
+            dK[i,j] = dKij_dθp(k,X,Xdim,i,j,θ,θp,θdim)
             dK[j,i] = dK[i,j]
         end
     end
     return dK
+end
+function grad_slice!(dK, k::Kernel, X, θ::Symbol, θp::Int)
+    θdim = num_optim_params(get_param(k, θ))
+    θval = Val{θ}
+    grad_slice!(dK, k, X, θval, θp, θdim)
 end
 
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients
 function grad_stack!{M<:MatF64}(stack::AbstractArray, k::Kernel, X::M, data::KernelData)
-    npars = num_params(k)
+    npars = num_optim_params(k)
     for p in 1:npars
         grad_slice!(view(stack,:,:,p),k,X,data,p)
     end
@@ -203,14 +213,33 @@ end
 ###################
 # Parameter Types #
 ###################
-@inline getindex(k::Kernel, i::Symbol) = get_value(get_params(k)[i])
-@inline get_optim_params(k::Kernel) = Float64[get_optim_val(par) for par in k.params]
+
+@inline get_params(k::Kernel) = k.params
+@inline get_param(k::Kernel, s::Symbol) = k.params[s]
+# @inline getindex(k::Kernel, i::Symbol) = get_value(get_params(k)[i])
+each_optim_par(k::Kernel) = OptimParamIterable(get_params(k))
+num_optim_params(k::Kernel) = length(OptimParamIterable(get_params(k)))
+@inline function get_optim_params(k::Kernel)
+    params = get_params(k)
+    pvec = Vector{Float64}(num_optim_params(k))
+    i = 1
+    for (θsym,θp) in each_optim_par(k)
+        θ = params[θsym]
+        pvec[i] = get_optim_val(θ, θp)
+        i += 1
+    end
+    return pvec
+end
 @inline get_param_names(k::Kernel) = keys(get_params(k))
 @inline num_params(k::Kernel) = length(get_params(k)) # only for univariate so far
-@inline function set_optim_params!(k::Kernel, hyp::Vector{Float64})
-    length(hyp) == num_params(k) || throw(ArgumentError("Kernel only has $(num_params(k)) parameters"))
-    for (i,par) in enumerate(get_params(k))
-        set_optim_val!(par, hyp[i])
+@inline function set_optim_params!(k::Kernel, hyp::VecF64)
+    params = get_params(k)
+    length(hyp) == num_optim_params(k) || throw(ArgumentError("Kernel only has $(num_params(k)) parameters"))
+    i = 1
+    for (θsym,θp) in each_optim_par(k)
+        θ = params[θsym]
+        set_optim_val!(θ, θp, hyp[i])
+        i += 1
     end
 end
 

@@ -31,19 +31,6 @@ function cov{M<:MatF64}(prodkern::ProdKernel, X::M, data::CompositeData)
     cov!(s, prodkern, X, data)
 end
 
-#=# This function is extremely inefficient=#
-#=function grad_kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})=#
-#=     dk = Array{Float64}( 0)=#
-#=      for k in prodkern.kerns=#
-#=          p = 1.0=#
-#=          for j in prodkern.kerns[find(k.!=prodkern.kerns)]=#
-#=              p = p.*cov(j, x, y)=#
-#=          end=#
-#=        append!(dk,grad_kern(k, x, y).*p) =#
-#=      end=#
-#=    dk=#
-#=end=#
-
 @inline function dKij_dθp{M<:MatF64}(prodkern::ProdKernel, X::M, i::Int, j::Int, p::Int, dim::Int)
     cKij = cov(prodkern, X[:,i], X[:,j])
     s=0

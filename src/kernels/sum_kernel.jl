@@ -25,15 +25,6 @@ function cov{M<:MatF64}(sumkern::SumKernel, X::M, data::CompositeData)
     cov!(s, sumkern, X, data)
 end
     
-
-function grad_kern{V1<:VecF64,V2<:VecF64}(sumkern::SumKernel, x::V1, y::V2)
-     dk = Array{Float64}(0)
-      for k in sumkern.kerns
-        append!(dk,grad_kern(k, x, y))
-      end
-    dk
-end
-
 @inline function dKij_dθp{M<:MatF64}(sumkern::SumKernel, X::M, i::Int, j::Int, p::Int, dim::Int)
     s=0
     for k in sumkern.kerns

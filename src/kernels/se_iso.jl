@@ -19,5 +19,5 @@ k(x,x') = σ²exp(-(x-x')ᵀ(x-x')/2ℓ²)
 end
 
 @inline metric(se::SEIso) = SqEuclidean()
-@inline cov(se::SEIso, r::Float64) = se[:σ2]*exp(-0.5*r/se[:ℓ2])
-@inline dk_dlθ(se::SEIso, θ::Type{Val{:ℓ2}}, r::Float64) = r/se[:ℓ2]*cov(se,r)
+@inline cov(se::SEIso, r::Float64) = get_value(se.params.σ2)*exp(-0.5*r/get_value(se.params.ℓ2))
+@inline dk_dlθ(se::SEIso, r::Float64, θ::Type{Val{:ℓ2}}) = r/get_value(se.params.ℓ2)*cov(se,r)

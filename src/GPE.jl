@@ -162,7 +162,7 @@ function update_mll_and_dmll!(gp::GPE,
                          size(Kgrad,1), size(Kgrad,2)))
     update_target!(gp)
     n_mean_params = num_params(gp.m)
-    n_kern_params = num_params(gp.k)
+    n_kern_params = num_optim_params(gp.k)
     gp.dmll = Array{Float64}( noise + mean*n_mean_params + kern*n_kern_params)
 
     get_ααinvcKI!(ααinvcKI, gp.cK, gp.alpha)
@@ -181,8 +181,8 @@ function update_mll_and_dmll!(gp::GPE,
         end
     end
     if kern
-        for param in get_param_names(gp.k)
-            grad_slice!(Kgrad, gp.k, gp.X, gp.data, Val{param})
+        for (θsym,θp) in each_optim_par(gp.k)
+            grad_slice!(Kgrad, gp.k, gp.X, θsym, θp, gp.data)
             gp.dmll[i] = vecdot(Kgrad,ααinvcKI)/2.0
             i+=1
         end

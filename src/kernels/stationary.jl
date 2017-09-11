@@ -1,74 +1,84 @@
 # Subtypes of Stationary must define the following functions:
 # metric(kernel::Stationary) = ::Metric
 # cov(k::Stationary, r::Float64) = ::Float64
-# grad_kern!
 
 @compat abstract type Stationary <:Kernel end
 @compat abstract type StationaryData <: KernelData end
 
-distance{M<:MatF64}(k::Stationary, X::M) = pairwise(metric(k), X)
-distance{M1<:MatF64,M2<:MatF64}(k::Stationary, X::M1, Y::M2) = pairwise(metric(k), X, Y)
-distance{V1<:VecF64,V2<:VecF64}(k::Stationary, x::V1, y::V2) = evaluate(metric(k), x, y)
+distance{M<:MatF64}(kern::Stationary, X::M) = pairwise(metric(kern), X)
+distance{M1<:MatF64,M2<:MatF64}(kern::Stationary, X::M1, Y::M2) = pairwise(metric(kern), X, Y)
+distance{V1<:VecF64,V2<:VecF64}(kern::Stationary, x::V1, y::V2) = evaluate(metric(kern), x, y)
 
-cov{V1<:VecF64,V2<:VecF64}(k::Stationary, x::V1, y::V2) = cov(k, distance(k, x, y))
+cov{V1<:VecF64,V2<:VecF64}(kern::Stationary, x::V1, y::V2) = cov(kern, distance(kern, x, y))
 
-function cov{M1<:MatF64,M2<:MatF64}(k::Stationary, x1::M1, x2::M2)
+function cov{M1<:MatF64,M2<:MatF64}(kern::Stationary, x1::M1, x2::M2)
     nobsv1 = size(x1, 2)
     nobsv2 = size(x2, 2)
-    R = distance(k, x1, x2)
+    R = distance(kern, x1, x2)
     for i in 1:nobsv1
         for j in 1:nobsv2
-            R[i,j] = cov(k, R[i,j])
+            R[i,j] = cov(kern, R[i,j])
         end
     end
     return R
 end
 
-function cov{M<:MatF64}(k::Stationary, X::M, data::StationaryData)
+function cov{M<:MatF64}(kern::Stationary, X::M, data::StationaryData)
     nobsv = size(X, 2)
-    R = copy(distance(k, X, data))
+    R = copy(distance(kern, X, data))
     for i in 1:nobsv
         for j in 1:i
-            @inbounds R[i,j] = cov(k, R[i,j])
+            @inbounds R[i,j] = cov(kern, R[i,j])
             @inbounds R[j,i] = R[i,j]
         end
     end
     return R
 end
-function cov!{M<:MatF64}(cK::MatF64, k::Stationary, X::M, data::StationaryData)
+function cov!{M<:MatF64,K<:Stationary}(cK::MatF64, kern::K, X::M, data::StationaryData)
     nobsv = size(X, 2)
-    R = distance(k, X, data)
+    R = distance(kern, X, data)
     for i in 1:nobsv
-        for j in 1:i
-            @inbounds cK[i,j] = cov(k, R[i,j])
-            @inbounds cK[j,i] = cK[i,j]
+        @inbounds for j in 1:i
+            cK[i,j] = cov(kern, R[i,j])
+            cK[j,i] = cK[i,j]
         end
     end
     return cK
 end
-function addcov!{M<:MatF64}(s::MatF64, k::Stationary, X::M, data::StationaryData)
+function addcov!{M<:MatF64}(s::MatF64, kern::Stationary, X::M, data::StationaryData)
     nobsv = size(X, 2)
-    R = distance(k, X, data)
+    R = distance(kern, X, data)
     for j in 1:nobsv
         @simd for i in 1:j
-            @inbounds s[i,j] += cov(k, R[i,j])
+            @inbounds s[i,j] += cov(kern, R[i,j])
             @inbounds s[j,i] = s[i,j]
         end
     end
     return R
 end
-function multcov!{M<:MatF64}(s::MatF64, k::Stationary, X::M, data::StationaryData)
+function multcov!{M<:MatF64}(s::MatF64, kern::Stationary, X::M, data::StationaryData)
     nobsv = size(X, 2)
-    R = distance(k, X, data)
+    R = distance(kern, X, data)
     for j in 1:nobsv
         @simd for i in 1:j
-            @inbounds s[i,j] *= cov(k, R[i,j])
+            @inbounds s[i,j] *= cov(kern, R[i,j])
             @inbounds s[j,i] = s[i,j]
         end
     end
     return R
 end
-@inline dk_dlθ(k::Stationary, θ::Type{Val{:σ2}}, r::Float64) = 2.0*cov(k,r)
+@inline dk_dlθ(kern::Stationary, r::Float64, θ::Type{Val{:σ2}}) = 2.0*cov(kern,r)
+@inline function dKij_dθp{M<:MatF64}(kern::Stationary, X::M, Xdim::Int64, 
+                 i::Int64, j::Int64, 
+                 θ::Type{Val{:σ2}}, θp::Int64, θdim::Int64, 
+                 data::KernelData)
+    return dk_dlθ(kern, distij(metric(kern),X,i,j,Xdim), θ)
+end
+@inline function dKij_dθp{M<:MatF64}(kern::Stationary, X::M, Xdim::Int64, 
+                 i::Int64, j::Int64, 
+                 θ::Type{Val{:σ2}}, θp::Int64, θdim::Int64)
+    return dk_dlθ(kern, distij(metric(kern),X,i,j,Xdim), θ)
+end
 
 # Isotropic Kernels
 
@@ -78,34 +88,46 @@ type IsotropicData <: StationaryData
     R::Matrix{Float64}
 end
 
-function KernelData{M<:MatF64}(k::Isotropic, X::M)
-     IsotropicData(distance(k, X))
+function KernelData{M<:MatF64}(kern::Isotropic, X::M)
+     IsotropicData(distance(kern, X))
 end
-function kernel_data_key{M<:MatF64}(k::Isotropic, X::M)
-    return @sprintf("%s_%s", "IsotropicData", metric(k))
+function kernel_data_key{M<:MatF64}(kern::Isotropic, X::M)
+    return @sprintf("%s_%s", "IsotropicData", metric(kern))
 end
 
-distance{M<:MatF64}(k::Isotropic, X::M, data::IsotropicData) = data.R
-function addcov!{M<:MatF64}(s::MatF64, k::Isotropic, X::M, data::IsotropicData)
+distance{M<:MatF64}(kern::Isotropic, X::M, data::IsotropicData) = data.R
+function addcov!{M<:MatF64}(s::MatF64, kern::Isotropic, X::M, data::IsotropicData)
     nobsv = size(X, 2)
-    R = distance(k, X, data)
+    R = distance(kern, X, data)
     for j in 1:nobsv
         @simd for i in 1:j
-            @inbounds s[i,j] += cov(k, R[i,j])
+            @inbounds s[i,j] += cov(kern, R[i,j])
             @inbounds s[j,i] = s[i,j]
         end
     end
     return R
 end
-@inline function dKij_dθ{M<:MatF64}(kern::Isotropic,X::M,i::Int,j::Int,p,dim::Int)
-    return dk_dlθ(kern, p, distij(metric(kern),X,i,j,dim))
+@inline function dKij_dθp{M<:MatF64}(kern::Isotropic,X::M,Xdim::Int,
+                                     i::Int,j::Int,
+                                     θ,θp::Int,θdim::Int)
+    return dk_dlθ(kern, distij(metric(kern),X,i,j,Xdim), θ)
 end
-@inline function dKij_dθ{M<:MatF64}(kern::Isotropic,X::M,data::IsotropicData,i::Int,j::Int,p,dim::Int)
-    return dk_dlθ(kern, p, data.R[i,j])
+@inline function dKij_dθp{M<:MatF64}(kern::Isotropic,X::M,Xdim::Int,
+                                     i::Int,j::Int,
+                                     θ,θp::Int,θdim::Int,
+                                     data::IsotropicData)
+    return dk_dlθ(kern, data.R[i,j], θ)
 end
-function grad_kern{V1<:VecF64,V2<:VecF64}(kern::Isotropic, x::V1, y::V2)
-    dist=distance(kern,x,y)
-    return [dk_dθp(kern,dist,k) for k in 1:num_params(kern)]
+@inline function dKij_dθp{M<:MatF64}(kern::Isotropic, X::M, Xdim::Int64, 
+                 i::Int64, j::Int64, 
+                 θ::Type{Val{:σ2}}, θp::Int64, θdim::Int64)
+    return dk_dlθ(kern, distij(metric(kern),X,i,j,Xdim), θ)
+end
+@inline function dKij_dθp{M<:MatF64}(kern::Isotropic, X::M, Xdim::Int64, 
+                 i::Int64, j::Int64, 
+                 θ::Type{Val{:σ2}}, θp::Int64, θdim::Int64, 
+                 data::IsotropicData)
+    return dk_dlθ(kern, data.R[i,j], θ)
 end
 
 # StationaryARD Kernels
@@ -117,7 +139,7 @@ type StationaryARDData <: StationaryData
 end
 
 # May need to customized in subtypes
-function KernelData{M<:MatF64}(k::StationaryARD, X::M)
+function KernelData{M<:MatF64}(kern::StationaryARD, X::M)
     dim, nobsv = size(X)
     dist_stack = Array{Float64}( nobsv, nobsv, dim)
     for d in 1:dim
@@ -126,15 +148,15 @@ function KernelData{M<:MatF64}(k::StationaryARD, X::M)
     end
     StationaryARDData(dist_stack)
 end
-kernel_data_key{M<:MatF64}(k::StationaryARD, X::M) = @sprintf("%s_%s", "StationaryARDData", metric(k))
+kernel_data_key{M<:MatF64}(kern::StationaryARD, X::M) = @sprintf("%s_%s", "StationaryARDData", metric(kern))
 
-function distance{M<:MatF64}(k::StationaryARD, X::M, data::StationaryARDData)
+function distance{M<:MatF64}(kern::StationaryARD, X::M, data::StationaryARDData)
     ### This commented section is slower than recalculating the distance from scratch...
     # nobsv = size(data.dist_stack,1)
-    # d = length(k.ℓ2)
-    # weighted = broadcast(/, data.dist_stack, reshape(k.ℓ2, (1,1,d)))
+    # d = length(kern.ℓ2)
+    # weighted = broadcast(/, data.dist_stack, reshape(kern.ℓ2, (1,1,d)))
     # return reshape(sum(weighted, 3), (nobsv, nobsv))
-    return pairwise(metric(k), X)
+    return pairwise(metric(kern), X)
 end
 @inline distijk{M<:MatF64}(dist::SqEuclidean,X::M,i::Int,j::Int,k::Int)=(X[k,i]-X[k,j])^2
 @inline function distij{M<:MatF64}(dist::SqEuclidean,X::M,i::Int,j::Int,dim::Int)
