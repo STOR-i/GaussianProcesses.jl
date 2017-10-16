@@ -1,5 +1,5 @@
 module GaussianProcesses
-using Optim, PDMats, Distances, FastGaussQuadrature
+using Optim, PDMats, Distances, FastGaussQuadrature, Klara
 using Compat
 using RecipesBase
 import Compat: view, cholfact!
@@ -30,7 +30,7 @@ include("chol_utils.jl")
 include("GP.jl")
 include("GPE.jl")
 include("GPMC.jl")
-include("mcmc.jl")
+include("mcmc2.jl")
 include("optimize.jl")
 include("plot.jl")
 
