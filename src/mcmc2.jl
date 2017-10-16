@@ -10,7 +10,7 @@ A function for running a variety of MCMC algorithms for estimating the GP hyperp
     * `thin::Int`: Thin factor
 """ ->
 function mcmc(gp::GPBase;
-              sampler::Klara.MCSampler=Klara.MALA(0.1),
+              sampler::Klara.MCSampler=Klara.MALA(),
               nIter::Int = 1000,
               burnin::Int = 0,
               thin::Int = 1)
