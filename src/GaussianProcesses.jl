@@ -30,7 +30,7 @@ include("chol_utils.jl")
 include("GP.jl")
 include("GPE.jl")
 include("GPMC.jl")
-include("mcmc2.jl")
+include("mcmc.jl")
 include("optimize.jl")
 include("plot.jl")
 
