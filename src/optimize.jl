@@ -30,11 +30,15 @@ end
 function get_optim_target(gp::GPBase; params_kwargs...)
     
     function ltarget(hyp::Vector{Float64})
+        prev = get_params(gp; params_kwargs...)
         try
             set_params!(gp, hyp; params_kwargs...)
             update_target!(gp)
             return -gp.target
         catch err
+            # reset parameters to remove any NaNs
+            set_params!(gp, prev; params_kwargs...)
+            
             if !all(isfinite.(hyp))
                 println(err)
                 return Inf
@@ -51,12 +55,15 @@ function get_optim_target(gp::GPBase; params_kwargs...)
     end
 
     function ltarget_and_dltarget!(hyp::Vector{Float64}, grad::Vector{Float64})
+        prev = get_params(gp; params_kwargs...)
         try
             set_params!(gp, hyp; params_kwargs...)
             update_target_and_dtarget!(gp; params_kwargs...)
             grad[:] = -gp.dtarget
             return -gp.target
         catch err
+            # reset parameters to remove any NaNs
+            set_params!(gp, prev; params_kwargs...)
             if !all(isfinite.(hyp))
                 println(err)
                 return Inf
