@@ -24,6 +24,7 @@ end
 function test_gpe_optim_params_options(mean::Mean, kern::Kernel, noise::Float64, X::Matrix{Float64}, y::Vector{Float64})
     gp = GPE(X, y, mean, kern, noise)
     init_params = get_params(gp; mean=true, kern=true, noise=true)
+    
     # Check mean fixed
     mean_params = get_params(gp; mean=true, kern=false, noise=false)
     optimize!(gp; mean=false, kern=true, noise=true)
@@ -47,9 +48,10 @@ end
 function test_gpmc_optim_params_options(mean::Mean, kern::Kernel, lik::Likelihood, X::Matrix{Float64}, y::Vector{<:Real})
     gp = GPMC(X, y, mean, kern, lik)
     init_params = get_params(gp; mean=true, kern=true, lik=true)
+    
     # Check mean fixed
     mean_params = get_params(gp.m)
-    optimize!(gp; mean=false, kern=true, lik=true, show_trace=true)
+    optimize!(gp; mean=false, kern=true, lik=true)
     @test mean_params == get_params(mean)
 
     set_params!(gp, init_params; mean=true, kern=true, lik=true)
@@ -58,7 +60,7 @@ function test_gpmc_optim_params_options(mean::Mean, kern::Kernel, lik::Likelihoo
     kern_params = get_params(gp.k)
     optimize!(gp; mean=true, kern=false, lik=true)
     @test kern_params == get_params(kern)
-
+    
     set_params!(gp, init_params; mean=true, kern=true, lik=true)
 
     # Check lik fixed
@@ -100,8 +102,6 @@ lik = BernLik();  # Bernoulli likelihood for binary data {0,1}
 test_gpmc_optim(mean, kern, lik, X, y)
 test_gpmc_optim_params_options(mean, kern, lik, X, y)
 
-rq = RQ(1.0, 1.0, 1.0)
-test_fixed(rq, x, y)
 
 # update_target_and_dtarget!(gp; lik=true, mean=false, kern=true)
 
