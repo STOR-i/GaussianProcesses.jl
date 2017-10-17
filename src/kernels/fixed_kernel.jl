@@ -84,7 +84,9 @@ function addcov!{M<:AbstractArray{Float64,2}}(
     return addcov!(cK, fk.kern, X, data)
 end
 
-#Priors
+##########
+# Priors #
+##########
 
 function get_priors(fk::FixedKern)
     if isempty(fk.kern.priors) return []

@@ -4,7 +4,8 @@
 # Description
 Constructor for the isotropic Matern 1/2 kernel (covariance)
 
-k(x,x') = σ²exp(-d/ℓ), where d=|x-x'|
+    k(x,x') = σ²exp(-d/ℓ), where d=|x-x'|
+
 # Arguments:
 * `ll::Float64`: Log of the length scale ℓ
 * `lσ::Float64`: Log of the signal standard deviation σ
