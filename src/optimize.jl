@@ -18,7 +18,7 @@ get_params_kwargs{T<:Real}(::Type{GPMC{T}}; kwargs...) = delete!(Dict(kwargs), :
     """ 
 function optimize!(gp::GPBase; method=LBFGS(), mean::Bool=true, kern::Bool=true, noise::Bool=true, lik::Bool=true, kwargs...)
     params_kwargs = get_params_kwargs(typeof(gp); mean=mean, kern=kern, noise=noise, lik=lik)
-    println(params_kwargs)
+    # println(params_kwargs)
     func = get_optim_target(gp; params_kwargs...)
     init = get_params(gp; params_kwargs...)  # Initial hyperparameter values
     results = optimize(func, init; method=method, kwargs...)     # Run optimizer
