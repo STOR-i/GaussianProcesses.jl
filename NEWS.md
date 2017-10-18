@@ -1,6 +1,6 @@
 # News
 
-## Version 0.5.0 (2017-08-21)
+## Version 0.5.0 (2017-10-18)
 * Introduced new likelihoods for fitting GPs to non-Gaussian data
 * Introduced MCMC routine for sampling
 * Created notebooks
