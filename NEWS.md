@@ -5,6 +5,7 @@
 * Introduced MCMC routine for sampling
 * Created notebooks
 * Changed plotting functions to use [Plots.jl](https://github.com/JuliaPlots/Plots.jl)
+* Updated Julia version requirement to 0.6
 
 ## Version 0.4.0 (2016-10-04)
 * Julia requirement moved up to version 0.5
