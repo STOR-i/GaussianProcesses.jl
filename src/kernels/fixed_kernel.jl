@@ -89,9 +89,10 @@ end
 ##########
 
 function get_priors(fk::FixedKern)
-    if isempty(fk.kern.priors) return []
+    free_priors = get_priors(fk.kern)
+    if isempty(free_priors) return []
     else
-        return get_priors(fk.kern)[fk.free]
+        return free_priors[fk.free]
     end
 end
 
