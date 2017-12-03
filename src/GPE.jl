@@ -48,7 +48,15 @@ type GPE <: GPBase
     end
     
     GPE(; m=MeanZero(), k=SE(0.0, 0.0), logNoise=-2.0) =  new(m, k, logNoise, 0)
-    
+    GPE(m::Mean, k::Kernel, logNoise::Float64, nobsv::Int,
+        X::MatF64, y::Vector{Float64},
+        data::KernelData, dim::Int,
+        cK::AbstractPDMat, alpha::Vector{Float64},
+        mll::Float64, target::Float64,
+        dmll::Vector{Float64}, dtarget::Vector{Float64}) = new(
+                m, k, logNoise, nobsv,
+                X, y, data, dim, cK, alpha,
+                mll, target, dmll, dtarget)
 end
 
 GP(X::Matrix{Float64}, y::Vector{Float64}, m::Mean, k::Kernel, logNoise::Float64=-2.0) = GPE(X, y, m, k, logNoise)
