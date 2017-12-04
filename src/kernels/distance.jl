@@ -64,6 +64,7 @@ end
 @inline distijk{M<:MatF64}(dist::WeightedSqEuclidean,X::M,i::Int,j::Int,k::Int)=_WeightedSqEuclidean_ijk(dist.weights,X,i,j,k)
 @inline distijk{M1<:MatF64,M2<:MatF64}(dist::WeightedSqEuclidean,X1::M1,X2::M2,i::Int,j::Int,k::Int)=_WeightedSqEuclidean_ijk(dist.weights,X1,X2,i,j,k)
 @inline distij{M<:MatF64}(dist::WeightedSqEuclidean,X::M,i::Int,j::Int,dim::Int)=_WeightedSqEuclidean_ij(dist.weights,X,i,j,dim)
+@inline distij{M1<:MatF64,M2<:MatF64}(dist::WeightedSqEuclidean,X1::M1,X2::M2,i::Int,j::Int,dim::Int)=_WeightedSqEuclidean_ij(dist.weights,X1,X2,i,j,dim)
 
 # Weighted Euclidean
 @inline dist2ijk{M<:MatF64}(dist::WeightedEuclidean,X::M,i::Int,j::Int,k::Int)=_WeightedSqEuclidean_ijk(dist.weights,X,i,j,k)

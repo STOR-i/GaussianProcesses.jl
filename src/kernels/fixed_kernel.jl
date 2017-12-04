@@ -69,10 +69,10 @@ cov!(cK::MatF64, fk::FixedKern, args...) = cov!(cK, fk.kern, args...)
 cov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, fk::FixedKern, X₁::M1, X₂::M2) = cov!(cK, fk.kern, k, X₁, X₂)
 cov!{M<:MatF64}(cK::MatF64, fk::FixedKern, X::M, data::EmptyData)=cov!(cK, fk.kern,X,data)
 cov!{M<:MatF64}(cK:: MatF64,fk::FixedKern,X::M) = cov!(cK, fk.kern, X)
-addcov!(s, fk::FixedKern, args...) = addcov!(s, fk.kern, args...)
 addcov!{M<:MatF64}(cK::MatF64, fk::FixedKern, X::M) = addcov!(cK, fk.kern, X)
-multcov!(s, fk::FixedKern, args...) = multcov!(s, fk.kern, args...)
+addcov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, fk::FixedKern, X1::M1, X2::M2) = addcov!(cK, fk.kern, X1, X2)
 multcov!{M<:MatF64}(cK::MatF64, fk::FixedKern, X::M) = multcov!(cK, fk.kern,X)
+multcov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, fk::FixedKern, X1::M1, X2::M2) = multcov!(cK, fk.kern,X1, X2)
 function multcov!{M<:AbstractArray{Float64,2}}(
     cK::AbstractArray{Float64,2}, 
     fk::FixedKern, X::M, data::KernelData)
