@@ -19,61 +19,116 @@ ard_weights(kernel::Stationary{WeightedEuclidean}) = kernel.iℓ2
 
 cov{V1<:VecF64,V2<:VecF64}(k::Stationary, x::V1, y::V2) = cov(k, distance(k, x, y))
 
-function cov{M1<:MatF64,M2<:MatF64}(k::Stationary, x1::M1, x2::M2)
-    nobsv1 = size(x1, 2)
-    nobsv2 = size(x2, 2)
-    R = distance(k, x1, x2)
+function cov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Stationary, X1::M1, X2::M2)
+    dim1, nobsv1 = size(X1)
+    dim2, nobsv2 = size(X2)
+    dim1==dim2 || throw(ArgumentError("X1 and X2 must have same dimension"))
+    nobsv1==size(cK,1) || throw(ArgumentError("X1 and cK incompatible nobsv"))
+    nobsv2==size(cK,2) || throw(ArgumentError("X2 and cK incompatible nobsv"))
+    dim = dim1
+    met = metric(k)
     for i in 1:nobsv1
         for j in 1:nobsv2
-            R[i,j] = cov(k, R[i,j])
-        end
-    end
-    return R
-end
-
-function cov{M<:MatF64}(k::Stationary, X::M, data::StationaryData)
-    nobsv = size(X, 2)
-    R = copy(distance(k, X, data))
-    for i in 1:nobsv
-        for j in 1:i
-            @inbounds R[i,j] = cov(k, R[i,j])
-            @inbounds R[j,i] = R[i,j]
-        end
-    end
-    return R
-end
-function cov!{M<:MatF64}(cK::MatF64, k::Stationary, X::M, data::StationaryData)
-    nobsv = size(X, 2)
-    R = distance(k, X, data)
-    for i in 1:nobsv
-        for j in 1:i
-            @inbounds cK[i,j] = cov(k, R[i,j])
-            @inbounds cK[j,i] = cK[i,j]
+            cK[i,j] = cov(k, distij(met, X1, X2, i, j, dim))
         end
     end
     return cK
 end
-function addcov!{M<:MatF64}(s::MatF64, k::Stationary, X::M, data::StationaryData)
-    nobsv = size(X, 2)
-    R = distance(k, X, data)
-    for j in 1:nobsv
-        @simd for i in 1:j
-            @inbounds s[i,j] += cov(k, R[i,j])
-            @inbounds s[j,i] = s[i,j]
+function addcov!{M0<:MatF64,M1<:MatF64,M2<:MatF64}(cK::M0, k::Stationary, X1::M1, X2::M2)
+    dim1, nobsv1 = size(X1)
+    dim2, nobsv2 = size(X2)
+    dim1==dim2 || throw(ArgumentError("X1 and X2 must have same dimension"))
+    nobsv1==size(cK,1) || throw(ArgumentError("X1 and cK incompatible nobsv"))
+    nobsv2==size(cK,2) || throw(ArgumentError("X2 and cK incompatible nobsv"))
+    dim = dim1
+    met = metric(k)
+    for i in 1:nobsv1
+        for j in 1:nobsv2
+            cK[i,j] += cov(k, distij(met, X1, X2, i, j, dim))
         end
     end
-    return R
+    return cK
 end
-function multcov!{M<:MatF64}(s::MatF64, k::Stationary, X::M, data::StationaryData)
-    nobsv = size(X, 2)
-    R = distance(k, X, data)
-    for j in 1:nobsv
-        @simd for i in 1:j
-            @inbounds s[i,j] *= cov(k, R[i,j])
-            @inbounds s[j,i] = s[i,j]
+function multcov!{M0<:MatF64,M1<:MatF64,M2<:MatF64}(cK::M0, k::Stationary, X1::M1, X2::M2)
+    dim1, nobsv1 = size(X1)
+    dim2, nobsv2 = size(X2)
+    dim1==dim2 || throw(ArgumentError("X1 and X2 must have same dimension"))
+    nobsv1==size(cK,1) || throw(ArgumentError("X1 and cK incompatible nobsv"))
+    nobsv2==size(cK,2) || throw(ArgumentError("X2 and cK incompatible nobsv"))
+    dim = dim1
+    met = metric(k)
+    for i in 1:nobsv1
+        for j in 1:nobsv2
+            cK[i,j] *= cov(k, distij(met, X1, X2, i, j, dim))
         end
     end
-    return R
+    return cK
+end
+function cov(k::Stationary, X1::MatF64, X2::MatF64)
+    nobsv1 = size(X1, 2)
+    nobsv2 = size(X2, 2)
+    cK = Array{Float64}(nobsv1, nobsv2)
+    cov!(cK, k, X1, X2)
+    return cK
+end
+
+function cov!{M<:MatF64}(cK::MatF64, k::Stationary, X::M)
+    dim, nobsv = size(X)
+    nobsv==size(cK,1) || throw(ArgumentError("X and cK incompatible nobsv"))
+    nobsv==size(cK,2) || throw(ArgumentError("X and cK incompatible nobsv"))
+    met = metric(k)
+    @inbounds for i in 1:nobsv
+        for j in 1:i
+            cK[i,j] = cov(k, distij(met, X, i, j, dim))
+            cK[j,i] = cK[i,j]
+        end
+    end
+    return cK
+end
+function cov!(cK::MatF64, k::Stationary, X::MatF64, data::StationaryData)
+    cov!(cK, k, X)
+end
+function cov(k::Stationary, X::MatF64, data::StationaryData)
+    nobsv = size(X, 2)
+    cK = Matrix{Float64}(nobsv, nobsv)
+    cov!(cK, k, X, data)
+end
+function cov{M<:MatF64}(k::Stationary, X::M)
+    nobsv = size(X, 2)
+    cK = Matrix{Float64}(nobsv, nobsv)
+    cov!(cK, k, X)
+end
+function addcov!{M<:MatF64}(cK::MatF64, k::Stationary, X::M)
+    dim, nobsv = size(X)
+    nobsv==size(cK,1) || throw(ArgumentError("X and cK incompatible nobsv"))
+    nobsv==size(cK,2) || throw(ArgumentError("X and cK incompatible nobsv"))
+    met = metric(k)
+    @inbounds for i in 1:nobsv
+        for j in 1:i
+            cK[i,j] += cov(k, distij(met, X, i, j, dim))
+            cK[j,i] = cK[i,j]
+        end
+    end
+    return cK
+end
+function addcov!(cK::MatF64, k::Stationary, X::MatF64, d::StationaryData)
+    addcov!(cK, k, X)
+end
+function multcov!{M<:MatF64}(cK::MatF64, k::Stationary, X::M)
+    dim, nobsv = size(X)
+    nobsv==size(cK,1) || throw(ArgumentError("X and cK incompatible nobsv"))
+    nobsv==size(cK,2) || throw(ArgumentError("X and cK incompatible nobsv"))
+    met = metric(k)
+    @inbounds for i in 1:nobsv
+        for j in 1:i
+            cK[i,j] *= cov(k, distij(met, X, i, j, dim))
+            cK[j,i] = cK[i,j]
+        end
+    end
+    return cK
+end
+function multcov!(cK::MatF64, k::Stationary, X::MatF64, data::StationaryData)
+    multcov!(cK, k, X)
 end
 dk_dlσ(k::Stationary, r::Float64) = 2.0*cov(k,r)
 
@@ -92,16 +147,16 @@ function kernel_data_key{M<:MatF64}(k::Isotropic, X::M)
     return @sprintf("%s_%s", "IsotropicData", metric(k))
 end
 
-function addcov!{M<:MatF64}(s::MatF64, k::Isotropic, X::M, data::IsotropicData)
-    nobsv = size(X, 2)
-    R = distance(k, X, data)
+function addcov!{M<:MatF64}(cK::MatF64, k::Isotropic, X::M, data::IsotropicData)
+    dim, nobsv = size(X)
+    met = metric(k)
     for j in 1:nobsv
         @simd for i in 1:j
-            @inbounds s[i,j] += cov(k, R[i,j])
-            @inbounds s[j,i] = s[i,j]
+            @inbounds cK[i,j] += cov(k, distij(met, X, i, j, dim))
+            @inbounds cK[j,i] = cK[i,j]
         end
     end
-    return R
+    return cK
 end
 @inline function dKij_dθp{M<:MatF64}(kern::Isotropic,X::M,i::Int,j::Int,p::Int,dim::Int)
     return dk_dθp(kern, distij(metric(kern),X,i,j,dim),p)
