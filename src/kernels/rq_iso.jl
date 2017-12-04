@@ -10,7 +10,7 @@ k(x,x') = σ²(1+(x-x')ᵀ(x-x')/2αℓ²)^{-α}
 * `lσ::Float64`: Log of the signal standard deviation σ
 * `lα::Float64`: Log of shape parameter α
 """ ->
-type RQIso <: Isotropic
+type RQIso <: Isotropic{SqEuclidean}
     ℓ2::Float64      # Length scale 
     σ2::Float64      # Signal std
     α::Float64       # shape parameter
@@ -27,7 +27,6 @@ get_params(rq::RQIso) = Float64[log(rq.ℓ2)/2.0, log(rq.σ2)/2.0, log(rq.α)]
 get_param_names(rq::RQIso) = [:ll, :lσ, :lα]
 num_params(rq::RQIso) = 3
 
-metric(rq::RQIso) = SqEuclidean()
 cov(rq::RQIso, r::Float64) = rq.σ2*(1.0+r/(2.0*rq.α*rq.ℓ2))^(-rq.α)
 
 @inline dk_dll(rq::RQIso, r::Float64) = rq.σ2*(r/rq.ℓ2)*(1.0+r/(2.0*rq.α*rq.ℓ2))^(-rq.α-1.0) # dK_d(log ℓ)dK_dℓ

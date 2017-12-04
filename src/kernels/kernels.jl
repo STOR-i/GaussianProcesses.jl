@@ -209,6 +209,7 @@ function prior_gradlogpdf(k::Kernel)
 end
 
 include("stationary.jl")
+include("distance.jl")
 include("lin.jl")               # Linear covariance function
 include("se.jl")                # Squared exponential covariance function
 include("rq.jl")                # Rational quadratic covariance function

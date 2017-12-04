@@ -1,14 +1,21 @@
 # Subtypes of Stationary must define the following functions:
-# metric(kernel::Stationary) = ::Metric
 # cov(k::Stationary, r::Float64) = ::Float64
 # grad_kern!
 
-@compat abstract type Stationary <:Kernel end
+@compat abstract type Stationary{D} <: Kernel where D <: Distances.SemiMetric end
 @compat abstract type StationaryData <: KernelData end
 
-distance{M<:MatF64}(k::Stationary, X::M) = pairwise(metric(k), X)
-distance{M1<:MatF64,M2<:MatF64}(k::Stationary, X::M1, Y::M2) = pairwise(metric(k), X, Y)
-distance{V1<:VecF64,V2<:VecF64}(k::Stationary, x::V1, y::V2) = evaluate(metric(k), x, y)
+function metric(kernel::Stationary{D}) where D <: Distances.SemiMetric
+    return D()
+end
+function metric(kernel::Stationary{WeightedSqEuclidean})
+    return WeightedSqEuclidean(ard_weights(kernel))
+end
+function metric(kernel::Stationary{WeightedEuclidean})
+    return WeightedEuclidean(ard_weights(kernel))
+end
+ard_weights(kernel::Stationary{WeightedSqEuclidean}) = kernel.iℓ2
+ard_weights(kernel::Stationary{WeightedEuclidean}) = kernel.iℓ2
 
 cov{V1<:VecF64,V2<:VecF64}(k::Stationary, x::V1, y::V2) = cov(k, distance(k, x, y))
 
@@ -72,7 +79,7 @@ dk_dlσ(k::Stationary, r::Float64) = 2.0*cov(k,r)
 
 # Isotropic Kernels
 
-@compat abstract type Isotropic <: Stationary end
+@compat abstract type Isotropic{D} <: Stationary{D} end
 
 type IsotropicData <: StationaryData
     R::Matrix{Float64}
@@ -85,7 +92,6 @@ function kernel_data_key{M<:MatF64}(k::Isotropic, X::M)
     return @sprintf("%s_%s", "IsotropicData", metric(k))
 end
 
-distance{M<:MatF64}(k::Isotropic, X::M, data::IsotropicData) = data.R
 function addcov!{M<:MatF64}(s::MatF64, k::Isotropic, X::M, data::IsotropicData)
     nobsv = size(X, 2)
     R = distance(k, X, data)
@@ -110,7 +116,7 @@ end
 
 # StationaryARD Kernels
 
-@compat abstract type StationaryARD <: Stationary end
+@compat abstract type StationaryARD{D} <: Stationary{D} end
 
 type StationaryARDData <: StationaryData
     dist_stack::Array{Float64, 3}
@@ -128,43 +134,3 @@ function KernelData{M<:MatF64}(k::StationaryARD, X::M)
 end
 kernel_data_key{M<:MatF64}(k::StationaryARD, X::M) = @sprintf("%s_%s", "StationaryARDData", metric(k))
 
-function distance{M<:MatF64}(k::StationaryARD, X::M, data::StationaryARDData)
-    ### This commented section is slower than recalculating the distance from scratch...
-    # nobsv = size(data.dist_stack,1)
-    # d = length(k.ℓ2)
-    # weighted = broadcast(/, data.dist_stack, reshape(k.ℓ2, (1,1,d)))
-    # return reshape(sum(weighted, 3), (nobsv, nobsv))
-    return pairwise(metric(k), X)
-end
-@inline distijk{M<:MatF64}(dist::SqEuclidean,X::M,i::Int,j::Int,k::Int)=(X[k,i]-X[k,j])^2
-@inline function distij{M<:MatF64}(dist::SqEuclidean,X::M,i::Int,j::Int,dim::Int)
-    s = 0.0
-    @inbounds @simd for k in 1:dim
-        s += distijk(dist,X,i,j,k)
-    end
-    return s
-end
-@inline distijk{M<:MatF64}(dist::Euclidean,X::M,i::Int,j::Int,k::Int)=(X[k,i]-X[k,j])^2
-@inline function distij{M<:MatF64}(dist::Euclidean,X::M,i::Int,j::Int,dim::Int)
-    s = 0.0
-    @inbounds @simd for k in 1:dim
-        s += distijk(dist,X,i,j,k)
-    end
-    return √s
-end
-@inline distijk{M<:MatF64}(dist::WeightedSqEuclidean,X::M,i::Int,j::Int,k::Int)=(X[k,i]-X[k,j])^2*dist.weights[k]
-@inline function distij{M<:MatF64}(dist::WeightedSqEuclidean,X::M,i::Int,j::Int,dim::Int)
-    s = 0.0
-    @inbounds @simd for k in 1:dim
-        s += distijk(dist,X,i,j,k)
-    end
-    return s
-end
-@inline dist2ijk{M<:MatF64}(dist::WeightedEuclidean,X::M,i::Int,j::Int,k::Int)=(X[k,i]-X[k,j])^2*dist.weights[k]
-@inline function distij{M<:MatF64}(dist::WeightedEuclidean,X::M,i::Int,j::Int,dim::Int)
-    s = 0.0
-    @inbounds @simd for k in 1:dim
-        s += dist2ijk(dist,X,i,j,k)
-    end
-    return √s
-end

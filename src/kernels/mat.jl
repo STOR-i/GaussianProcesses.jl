@@ -1,6 +1,6 @@
 # A class of Matern isotropic functions including the Matrern 3/2 and 5/2, where d= 3 or 5. Also the exponential function, where d=1
-@compat abstract type MaternIso <: Isotropic end
-@compat abstract type MaternARD <: StationaryARD end
+@compat abstract type MaternIso <: Isotropic{Euclidean} end
+@compat abstract type MaternARD <: StationaryARD{WeightedEuclidean} end
 
 @inline function dKij_dθp{M<:MatF64}(mat::MaternARD, X::M, i::Int, j::Int, p::Int, dim::Int)
     r=distij(metric(mat),X,i,j,dim)

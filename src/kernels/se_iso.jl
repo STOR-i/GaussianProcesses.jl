@@ -7,7 +7,7 @@ k(x,x') = σ²exp(-(x-x')ᵀ(x-x')/2ℓ²)
 * `ll::Float64`: Log of the length scale ℓ
 * `lσ::Float64`: Log of the signal standard deviation σ
 """
-type SEIso <: Isotropic
+type SEIso <: Isotropic{SqEuclidean}
     ℓ2::Float64      # Length scale
     σ2::Float64      # Signal std
     priors::Array          # Array of priors for kernel parameters
@@ -23,7 +23,6 @@ get_params(se::SEIso) = Float64[log(se.ℓ2)/2.0, log(se.σ2)/2.0]
 get_param_names(se::SEIso) = [:ll, :lσ]
 num_params(se::SEIso) = 2
 
-metric(se::SEIso) = SqEuclidean()
 cov(se::SEIso, r::Float64) = se.σ2*exp(-0.5*r/se.ℓ2)
 
 @inline dk_dll(se::SEIso, r::Float64) = r/se.ℓ2*cov(se,r)
