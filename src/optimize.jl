@@ -83,7 +83,8 @@ function get_optim_target(gp::GPBase; params_kwargs...)
         ltarget_and_dltarget!(grad::Vector{Float64}, hyp::Vector{Float64})
     end
 
-    func = OnceDifferentiable(ltarget, dltarget!, ltarget_and_dltarget!)
+    xinit = get_params(gp; params_kwargs...)
+    func = OnceDifferentiable(ltarget, dltarget!, ltarget_and_dltarget!, xinit)
     return func
 end
 
