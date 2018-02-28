@@ -23,49 +23,49 @@ end
 
 function test_gpe_optim_params_options(mean::Mean, kern::Kernel, noise::Float64, X::Matrix{Float64}, y::Vector{Float64})
     gp = GPE(X, y, mean, kern, noise)
-    init_params = get_params(gp; mean=true, kern=true, noise=true)
+    init_params = get_params(gp; domean=true, kern=true, noise=true)
     
     # Check mean fixed
-    mean_params = get_params(gp; mean=true, kern=false, noise=false)
-    optimize!(gp; mean=false, kern=true, noise=true)
-    @test mean_params == get_params(gp; mean=true, kern=false, noise=false)
+    mean_params = get_params(gp; domean=true, kern=false, noise=false)
+    optimize!(gp; domean=false, kern=true, noise=true)
+    @test mean_params == get_params(gp; domean=true, kern=false, noise=false)
 
-    set_params!(gp, init_params; mean=true, kern=true, noise=true)
+    set_params!(gp, init_params; domean=true, kern=true, noise=true)
     
     # Check kern fixed
-    kern_params = get_params(gp; mean=false, kern=true, noise=false)
-    optimize!(gp; mean=true, kern=false, noise=true)
-    @test kern_params == get_params(gp; mean=false, kern=true, noise=false)
+    kern_params = get_params(gp; domean=false, kern=true, noise=false)
+    optimize!(gp; domean=true, kern=false, noise=true)
+    @test kern_params == get_params(gp; domean=false, kern=true, noise=false)
 
-    set_params!(gp, init_params; mean=true, kern=true, noise=true)
+    set_params!(gp, init_params; domean=true, kern=true, noise=true)
 
     # Check noise fixed
-    noise_params = get_params(gp; mean=false, kern=false, noise=true)
-    optimize!(gp; mean=true, kern=true, noise=false)
-    @test noise_params == get_params(gp; mean=false, kern=false, noise=true)
+    noise_params = get_params(gp; domean=false, kern=false, noise=true)
+    optimize!(gp; domean=true, kern=true, noise=false)
+    @test noise_params == get_params(gp; domean=false, kern=false, noise=true)
 end
 
 function test_gpmc_optim_params_options(mean::Mean, kern::Kernel, lik::Likelihood, X::Matrix{Float64}, y::Vector{<:Real})
     gp = GPMC(X, y, mean, kern, lik)
-    init_params = get_params(gp; mean=true, kern=true, lik=true)
+    init_params = get_params(gp; domean=true, kern=true, lik=true)
     
     # Check mean fixed
     mean_params = get_params(gp.m)
-    optimize!(gp; mean=false, kern=true, lik=true)
+    optimize!(gp; domean=false, kern=true, lik=true)
     @test mean_params == get_params(mean)
 
-    set_params!(gp, init_params; mean=true, kern=true, lik=true)
+    set_params!(gp, init_params; domean=true, kern=true, lik=true)
     
     # Check kern fixed
     kern_params = get_params(gp.k)
-    optimize!(gp; mean=true, kern=false, lik=true)
+    optimize!(gp; domean=true, kern=false, lik=true)
     @test kern_params == get_params(kern)
     
-    set_params!(gp, init_params; mean=true, kern=true, lik=true)
+    set_params!(gp, init_params; domean=true, kern=true, lik=true)
 
     # Check lik fixed
     lik_params = get_params(gp.lik)
-    optimize!(gp; mean=true, kern=true, lik=false)
+    optimize!(gp; domean=true, kern=true, lik=false)
     @test lik_params == get_params(lik)
 end
 
@@ -103,6 +103,6 @@ test_gpmc_optim(mean, kern, lik, X, y)
 test_gpmc_optim_params_options(mean, kern, lik, X, y)
 
 
-# update_target_and_dtarget!(gp; lik=true, mean=false, kern=true)
+# update_target_and_dtarget!(gp; lik=true, domean=false, kern=true)
 
 # showall(get_params(gp; mean=true, kern=true, lik=true))

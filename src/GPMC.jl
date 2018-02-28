@@ -97,7 +97,7 @@ end
 """ Update gradient of the log-likelihood dlog p(Y|v,θ) """
 function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
     lik::Bool=true,  # include gradient components for the likelihood parameters
-    mean::Bool=true, # include gradient components for the mean parameters
+    domean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
     )
     size(Kgrad) == (gp.nobsv, gp.nobsv) || throw(ArgumentError, 
@@ -112,7 +112,7 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
     update_ll!(gp)
     Lv = unwhiten(gp.cK,gp.v)
     
-    gp.dll = Array{Float64}(gp.nobsv + lik*n_lik_params + mean*n_mean_params + kern*n_kern_params)
+    gp.dll = Array{Float64}(gp.nobsv + lik*n_lik_params + domean*n_mean_params + kern*n_kern_params)
     dl_df=dlog_dens_df(gp.lik, Lv + gp.μ, gp.y)
 
     U = triu(gp.cK.chol.factors)
@@ -127,7 +127,7 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
             i += 1
         end
     end
-    if mean && n_mean_params > 0
+    if domean && n_mean_params > 0
         Mgrads = grad_stack(gp.m, gp.X)
         for j in 1:n_mean_params
             gp.dll[i] = dot(dl_df,Mgrads[:,j])
@@ -161,11 +161,15 @@ function update_target!(gp::GPMC)
 end    
 
 """ GPMC: A function to update the target (aka log-posterior) and its derivative """
-function update_target_and_dtarget!(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
-    Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
+function update_target_and_dtarget!(gp::GPMC, Kgrad::MatF64; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     update_target!(gp)
-    update_ll_and_dll!(gp, Kgrad; lik=lik, mean=mean, kern=kern)
-    gp.dtarget = gp.dll + prior_gradlogpdf(gp; lik=lik, mean=mean, kern=kern)
+    update_ll_and_dll!(gp, Kgrad; lik=lik, domean=domean, kern=kern)
+    gp.dtarget = gp.dll + prior_gradlogpdf(gp; lik=lik, domean=domean, kern=kern)
+end
+""" GPMC: A function to update the target (aka log-posterior) and its derivative """
+function update_target_and_dtarget!(gp::GPMC; kwargs...)
+    Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
+    update_target_and_dtarget!(gp, Kgrad; kwargs...)
 end
 
 
@@ -242,13 +246,13 @@ rand{M<:MatF64}(gp::GPMC,X::M) = vec(rand(gp,X,1))
 rand{V<:VecF64}(gp::GPMC,x::V) = vec(rand(gp,x',1))
 
 
-function get_params(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
+function get_params(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     params = Float64[]
     append!(params, gp.v)
     if lik  && num_params(gp.lik)>0
         append!(params, get_params(gp.lik))
     end
-    if mean && num_params(gp.m)>0
+    if domean && num_params(gp.m)>0
         append!(params, get_params(gp.m))
     end
     if kern
@@ -257,7 +261,7 @@ function get_params(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     return params
 end
 
-function set_params!(gp::GPMC, hyp::Vector{Float64}; lik::Bool=true, mean::Bool=true, kern::Bool=true)
+function set_params!(gp::GPMC, hyp::Vector{Float64}; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     n_lik_params = num_params(gp.lik)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
@@ -268,7 +272,7 @@ function set_params!(gp::GPMC, hyp::Vector{Float64}; lik::Bool=true, mean::Bool=
         set_params!(gp.lik, hyp[i:i+n_lik_params-1]);
         i += n_lik_params
     end
-    if mean && n_mean_params>0
+    if domean && n_mean_params>0
         set_params!(gp.m, hyp[i:i+n_mean_params-1])
         i += n_mean_params
     end
@@ -278,12 +282,12 @@ function set_params!(gp::GPMC, hyp::Vector{Float64}; lik::Bool=true, mean::Bool=
     end
 end
 
-function prior_gradlogpdf(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
+function prior_gradlogpdf(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     grad = -gp.v
     if lik
         append!(grad, prior_gradlogpdf(gp.lik))
     end
-    if mean
+    if domean
         append!(grad, prior_gradlogpdf(gp.m))
     end
     if kern

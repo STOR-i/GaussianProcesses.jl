@@ -146,7 +146,7 @@ function update_mll_and_dmll!(gp::GPE,
     ααinvcKI::MatF64
     ; 
     noise::Bool=true, # include gradient component for the logNoise term
-    mean::Bool=true, # include gradient components for the mean parameters
+    domean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
     )
     size(Kgrad) == (gp.nobsv, gp.nobsv) || throw(ArgumentError, 
@@ -156,7 +156,7 @@ function update_mll_and_dmll!(gp::GPE,
     update_target!(gp)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
-    gp.dmll = Array{Float64}( noise + mean*n_mean_params + kern*n_kern_params)
+    gp.dmll = Array{Float64}( noise + domean*n_mean_params + kern*n_kern_params)
 
     get_ααinvcKI!(ααinvcKI, gp.cK, gp.alpha)
     
@@ -166,7 +166,7 @@ function update_mll_and_dmll!(gp::GPE,
         i+=1
     end
 
-    if mean && n_mean_params>0
+    if domean && n_mean_params>0
         Mgrads = grad_stack(gp.m, gp.X)
         for j in 1:n_mean_params
             gp.dmll[i] = dot(Mgrads[:,j],gp.alpha)
@@ -198,12 +198,12 @@ function update_target!(gp::GPE)
 end
 
 """ GPE: A function to update the target (aka log-posterior) and its derivative """
-function update_target_and_dtarget!(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
+function update_target_and_dtarget!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
     Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
     ααinvcKI = Array{Float64}( gp.nobsv, gp.nobsv)
     update_target!(gp)
-    update_mll_and_dmll!(gp, Kgrad, ααinvcKI, noise=noise,mean=mean,kern=kern)
-    gp.dtarget = gp.dmll + prior_gradlogpdf(gp; noise=noise, mean=mean, kern=kern)
+    update_mll_and_dmll!(gp, Kgrad, ααinvcKI, noise=noise,domean=domean,kern=kern)
+    gp.dtarget = gp.dmll + prior_gradlogpdf(gp; noise=noise, domean=domean, kern=kern)
 end
 
 
@@ -281,10 +281,10 @@ rand{V<:VecF64}(gp::GPE,x::V) = vec(rand(gp,x',1))
 #—————————————————————————————————————————————————————–
 #Functions for setting and calling the parameters of the GP object
 
-function get_params(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
+function get_params(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
     params = Float64[]
     if noise; push!(params, gp.logNoise); end
-    if mean
+    if domean
         append!(params, get_params(gp.m))
     end
     if kern
@@ -293,7 +293,7 @@ function get_params(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
     return params
 end
 
-function set_params!(gp::GPE, hyp::Vector{Float64}; noise::Bool=true, mean::Bool=true, kern::Bool=true)
+function set_params!(gp::GPE, hyp::Vector{Float64}; noise::Bool=true, domean::Bool=true, kern::Bool=true)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
 
@@ -303,7 +303,7 @@ function set_params!(gp::GPE, hyp::Vector{Float64}; noise::Bool=true, mean::Bool
         i+=1
     end
 
-    if mean && n_mean_params>0
+    if domean && n_mean_params>0
         set_params!(gp.m, hyp[i:i+n_mean_params-1])
         i += n_mean_params
     end
@@ -313,10 +313,10 @@ function set_params!(gp::GPE, hyp::Vector{Float64}; noise::Bool=true, mean::Bool
     end
 end
 
-function prior_gradlogpdf(gp::GPE; noise::Bool=true, mean::Bool=true, kern::Bool=true)
+function prior_gradlogpdf(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
     grad = Float64[]
     if noise; push!(grad, 0.0); end # Noise does not have any priors
-    if mean
+    if domean
         append!(grad, prior_gradlogpdf(gp.m))
     end
     if kern
