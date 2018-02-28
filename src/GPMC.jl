@@ -103,11 +103,9 @@ function update_ll!(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true
     gp.ll = sum(log_dens(gp.lik,F,gp.y)) #Log-likelihood
 end
 
-
-
 # dlog p(Y|v,θ)
 """ Update gradient of the log-likelihood dlog p(Y|v,θ) """
-function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
+function update_dll!(gp::GPMC, Kgrad::MatF64;
     lik::Bool=true,  # include gradient components for the likelihood parameters
     domean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
@@ -121,7 +119,6 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
 
-    update_ll!(gp; lik=lik, domean=domean, kern=kern)
     Lv = unwhiten(gp.cK,gp.v)
     
     gp.dll = Array{Float64}(gp.nobsv + lik*n_lik_params + domean*n_mean_params + kern*n_kern_params)
@@ -159,6 +156,15 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
     end
 end
 
+function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
+    lik::Bool=true,  # include gradient components for the likelihood parameters
+    domean::Bool=true, # include gradient components for the mean parameters
+    kern::Bool=true, # include gradient components for the spatial kernel parameters
+    )
+    update_ll!(gp; lik=lik, domean=domean, kern=kern)
+    update_dll!(gp, Kgrad; lik=lik, domean=domean, kern=kern)
+end
+
 
 """ GPMC: Initialise the target, which is assumed to be the log-posterior, log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ) """
 function initialise_target!(gp::GPMC)
@@ -175,7 +181,7 @@ end
 """ GPMC: A function to update the target (aka log-posterior) and its derivative """
 function update_target_and_dtarget!(gp::GPMC, Kgrad::MatF64; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     update_target!(gp; lik=lik, domean=domean, kern=kern)
-    update_ll_and_dll!(gp, Kgrad; lik=lik, domean=domean, kern=kern)
+    update_dll!(gp, Kgrad; lik=lik, domean=domean, kern=kern)
     gp.dtarget = gp.dll + prior_gradlogpdf(gp; lik=lik, domean=domean, kern=kern)
 end
 """ GPMC: A function to update the target (aka log-posterior) and its derivative """
