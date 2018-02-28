@@ -76,17 +76,29 @@ function initialise_ll!(gp::GPMC)
     gp.ll = sum(log_dens(gp.lik,F,gp.y)) #Log-likelihood
 end
 
-# modification of initialise_ll! that reuses existing matrices to avoid
-# unnecessary memory allocations, which speeds things up significantly
-function update_ll!(gp::GPMC)
-    Σbuffer = gp.cK.mat
-    gp.μ = mean(gp.m,gp.X)
+"""
+Update the covariance matrix and its Cholesky decomposition.
+"""
+function update_cK!(gp::GPMC)
+    old_cK = gp.cK
+    Σbuffer = old_cK.mat
     cov!(Σbuffer, gp.k, gp.X, gp.data)
-    Σbuffer += 1e-6*I
-    chol_buffer = gp.cK.chol.factors
+    Σbuffer += 1e-6*I # no logNoise for GPMC
+    chol_buffer = old_cK.chol.factors
     copy!(chol_buffer, Σbuffer)
     chol = cholfact!(Symmetric(chol_buffer))
     gp.cK = PDMats.PDMat(Σbuffer, chol)
+end
+
+# modification of initialise_ll! that reuses existing matrices to avoid
+# unnecessary memory allocations, which speeds things up significantly
+function update_ll!(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true)
+    if kern
+        # only need to update the covariance matrix
+        # if the covariance parameters have changed
+        update_cK!(gp)
+    end
+    gp.μ = mean(gp.m,gp.X)
     F = unwhiten(gp.cK,gp.v) + gp.μ
     gp.ll = sum(log_dens(gp.lik,F,gp.y)) #Log-likelihood
 end
@@ -109,7 +121,7 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
 
-    update_ll!(gp)
+    update_ll!(gp; lik=lik, domean=domean, kern=kern)
     Lv = unwhiten(gp.cK,gp.v)
     
     gp.dll = Array{Float64}(gp.nobsv + lik*n_lik_params + domean*n_mean_params + kern*n_kern_params)
@@ -155,14 +167,14 @@ function initialise_target!(gp::GPMC)
 end    
 
 """ GPMC: Update the target, which is assumed to be the log-posterior, log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ) """
-function update_target!(gp::GPMC)
-    update_ll!(gp)
+function update_target!(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true)
+    update_ll!(gp; lik=lik, domean=domean, kern=kern)
     gp.target = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.m) + prior_logpdf(gp.k) 
 end    
 
 """ GPMC: A function to update the target (aka log-posterior) and its derivative """
 function update_target_and_dtarget!(gp::GPMC, Kgrad::MatF64; lik::Bool=true, domean::Bool=true, kern::Bool=true)
-    update_target!(gp)
+    update_target!(gp; lik=lik, domean=domean, kern=kern)
     update_ll_and_dll!(gp, Kgrad; lik=lik, domean=domean, kern=kern)
     gp.dtarget = gp.dll + prior_gradlogpdf(gp; lik=lik, domean=domean, kern=kern)
 end
