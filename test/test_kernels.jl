@@ -61,7 +61,7 @@ function test_gradient(kern::Kernel, X::Matrix{Float64})
 end
 
 function test_dtarget(kern::Kernel, X::Matrix{Float64}, y::Vector{Float64})
-    gp = GP(X,y,MeanConst(0.0), kern, -3.0)
+    gp = GPE(X,y,MeanConst(0.0), kern, -3.0)
     init_params = get_params(gp)
     nobsv = size(X,2)
     function f(hyp)
@@ -75,7 +75,7 @@ function test_dtarget(kern::Kernel, X::Matrix{Float64}, y::Vector{Float64})
     set_params!(gp, init_params)
     for i in 1:length(theor_grad)
         @assert isapprox(theor_grad[i], numer_grad[i], rtol=1e-3, atol=1e-3) string(
-            theor_grad, " != ", numer_grad, " at index ", i
+            "(thereotical) ", theor_grad, " != (numerical) ", numer_grad, " at index ", i
             )
     end
 end
@@ -117,8 +117,6 @@ ll = rand(d)
 x = 2π * rand(d, n)
 y = randn(n)
 
-rq = RQIso(1.0, 1.0, 1.0)
-test_Kernel(fix(rq, :lσ), x, y)
 
 # Isotropic kernels
 
@@ -139,6 +137,13 @@ test_Kernel(rq, x, y)
 
 peri = Periodic(1.0, 1.0, 2π)
 test_Kernel(peri, x, y)
+
+# Fixed Kernel
+
+rq = RQIso(1.0, 1.0, 1.0)
+test_Kernel(fix(rq, :lσ), x, y)
+
+test_Kernel(fix(rq), x, y)
 
 # Non-isotropic
 
