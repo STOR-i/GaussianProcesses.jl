@@ -176,6 +176,11 @@ test_Kernel(poly, x, x2, y)
 noise = Noise(1.0)
 test_Kernel(noise, x, x2, y)
 
+# Constant kernel
+
+cons = Const(1.0)
+test_Kernel(cons, x, x2, y)
+
 # ARD kernels
 
 se_ard = SEArd(ll, 1.0)
@@ -216,3 +221,4 @@ rq = RQIso(1.0, 1.0, 1.0)
 test_Kernel(fix(rq, :lσ), x, x2, y)
 
 test_Kernel(fix(rq), x, x2, y)
+
