@@ -1,5 +1,5 @@
 module GaussianProcesses
-using Optim, PDMats, Distances, FastGaussQuadrature, Klara
+using Optim, PDMats, Distances, FastGaussQuadrature
 using Compat
 using RecipesBase
 import Compat: view, cholfact!
@@ -14,7 +14,7 @@ import Base: rand, rand!, mean, cov, push!
 export GPBase, GP, GPE, GPMC, predict_f, predict_y, Kernel, Likelihood, CompositeKernel, SumKernel, ProdKernel, Masked, FixedKern, fix, Noise, Const, SE, SEIso, SEArd, Periodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Matern, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, #kernel functions
     MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, #mean functions
     GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
-    mcmc, mcmc2, optimize!,                                           #inference functions
+    mcmc, optimize!,                                           #inference functions
     set_priors!,set_params!, update_target!                                                
 
 
@@ -31,7 +31,6 @@ include("GP.jl")
 include("GPE.jl")
 include("GPMC.jl")
 include("mcmc.jl")
-include("mcmc2.jl")
 include("optimize.jl")
 include("plot.jl")
 
