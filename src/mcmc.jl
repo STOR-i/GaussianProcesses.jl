@@ -8,18 +8,20 @@ A function for running a variety of MCMC algorithms for estimating the GP hyperp
         * `ε::Real`: Stepsize parameter
         * `L::Int`: Number of leapfrog steps
         """ ->
-function mcmc(gp::GPBase; nIter::Int=1000, ε::Float64=0.01, Lmin::Int=5, Lmax::Int=15,
+function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64=0.1,
+        Lmin::Int=5, Lmax::Int=15,
         lik::Bool=true,
+        noise::Bool=true,
         domean::Bool=true,
         kern::Bool=true)
-
+    
+    params_kwargs = get_params_kwargs(typeof(gp); domean=domean, kern=kern, noise=noise, lik=lik) 
     count = 0
-    Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
     function calc_target(gp::GPBase, θ::Vector{Float64}) #log-target and its gradient 
         count += 1
         try
-            set_params!(gp, θ; lik=lik, domean=domean, kern=kern)
-            update_target_and_dtarget!(gp, Kgrad; lik=lik, domean=domean, kern=kern)
+            set_params!(gp, θ; params_kwargs...)
+            update_target_and_dtarget!(gp; params_kwargs...)
             return true
         catch err
             if !all(isfinite.(θ))
@@ -35,8 +37,9 @@ function mcmc(gp::GPBase; nIter::Int=1000, ε::Float64=0.01, Lmin::Int=5, Lmax::
     end
 
 
-    θ_cur = get_params(gp; lik=lik, domean=domean, kern=kern)
+    θ_cur = get_params(gp; params_kwargs...)
     D = length(θ_cur)
+    leapSteps = 0                   #accumulator to track number of leap-frog steps
     post = Array{Float64}(nIter,D)     #posterior samples
     post[1,:] = θ_cur
     
@@ -51,7 +54,9 @@ function mcmc(gp::GPBase; nIter::Int=1000, ε::Float64=0.01, Lmin::Int=5, Lmax::
         ν = ν_cur + 0.5 * ε * grad
         
         reject = false
-        for l in 1:rand(Lmin:Lmax)
+        L = rand(Lmin:Lmax)
+        leapSteps +=L
+        for l in 1:L
             θ += ε * ν
             if  !calc_target(gp,θ)
                 reject=true
@@ -77,9 +82,12 @@ function mcmc(gp::GPBase; nIter::Int=1000, ε::Float64=0.01, Lmin::Int=5, Lmax::
             post[t,:] = θ_cur
         end
     end
-    set_params!(gp, θ_cur; lik=lik, domean=domean, kern=kern)
-    println("number of function calls: ", count)
-    @printf("number of acceptances: %d / %d \n", num_acceptances, nIter)
+    post = post[burn:thin:end,:]
+    set_params!(gp, θ_cur; params_kwargs...)
+    @printf("Number of iterations = %d, Thinning = %d, Burn-in = %d \n", nIter,thin,burn)
+    @printf("Step size = %f, Average number of leapfrog steps = %f \n", ε,leapSteps/nIter)
+    println("Number of function calls: ", count)
+    @printf("Acceptance rate: %f \n", num_acceptances/nIter)
     return post'
 end    
 
