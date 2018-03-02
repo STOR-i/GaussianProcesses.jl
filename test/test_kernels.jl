@@ -167,9 +167,9 @@ test_Kernel(peri, x, x2, y)
 # Fixed Kernel
 
 rq = RQIso(1.0, 1.0, 1.0)
-test_Kernel(fix(rq, :lσ), x, y)
+test_Kernel(fix(rq, :lσ), x, x2, y)
 
-test_Kernel(fix(rq), x, y)
+test_Kernel(fix(rq), x, x2, y)
 
 # Non-isotropic
 
