@@ -20,6 +20,7 @@ type EmptyData <: KernelData
 end
 
 KernelData{M<:MatF64}(k::Kernel, X::M) = EmptyData()
+kernel_data_key{M<:MatF64}(k::Kernel, X::M) = "EmptyData"
 
 """
 # Description
