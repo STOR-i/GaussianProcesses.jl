@@ -164,12 +164,6 @@ test_Kernel(rq, x, x2, y)
 peri = Periodic(1.0, 1.0, 2π)
 test_Kernel(peri, x, x2, y)
 
-# Fixed Kernel
-
-rq = RQIso(1.0, 1.0, 1.0)
-test_Kernel(fix(rq, :lσ), x, x2, y)
-
-test_Kernel(fix(rq), x, x2, y)
 
 # Non-isotropic
 
@@ -216,7 +210,9 @@ test_Kernel(prod_kern, x, x2, y)
 prod_kern_3 = prod_kern * lin
 test_Kernel(prod_kern_3, x, x2, y)
 
-# Fixed kernel
+# Fixed Kernel
 
 rq = RQIso(1.0, 1.0, 1.0)
 test_Kernel(fix(rq, :lσ), x, x2, y)
+
+test_Kernel(fix(rq), x, x2, y)
