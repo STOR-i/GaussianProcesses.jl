@@ -55,6 +55,12 @@ end
 function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, fk::FixedKern, X::M2, data::EmptyData, p::Int)
     return grad_slice!(dK, fk.kern, X, data, fk.free[p])
 end
+@inline function dKij_dθp{M<:MatF64}(fk::FixedKern,X::M,i::Int,j::Int,p::Int,dim::Int)
+    return dKij_dθp(fk.kern, X, i, j, fk.free[p], dim)
+end
+@inline function dKij_dθp{M<:MatF64,D<:KernelData}(fk::FixedKern,X::M,data::D,i::Int,j::Int,p::Int,dim::Int)
+    return dKij_dθp(fk.kern, X, data, i, j, fk.free[p], dim)
+end
 
 # delegate everything else to the wrapped kernel
 # (is there a better way to do this?)
@@ -65,6 +71,7 @@ cov{M<:MatF64}(fk::FixedKern, X::M, data::EmptyData) = cov(ck.kern,X,data)
 KernelData(fk::FixedKern, args...) = KernelData(fk.kern, args...)
 KernelData{M<:MatF64}(fk::FixedKern, X::M) = KernelData(fk.kern, X)
 kernel_data_key(fk::FixedKern, args...) = kernel_data_key(fk.kern, args...)
+kernel_data_key{M<:MatF64}(fk::FixedKern, X::M) = kernel_data_key(fk.kern, X)
 cov!(cK::MatF64, fk::FixedKern, args...) = cov!(cK, fk.kern, args...)
 cov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, fk::FixedKern, X₁::M1, X₂::M2) = cov!(cK, fk.kern, k, X₁, X₂)
 cov!{M<:MatF64}(cK::MatF64, fk::FixedKern, X::M, data::EmptyData)=cov!(cK, fk.kern,X,data)

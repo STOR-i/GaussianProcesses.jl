@@ -1,5 +1,6 @@
 using GaussianProcesses, Base.Test
-using GaussianProcesses: get_params, get_param_names, KernelData, EmptyData
+using GaussianProcesses: get_params, get_param_names
+using GaussianProcesses: kernel_data_key, KernelData, EmptyData
 using GaussianProcesses: set_params!, num_params, grad_stack!
 using GaussianProcesses: GP, MeanConst, update_target!, update_target_and_dtarget!
 using GaussianProcesses: StationaryARD
@@ -33,7 +34,8 @@ function test_cov(kern::Kernel, X::Matrix{Float64})
     GaussianProcesses.addcov!(cK_added, kern, X)
     @test spec ≈ cK_added
     cK_added[:,:] = 0.0
-    GaussianProcesses.addcov!(cK_added, kern, X, KernelData(kern,X))
+    kdata = KernelData(kern,X)
+    GaussianProcesses.addcov!(cK_added, kern, X, kdata)
     @test spec ≈ cK_added
     cK_prod = ones(n,n)
     GaussianProcesses.multcov!(cK_prod, kern, X)
@@ -41,6 +43,12 @@ function test_cov(kern::Kernel, X::Matrix{Float64})
     cK_prod[:,:] = 1.0
     GaussianProcesses.multcov!(cK_prod, kern, X, KernelData(kern,X))
     @test spec ≈ cK_prod
+    key = kernel_data_key(kern, X)
+    @test typeof(key) == String
+    # check we've overwritten the default if necessary
+    if typeof(kdata) != EmptyData
+        @test key != "EmptyData"
+    end
 end
 
 function test_grad_stack(kern::Kernel, X::Matrix{Float64})
@@ -143,7 +151,6 @@ x = randn(d, n)
 x2 = randn(d, n2)
 y = randn(n)
 
-
 # Isotropic kernels
 
 se = SEIso(1.0, 1.0)
@@ -215,6 +222,7 @@ test_Kernel(prod_kern, x, x2, y)
 prod_kern_3 = prod_kern * lin
 test_Kernel(prod_kern_3, x, x2, y)
 
+
 # Fixed Kernel
 
 rq = RQIso(1.0, 1.0, 1.0)
@@ -222,3 +230,6 @@ test_Kernel(fix(rq, :lσ), x, x2, y)
 
 test_Kernel(fix(rq), x, x2, y)
 
+# Sum and Product and Fix
+sum_prod_kern = se * mat12 + lin * fix(rq, :lσ)
+test_Kernel(sum_prod_kern, x, x2, y)
