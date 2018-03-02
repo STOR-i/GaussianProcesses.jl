@@ -49,21 +49,21 @@ Y = [rand(Distributions.Binomial(n,exp(y[i])/(1.0+exp(y[i])))) for i in 1:n]
 lik = BinLik(n)
 test_gpmc(Y,lik)
 
-#Exponential likelihood
+# Exponential likelihood
 Y = [rand(Distributions.Exponential(y[i]^2)) for i in 1:n]
 lik = ExpLik()
 test_gpmc(Y,lik)
 
-#Gaussin likelihood     
+# Gaussin likelihood     
 lik = GaussLik(-1.0)
 test_gpmc(y,lik)
 
-#Poisson likelihood
+# Poisson likelihood
 Y = [rand(Distributions.Poisson(exp(y[i]))) for i in 1:n]
 lik = PoisLik()
 test_gpmc(Y,lik)
 
-#Student-T likelihood
+# Student-T likelihood
 df = 3
 Y = y .+ rand(Distributions.TDist(df),n)
 lik = StuTLik(df,0.1)
