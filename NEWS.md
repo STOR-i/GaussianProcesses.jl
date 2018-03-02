@@ -1,5 +1,11 @@
 # News
 
+## Version 0.6.0 (2018-03-02)
+* Updated optimization code to be compatible with new Optim.jl API
+* Removed Klara dependency
+* Performance improvements to `predict` functions
+
+
 ## Version 0.5.0 (2017-10-18)
 * Updated Julia version requirement to 0.6
 * GP type has been renamed to GPE (GP exact) for Gaussian likelihoods
