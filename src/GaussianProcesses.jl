@@ -1,5 +1,5 @@
 module GaussianProcesses
-using Optim, PDMats, Distances#, FastGaussQuadrature, Klara
+using Optim, PDMats, Distances, FastGaussQuadrature
 using Compat
 using RecipesBase
 import Compat: view, cholfact!
