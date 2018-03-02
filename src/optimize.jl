@@ -54,7 +54,7 @@ function get_optim_target(gp::GPBase; params_kwargs...)
         end        
     end
 
-    function ltarget_and_dltarget!(hyp::Vector{Float64}, grad::Vector{Float64})
+    function ltarget_and_dltarget!(grad::Vector{Float64}, hyp::Vector{Float64})
         prev = get_params(gp; params_kwargs...)
         try
             set_params!(gp, hyp; params_kwargs...)
@@ -79,11 +79,12 @@ function get_optim_target(gp::GPBase; params_kwargs...)
         end
     end
     
-    function dltarget!(hyp::Vector{Float64}, grad::Vector{Float64})
-        ltarget_and_dltarget!(hyp::Vector{Float64}, grad::Vector{Float64})
+    function dltarget!(grad::Vector{Float64}, hyp::Vector{Float64})
+        ltarget_and_dltarget!(grad::Vector{Float64}, hyp::Vector{Float64})
     end
 
-    func = OnceDifferentiable(ltarget, dltarget!, ltarget_and_dltarget!)
+    xinit = get_params(gp; params_kwargs...)
+    func = OnceDifferentiable(ltarget, dltarget!, ltarget_and_dltarget!, xinit)
     return func
 end
 

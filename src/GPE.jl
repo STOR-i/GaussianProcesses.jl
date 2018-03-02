@@ -108,10 +108,10 @@ Computes α*α'-cK\eye(nobsv) in-place, avoiding any memory allocation
 """
 function get_ααinvcKI!{M<:MatF64}(ααinvcKI::M, cK::AbstractPDMat, α::Vector)
     nobsv = length(α)
-    size(ααinvcKI) == (nobsv, nobsv) || throw(ArgumentError, 
+    size(ααinvcKI) == (nobsv, nobsv) || throw(ArgumentError(
                 @sprintf("Buffer for ααinvcKI should be a %dx%d matrix, not %dx%d",
                          nobsv, nobsv,
-                         size(ααinvcKI,1), size(ααinvcKI,2)))
+                         size(ααinvcKI,1), size(ααinvcKI,2))))
     ααinvcKI[:,:] = 0.0
     @inbounds for i in 1:nobsv
         ααinvcKI[i,i] = -1.0
@@ -157,10 +157,10 @@ function update_mll_and_dmll!(gp::GPE,
     mean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
     )
-    size(Kgrad) == (gp.nobsv, gp.nobsv) || throw(ArgumentError, 
+    size(Kgrad) == (gp.nobsv, gp.nobsv) || throw(ArgumentError(
                 @sprintf("Buffer for Kgrad should be a %dx%d matrix, not %dx%d",
                          gp.nobsv, gp.nobsv,
-                         size(Kgrad,1), size(Kgrad,2)))
+                         size(Kgrad,1), size(Kgrad,2))))
     update_target!(gp)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)

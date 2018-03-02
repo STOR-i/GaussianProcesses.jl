@@ -10,7 +10,7 @@ k(x,x') = σ²exp(-2sin²(π|x-x'|/p)/ℓ²)
 * `lσ::Float64`        : Log of the signal standard deviation σ
 * `lp::Float64`        : Log of the period
 """ ->
-type Periodic <: Isotropic
+type Periodic <: Isotropic{Euclidean}
     ℓ2::Float64
     σ2::Float64
     p::Float64      # Log of period
@@ -21,7 +21,6 @@ end
 get_params(pe::Periodic) = Float64[log(pe.ℓ2)/2.0, log(pe.σ2)/2.0, log(pe.p)]
 get_param_names(pe::Periodic) = [:ll, :lσ, :lp]
 num_params(pe::Periodic) = 3
-metric(pe::Periodic) = Euclidean()
 
 function set_params!(pe::Periodic, hyp::Vector{Float64})
     length(hyp) == 3 || throw(ArgumentError("Periodic function has only three parameters"))

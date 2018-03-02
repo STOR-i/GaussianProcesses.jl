@@ -73,12 +73,20 @@ cov!{M<:MatF64}(cK:: MatF64, k::Kernel, X::M) = cov!(cK, k, X, KernelData(k, X))
 #=function cov!(cK::Matrix{Float64}, k::Kernel, X::Matrix{Float64}, data::KernelData)=#
 #=    cK[:,:] = cov(k,X,data)=#
 #=end=#
+function addcov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Kernel, X1::M1, X2::M2)
+    cK[:,:] .+= cov(k, X1, X2)
+    return cK
+end
 function addcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M)
     cK[:,:] .+= cov(k, X, KernelData(k, X))
     return cK
 end
 function addcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::KernelData)
     cK[:,:] .+= cov(k, X, data)
+    return cK
+end
+function multcov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Kernel, X1::M1, X2::M2)
+    cK[:,:] .*= cov(k, X1, X2)
     return cK
 end
 function multcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M)
@@ -209,6 +217,7 @@ function prior_gradlogpdf(k::Kernel)
 end
 
 include("stationary.jl")
+include("distance.jl")
 include("lin.jl")               # Linear covariance function
 include("se.jl")                # Squared exponential covariance function
 include("rq.jl")                # Rational quadratic covariance function
