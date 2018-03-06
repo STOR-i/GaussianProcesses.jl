@@ -105,9 +105,8 @@ function update_ll!(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true
     gp.ll = sum(log_dens(gp.lik,F,gp.y)) #Log-likelihood
 end
 
-# dlog p(Y|v,θ)
 """ Update gradient of the log-likelihood dlog p(Y|v,θ) """
-function update_dll!(gp::GPMC, Kgrad::MatF64;
+function update_dll!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64;
     lik::Bool=true,  # include gradient components for the likelihood parameters
     domean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
@@ -116,20 +115,21 @@ function update_dll!(gp::GPMC, Kgrad::MatF64;
     @sprintf("Buffer for Kgrad should be a %dx%d matrix, not %dx%d",
              gp.nobsv, gp.nobsv,
              size(Kgrad,1), size(Kgrad,2)))
-    
+    size(L_bar) == (gp.nobsv, gp.nobsv) || throw(ArgumentError, 
+    @sprintf("Buffer for L_bar should be a %dx%d matrix, not %dx%d",
+             gp.nobsv, gp.nobsv,
+             size(L_bar,1), size(L_bar,2)))
+
     n_lik_params = num_params(gp.lik)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
 
-    Lv = unwhiten(gp.cK,gp.v)
-    
     gp.dll = Array{Float64}(gp.nobsv + lik*n_lik_params + domean*n_mean_params + kern*n_kern_params)
-    dl_df=dlog_dens_df(gp.lik, Lv + gp.μ, gp.y)
 
-    U = triu(gp.cK.chol.factors)
-    L = U'
-    gp.dll[1:gp.nobsv] = L'dl_df
-    
+    Lv = unwhiten(gp.cK, gp.v)
+    dl_df = dlog_dens_df(gp.lik, Lv + gp.μ, gp.y)
+    A_mul_B!(view(gp.dll, 1:gp.nobsv), gp.cK.chol[:U], dl_df)
+
     i=gp.nobsv+1 
     if lik && n_lik_params > 0
         Lgrads = dlog_dens_dθ(gp.lik,Lv + gp.μ, gp.y)
@@ -146,9 +146,16 @@ function update_dll!(gp::GPMC, Kgrad::MatF64;
         end
     end
     if kern
-        # L_bar = zeros(gp.nobsv, gp.nobsv)
-        # tril!(LinAlg.BLAS.ger!(1.0, dl_df, gp.v, L_bar)) # grad_ll_L
-        L_bar = tril(dl_df * gp.v')
+        L_bar[:] = 0.0
+        LinAlg.BLAS.ger!(1.0, dl_df, gp.v, L_bar)
+        tril!(L_bar)
+        # ToDo:
+        # the following two steps allocates memory
+        # and are fickle, reaching into the internal
+        # implementation of the cholesky decomposition
+        L = gp.cK.chol[:L].data
+        tril!(L)
+        #
         chol_unblocked_rev!(L, L_bar)
         for iparam in 1:n_kern_params
             grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
@@ -158,13 +165,13 @@ function update_dll!(gp::GPMC, Kgrad::MatF64;
     end
 end
 
-function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
+function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64;
     lik::Bool=true,  # include gradient components for the likelihood parameters
     domean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
     )
     update_ll!(gp; lik=lik, domean=domean, kern=kern)
-    update_dll!(gp, Kgrad; lik=lik, domean=domean, kern=kern)
+    update_dll!(gp, Kgrad, L_bar; lik=lik, domean=domean, kern=kern)
 end
 
 
@@ -181,15 +188,16 @@ function update_target!(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=
 end    
 
 """ GPMC: A function to update the target (aka log-posterior) and its derivative """
-function update_target_and_dtarget!(gp::GPMC, Kgrad::MatF64; lik::Bool=true, domean::Bool=true, kern::Bool=true)
+function update_target_and_dtarget!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     update_target!(gp; lik=lik, domean=domean, kern=kern)
-    update_dll!(gp, Kgrad; lik=lik, domean=domean, kern=kern)
+    update_dll!(gp, Kgrad, L_bar; lik=lik, domean=domean, kern=kern)
     gp.dtarget = gp.dll + prior_gradlogpdf(gp; lik=lik, domean=domean, kern=kern)
 end
 """ GPMC: A function to update the target (aka log-posterior) and its derivative """
 function update_target_and_dtarget!(gp::GPMC; kwargs...)
-    Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
-    update_target_and_dtarget!(gp, Kgrad; kwargs...)
+    Kgrad = Array{Float64}(gp.nobsv, gp.nobsv)
+    L_bar = Array{Float64}(gp.nobsv, gp.nobsv)
+    update_target_and_dtarget!(gp, Kgrad, L_bar; kwargs...)
 end
 
 

@@ -15,13 +15,15 @@ function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64
         domean::Bool=true,
         kern::Bool=true)
     
+    Kgrad = Array{Float64}(gp.nobsv, gp.nobsv)
+    L_bar = Array{Float64}(gp.nobsv, gp.nobsv)
     params_kwargs = get_params_kwargs(typeof(gp); domean=domean, kern=kern, noise=noise, lik=lik) 
     count = 0
     function calc_target(gp::GPBase, θ::Vector{Float64}) #log-target and its gradient 
         count += 1
         try
             set_params!(gp, θ; params_kwargs...)
-            update_target_and_dtarget!(gp; params_kwargs...)
+            update_target_and_dtarget!(gp, Kgrad, L_bar; params_kwargs...)
             return true
         catch err
             if !all(isfinite.(θ))
