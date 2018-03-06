@@ -139,7 +139,10 @@ function update_cK!(gp::GPE)
     old_cK = gp.cK
     Σbuffer = old_cK.mat
     cov!(Σbuffer, gp.k, gp.X, gp.data)
-    Σbuffer += (exp(2*gp.logNoise) + 1e-5)*I
+    noise = (exp(2*gp.logNoise) + 1e-5)
+    for i in 1:gp.nobsv
+        Σbuffer[i,i] += noise
+    end
     chol_buffer = old_cK.chol.factors
     copy!(chol_buffer, Σbuffer)
     chol = cholfact!(Symmetric(chol_buffer))
@@ -156,7 +159,6 @@ function update_mll!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tr
     gp.alpha = gp.cK \ (gp.y - μ)
     gp.mll = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
-
 
 """ GPE: Update gradient of marginal log-likelihood """
 function update_mll_and_dmll!(gp::GPE,

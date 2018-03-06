@@ -83,7 +83,9 @@ function update_cK!(gp::GPMC)
     old_cK = gp.cK
     Σbuffer = old_cK.mat
     cov!(Σbuffer, gp.k, gp.X, gp.data)
-    Σbuffer += 1e-6*I # no logNoise for GPMC
+    for i in 1:gp.nobsv
+        Σbuffer[i,i] += 1e-6 # no logNoise for GPMC
+    end
     chol_buffer = old_cK.chol.factors
     copy!(chol_buffer, Σbuffer)
     chol = cholfact!(Symmetric(chol_buffer))
