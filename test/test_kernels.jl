@@ -156,6 +156,9 @@ y = randn(n)
 se = SEIso(1.0, 1.0)
 test_Kernel(se, x, x2, y)
 
+expk = ExpIso(1.0, 1.0)
+test_Kernel(expk, x, x2, y)
+
 mat12 = Mat12Iso(1.0,1.0)
 test_Kernel(mat12, x, x2, y)
 
@@ -192,6 +195,9 @@ test_Kernel(cons, x, x2, y)
 
 se_ard = SEArd(ll, 1.0)
 test_Kernel(se_ard, x, x2, y)
+
+expk_ard = ExpArd(ll, 1.0)
+test_Kernel(expk_ard, x, x2, y)
 
 mat12_ard = Mat12Ard(ll, 1.0)
 test_Kernel(mat12_ard, x, x2, y)
