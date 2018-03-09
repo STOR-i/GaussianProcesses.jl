@@ -221,7 +221,6 @@ include("stationary.jl")
 include("distance.jl")
 include("lin.jl")               # Linear covariance function
 include("se.jl")                # Squared exponential covariance function
-include("exp.jl")                # Squared exponential covariance function
 include("rq.jl")                # Rational quadratic covariance function
 include("mat.jl")               # Matern covariance function
 include("periodic.jl")          # Periodic covariance function
