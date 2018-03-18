@@ -10,7 +10,7 @@ type MeanZero <: Mean
 end
 
 num_params(mZero::MeanZero) = 0
-grad_mean(mZero::MeanZero, x::Vector{Float64}) = Float64[]
+grad_mean(mZero::MeanZero, x::VecF64) = Float64[]
 mean(mZero::MeanZero, x::VecF64) = 0.0
 mean(mZero::MeanZero, X::MatF64) =  fill(0.0, size(X,2))
 get_params(mZero::MeanZero) = Float64[]

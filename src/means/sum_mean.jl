@@ -10,7 +10,7 @@ mean(summean::SumMean, X::MatF64) = sum(mean(m, X) for m in submeans(summean))
 
 get_param_names(summean::SumMean) = composite_param_names(summean.means, :sm)
 
-function grad_mean(sm::SumMean, x::Vector{Float64})
+function grad_mean(sm::SumMean, x::VecF64)
     np = num_params(sm)
     dm = Array{Float64}(np)
     v = 1

@@ -26,7 +26,7 @@ function set_params!(mLin::MeanLin, hyp::Vector{Float64})
     mLin.β = hyp
 end
 
-function grad_mean(mLin::MeanLin, x::Vector{Float64})
+function grad_mean(mLin::MeanLin, x::VecF64)
     dM_theta = x
     return dM_theta
 end

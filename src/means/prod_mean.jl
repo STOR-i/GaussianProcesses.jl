@@ -17,7 +17,7 @@ end
 
 get_param_names(pm::ProdMean) = composite_param_names(pm.means, :pm)
 
-function grad_mean(pm::ProdMean, x::Vector{Float64})
+function grad_mean(pm::ProdMean, x::VecF64)
     np = num_params(pm)
     dm = Array{Float64}(np)
     means = submeans(pm)

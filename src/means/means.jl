@@ -26,8 +26,8 @@ function grad_stack(m::Mean, X::MatF64)
     n = num_params(m)
     d, nobsv = size(X)
     mat = Array{Float64}(nobsv, n)
-    for i in 1:nobsv
-        @inbounds mat[i,:] = grad_mean(m, X[:,i])
+    @inbounds for i in 1:nobsv
+        mat[i,:] = grad_mean(m, view(X,:,i))
     end
     return mat
 end

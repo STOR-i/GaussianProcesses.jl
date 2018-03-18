@@ -161,7 +161,7 @@ function update_mll!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tr
 end
 
 """ GPE: Update gradient of marginal log-likelihood """
-function update_mll_and_dmll!(gp::GPE,
+function update_dmll!(gp::GPE,
     Kgrad::MatF64,
     ααinvcKI::MatF64
     ; 
@@ -173,7 +173,6 @@ function update_mll_and_dmll!(gp::GPE,
                 @sprintf("Buffer for Kgrad should be a %dx%d matrix, not %dx%d",
                          gp.nobsv, gp.nobsv,
                          size(Kgrad,1), size(Kgrad,2))))
-    update_target!(gp; noise=noise, domean=domean, kern=kern)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
     gp.dmll = Array{Float64}( noise + domean*n_mean_params + kern*n_kern_params)
@@ -202,6 +201,15 @@ function update_mll_and_dmll!(gp::GPE,
     end
 end
 
+""" GPE: Update gradient of marginal log-likelihood """
+function update_mll_and_dmll!(gp::GPE,
+        Kgrad::MatF64,
+        ααinvcKI::MatF64;
+        kwargs...)
+    update_mll!(gp; kwargs...)
+    update_dmll!(gp, Kgrad, ααinvcKI; kwargs...)
+end
+
 
 """ GPE: Initialise the target, which is assumed to be the log-posterior, log p(θ|y) ∝ log p(y|θ) +  log p(θ) """
 function initialise_target!(gp::GPE)
@@ -218,12 +226,12 @@ function update_target!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool
 end
 
 """ GPE: A function to update the target (aka log-posterior) and its derivative """
-function update_target_and_dtarget!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
+function update_target_and_dtarget!(gp::GPE; kwargs...)
     Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
-    ααinvcKI = Array{Float64}( gp.nobsv, gp.nobsv)
-    update_target!(gp; noise=noise, domean=domean, kern=kern)
-    update_mll_and_dmll!(gp, Kgrad, ααinvcKI, noise=noise, domean=domean, kern=kern)
-    gp.dtarget = gp.dmll + prior_gradlogpdf(gp; noise=noise, domean=domean, kern=kern)
+    ααinvcKI = Array{Float64}(gp.nobsv, gp.nobsv)
+    update_target!(gp; kwargs...)
+    update_dmll!(gp, Kgrad, ααinvcKI; kwargs...)
+    gp.dtarget = gp.dmll + prior_gradlogpdf(gp; kwargs...)
 end
 
 
