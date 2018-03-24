@@ -39,3 +39,33 @@ end
 # 1D Case for prediction
 predict_f{V<:VecF64}(gp::GPBase, x::V; full_cov::Bool=false) = predict_f(gp, x'; full_cov=full_cov)
 
+@doc """
+# Description
+Sometimes with Gaussian processes once gets covariance matrices that are 
+mathematically positive definite, but numerically have negative eigenvalues.
+To get around this, we add a little bit of weight to the diagonal (which
+raises all eigenvalues by that amount) until we get a positive definite matrix.
+
+# Arguments:
+* Sigma_raw::AbstractMatrix{Float64}: a covariance matrix
+"""
+function tolerant_PDMat{M<:MatF64}(Sigma_raw::M)
+    n = size(Sigma_raw, 1)
+    size(Sigma_raw, 2) == n || throw(ArgumentError("Covariance matrix must be square"))
+    for _ in 1:10 # 10 chances
+        try
+            Sigma = PDMat(Sigma_raw)
+            return Sigma
+        catch
+            # that wasn't (numerically) positive definite,
+            # so let's add some weight to the diagonal
+            ϵ = 1e-6*trace(Sigma_raw)/n
+            @inbounds for i in 1:n
+                Sigma_raw[i, i] += ϵ
+            end
+        end
+    end
+    # last chance
+    Sigma = PDMat(Sigma_raw)
+    return Sigma
+end
