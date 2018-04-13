@@ -225,6 +225,18 @@ function update_target!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool
     gp.target = gp.mll  + prior_logpdf(gp.m) + prior_logpdf(gp.k)
 end
 
+function update_dtarget!(gp::GPE, Kgrad::MatF64, L_bar::MatF64; kwargs...)
+    update_dmll!(gp, Kgrad, L_bar; kwargs...)
+    gp.dtarget = gp.dmll + prior_gradlogpdf(gp; kwargs...)
+end
+
+
+""" GPE: A function to update the target (aka log-posterior) and its derivative """
+function update_target_and_dtarget!(gp::GPE, Kgrad::MatF64, L_bar::MatF64; kwargs...)
+    update_target!(gp; kwargs...)
+    update_dtarget!(gp, Kgrad, L_bar; kwargs...)
+end
+
 """ GPE: A function to update the target (aka log-posterior) and its derivative """
 function update_target_and_dtarget!(gp::GPE; kwargs...)
     Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
