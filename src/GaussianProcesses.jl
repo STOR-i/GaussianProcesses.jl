@@ -1,12 +1,8 @@
 module GaussianProcesses
-using Optim, PDMats, Distances, FastGaussQuadrature
-using Compat
-using RecipesBase
+using Optim, PDMats, Distances, FastGaussQuadrature, Compat, RecipesBase, Distributions
 import Compat: view, cholfact!
-using Distributions
 import Distributions: logpdf, gradlogpdf
-import Base: +, *
-import Base: rand, rand!, mean, cov, push!
+import Base: +, *, rand, rand!, mean, cov, push!
 
 # Functions that should be available to package
 # users should be explicitly exported here
