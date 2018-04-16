@@ -8,7 +8,13 @@ y = randn(n) + 0.5
 
 """ Not much of a test really... just checks that it doesn't crash
 """
-function test_mcmc(kern::Kernel,lik::Likelihood,X::Matrix{Float64}, y::Vector{Float64})
+function test_gpe_mcmc(kern::Kernel,X::Matrix{Float64}, y::Vector{Float64})
+	gp = GP(X,y,MeanZero(), kern)
+        set_priors!(gp.k,[Distributions.Normal(-1.0,1.0) for i in 1:num_params(gp.k)])
+	mcmc(gp)
+end
+
+function test_gpmc_mcmc(kern::Kernel,lik::Likelihood,X::Matrix{Float64}, y::Vector{Float64})
 	gp = GP(X,y,MeanZero(), kern,lik)
         set_priors!(gp.k,[Distributions.Normal(-1.0,1.0) for i in 1:num_params(gp.k)])
 	mcmc(gp)
@@ -17,4 +23,5 @@ end
 
 rq = RQ(1.0, 1.0, 1.0)
 lik = GaussLik(-1.0)
-test_mcmc(rq, lik, x, y)
+test_gpmc_mcmc(rq, lik, x, y)
+test_gpe_mcmc(rq, x, y)
