@@ -15,12 +15,12 @@ end
 #log of probability density
 function log_dens(poisson::PoisLik, f::Vector{Float64}, y::Vector{Int64})
     #where we exponentiate for positivity f = exp(fi) 
-    return [yi*fi - exp(fi) - lgamma(1.0 + yi) for (fi,yi) in zip(f,y)]
+    return y.*f - exp.(f) - lgamma.(1.0 .+ y)
 end
 
 #derivative of pdf wrt latent function
 function dlog_dens_df(poisson::PoisLik, f::Vector{Float64}, y::Vector{Int64})
-    return [yi - exp(fi) for (fi,yi) in zip(f,y)]
+    return y - exp.(f) 
 end                   
 
 #mean and variance under likelihood

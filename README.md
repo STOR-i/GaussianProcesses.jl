@@ -2,7 +2,7 @@
 
 A Gaussian Processes package for Julia. 
 
-This package is still in the early stages of development. If you have any suggestions to improve the package, or if you've noticed a bug, then please post an [issue](https://github.com/STOR-i/GaussianProcesses.jl/issues/new) for us and we'll get to it as quickly as we can. Pull requests are also welcome.
+This package is still under development. If you have any suggestions to improve the package, or if you've noticed a bug, then please post an [issue](https://github.com/STOR-i/GaussianProcesses.jl/issues/new) for us and we'll get to it as quickly as we can. Pull requests are also welcome.
 
 ## Introduction
 
@@ -12,7 +12,7 @@ For an extensive review of Gaussian Processes there is an excellent book [Gaussi
 
 ## Installation
 
-GaussianProcesses.jl requires Julia version 0.5 or above. To install GaussianProcesses.jl run the following command inside a Julia session:
+GaussianProcesses.jl requires Julia version 0.6 or above. To install GaussianProcesses.jl run the following command inside a Julia session:
 
 ```julia
 julia> Pkg.add("GaussianProcesses")
@@ -29,6 +29,15 @@ gp = GP(X',y,mean,kernel,likelihood)
 for Gaussian and non-Gaussian data respectively.
 
 The package has a number of *mean*, *kernel* and *likelihood* functions available. See the documentation for further details.
+
+### Inference
+
+The parameters of the model can be estimated by maximizing the log-likelihood (where the latent function is integrated out) using the `optimize!` function, or in the case of *non-Gaussian data*, an `mcmc` function is available, utilizing the Hamiltonian Monte Carlo sampler, and can be used to infer the model parameters and latent function values. 
+```
+optimize!(gp)    # Find parameters which maximize the log-likelihood
+mcmc(gp)         # Sample from the GP posterior
+```
+See the [notebooks](https://github.com/STOR-i/GaussianProcesses.jl/tree/master/notebooks) for examples of the functions used in the package.
 
 ## Documentation
 

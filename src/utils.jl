@@ -20,7 +20,7 @@ function map_column_pairs!{M1<:MatF64,M2<:MatF64,M3<:MatF64}(D::M1, f::Function,
     size(D,2) == nobs2 || throw(ArgumentError(@sprintf("D has %d columns, while Y has %d columns (should be same)", 
                                                        size(D,2), nobs2)))
     for i in 1:nobs1, j in 1:nobs2
-        @inbounds D[i,j] = f(X[:,i], Y[:,j])
+        @inbounds D[i,j] = f(view(X,:,i), view(Y,:,j))
     end
     return D
 end
@@ -64,10 +64,10 @@ function map_column_pairs!{M1<:MatF64,M2<:MatF64}(D::M1, f::Function, X::M2)
                                                        size(D,1), nobsv)))
     size(D,2) == nobsv || throw(ArgumentError(@sprintf("D has %d columns, while X has %d columns (should be same)", 
                                                        size(D,2), nobsv)))
-    for i in 1:nobsv
+    @inbounds for i in 1:nobsv
         for j in 1:i
-            @inbounds D[i,j] = f(X[:,i], X[:,j])
-            if i != j; @inbounds D[j,i] = D[i,j]; end;
+            D[i,j] = f(view(X,:,i), view(X,:,j))
+            if i != j; D[j,i] = D[i,j]; end;
         end
     end
     return D
@@ -97,6 +97,7 @@ function map_column_pairs{M<:MatF64}(f::Function, X::M)
 end
 
 
-# Taken from Distributions package
+# Taken from StatsFuns package
 φ(z::Real) = exp(-0.5*z*z)/√2π
 Φ(z::Real) = 0.5*erfc(-z/√2)
+invΦ(p::Real) = -erfcinv(2*p) * sqrt(2)

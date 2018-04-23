@@ -18,10 +18,9 @@ include("studentT.jl")
 include("poisson.jl")
 include("binomial.jl")
 
-#———————————————————————————————————————————————————————————————-
-#Priors
-
-
+##########
+# Priors #
+##########
 function set_priors!(lik::Likelihood, priors::Array)
     length(priors) == num_params(lik) || throw(ArgumentError("$(typeof(lik)) has exactly $(num_params(lik)) parameters"))
     lik.priors = priors
@@ -56,7 +55,7 @@ function predict_obs(lik::Likelihood, fmean::Vector{Float64}, fvar::Vector{Float
     n_gaussHermite = 20
     nodes, weights = gausshermite(n_gaussHermite)
     weights /= sqrt(pi)
-    f = fmean .+ sqrt(2.0*fvar)*nodes'
+    f = fmean .+ sqrt.(2.0*fvar)*nodes'
     
     mLik = Array{Float64}(size(f)); vLik = Array{Float64}(size(f));
     for i in 1:n_gaussHermite

@@ -2,19 +2,21 @@
 # Description
 Constructor for the Student-t likelihood (aka non-standardized Student's t-distribution)
 
-    p(y|ν,f,σ) = Γ((ν+1)/2)/[Γ(ν/2)\sqrt{πν}σ](1+1/ν((y-f)/σ)²)^(-(ν+1)/2),
-    where f is the latent function of the GP.
+    p(y|f,σ) = Γ((ν+1)/2)/[Γ(ν/2)\sqrt{πν}σ](1+1/ν((y-f)/σ)²)^(-(ν+1)/2),
+
+where f is the latent Gaussian process and σ a
+non-fixed hyperparameter.
 
 # Arguments:
-    * `ν::Int64`:   degrees of freedom
+    * `ν::Int64`:    degrees of freedom
     * `lσ::Float64`: log of scale
 # Link:
     * https://en.wikipedia.org/wiki/Student's_t-distribution
 """
 type StuTLik <: Likelihood
-    ν::Int64    #degrees of freedom
-    σ::Float64  #scale
-    priors::Array          # Array of priors for likelihood parameters
+    ν::Int64       # Degrees of freedom
+    σ::Float64     # Scale
+    priors::Array  # Array of priors for likelihood parameters
     StuTLik(ν::Int64,lσ::Float64) = new(ν,exp(lσ),[])
 end
 

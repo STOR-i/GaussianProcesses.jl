@@ -1,5 +1,22 @@
 # News
 
+## Version 0.6.0 (2018-03-02)
+* Updated optimization code to be compatible with new Optim.jl API
+* Removed Klara dependency
+* Performance improvements to `predict` functions
+
+
+## Version 0.5.0 (2017-10-18)
+* Updated Julia version requirement to 0.6
+* GP type has been renamed to GPE (GP exact) for Gaussian likelihoods
+* Introduced GPMC type for fitting models with non-Gaussian likelihoods:
+  * Bernouilli, Poisson, Binomial and student-t likelihoods available
+* Introduced priors for parameters of the kernal, mean, and likelihood functions
+* MCMC available for GPE and GPMC type
+* Changed plotting functions to use [Plots.jl](https://github.com/JuliaPlots/Plots.jl)
+* Created notebooks illustrating package features
+
+
 ## Version 0.4.0 (2016-10-04)
 * Julia requirement moved up to version 0.5
 * Major speed improvements for fitting of GP object, and for covariance and gradient calculations

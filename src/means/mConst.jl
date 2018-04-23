@@ -14,7 +14,8 @@ type MeanConst <: Mean
     MeanConst(β::Float64) = new(β, [])
 end
 
-mean(mConst::MeanConst,x::MatF64) =  fill(mConst.β, size(x,2))
+mean(mConst::MeanConst, x::VecF64) = mConst.β
+mean(mConst::MeanConst, X::MatF64) = fill(mConst.β, size(X,2))
 
 get_params(mConst::MeanConst) = Float64[mConst.β]
 get_param_names(::MeanConst) = [:β]
@@ -23,7 +24,7 @@ function set_params!(mConst::MeanConst, hyp::Vector{Float64})
     length(hyp) == 1 || throw(ArgumentError("Constant mean function only has 1 parameter"))
     mConst.β = hyp[1]
 end
-function grad_mean(mConst::MeanConst, x::Vector{Float64})
-    dM_theta = ones(size(x,2))
+function grad_mean(mConst::MeanConst, x::VecF64)
+    dM_theta = ones(1)
     return dM_theta
 end

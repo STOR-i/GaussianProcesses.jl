@@ -1,11 +1,11 @@
 """
-    # Description
-    Constructor for the Bernoulli likelihood
+# Description
+Constructor for the Bernoulli likelihood
+    
+    p(y=k|f) = θᵏ(1-θ)¹⁻ᵏ, for k=0, 1
 
-    p(y=k|f) = pᵏ(1-p)¹⁻ᵏ, for k=0,1
-    # Arguments:
-    * `p::Float64`: probability of a success, where the link function is the probit function, p = Φ(f) and f is the latent function
-    """
+where θ = Φ(f), and f is the latent Gaussian process
+"""
 type BernLik <: Likelihood
     BernLik() = new()
 end

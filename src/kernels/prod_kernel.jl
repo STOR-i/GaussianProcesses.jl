@@ -1,25 +1,12 @@
 type ProdKernel <: CompositeKernel
     kerns::Vector{Kernel}
-    function ProdKernel(args...)
-        kerns = Array{Kernel}(length(args))
-        for (i,k) in enumerate(args)
-            isa(k, Kernel) || throw(ArgumentError("All arguments of ProdKernel must be Kernel objects"))
-            kerns[i] = k
-        end
-        return new(kerns)
-    end
+    ProdKernel(args::Vararg{Kernel}) = new(collect(args))
 end
 
-subkernels(prodkern::ProdKernel) = prodkern.kerns
-get_param_names(prodkern::ProdKernel) = composite_param_names(prodkern.kerns, :pk)
+subkernels(pk::ProdKernel) = pk.kerns
+get_param_names(pk::ProdKernel) = composite_param_names(pk.kerns, :pk)
 
-function cov{V1<:VecF64,V2<:VecF64}(prodkern::ProdKernel, x::V1, y::V2)
-    p = 1.0
-    for k in prodkern.kerns
-        p *= cov(k, x, y)
-    end
-    return p
-end
+cov{V1<:VecF64,V2<:VecF64}(pk::ProdKernel, x::V1, y::V2) = prod(cov(k, x, y) for k in subkernels(pk))
 
 function cov{M<:MatF64}(prodkern::ProdKernel, X::M)
     d, nobsv = size(X)
@@ -105,13 +92,7 @@ function grad_slice!{M1<:MatF64, M2<:MatF64}(
 end
 
 # Multiplication operators
-function *(k1::ProdKernel, k2::Kernel)
-    kerns = [k1.kerns; k2]
-    ProdKernel(kerns...)
-end
-function *(k1::ProdKernel, k2::ProdKernel)
-    kerns = [k1.kerns; k2.kerns]
-    ProdKernel(kerns...)
-end
+*(k1::ProdKernel, k2::Kernel) = ProdKernel(k1.kerns..., k2)
+*(k1::ProdKernel, k2::ProdKernel) = ProdKernel(k1.kerns..., k2.kerns...)
 *(k1::Kernel, k2::Kernel) = ProdKernel(k1,k2)
-*(k1::Kernel, k2::ProdKernel) = *(k2,k1)
+*(k1::Kernel, k2::ProdKernel) = ProdKernel(k1, k2.kerns...)

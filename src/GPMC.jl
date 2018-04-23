@@ -66,7 +66,7 @@ GPMC{T<:Real}(x::Vector{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik
 
 GP{T<:Real}(x::Vector{Float64}, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(x', y, m, k, lik)
 
-#initiate the log-likelihood function of a general GP model
+"""Initialise the log-likelihood function of a general GP model"""
 function initialise_ll!(gp::GPMC)
     # log p(Y|v,θ) 
     gp.μ = mean(gp.m,gp.X)
@@ -76,60 +76,72 @@ function initialise_ll!(gp::GPMC)
     gp.ll = sum(log_dens(gp.lik,F,gp.y)) #Log-likelihood
 end
 
-# modification of initialise_ll! that reuses existing matrices to avoid
-# unnecessary memory allocations, which speeds things up significantly
-function update_ll!(gp::GPMC)
-    Σbuffer = gp.cK.mat
-    gp.μ = mean(gp.m,gp.X)
+"""
+Update the covariance matrix and its Cholesky decomposition.
+"""
+function update_cK!(gp::GPMC)
+    old_cK = gp.cK
+    Σbuffer = old_cK.mat
     cov!(Σbuffer, gp.k, gp.X, gp.data)
     for i in 1:gp.nobsv
-        Σbuffer[i,i] += 1e-8
+        Σbuffer[i,i] += 1e-6 # no logNoise for GPMC
     end
-    chol_buffer = gp.cK.chol.factors
+    chol_buffer = old_cK.chol.factors
     copy!(chol_buffer, Σbuffer)
     chol = cholfact!(Symmetric(chol_buffer))
     gp.cK = PDMats.PDMat(Σbuffer, chol)
+end
+
+# modification of initialise_ll! that reuses existing matrices to avoid
+# unnecessary memory allocations, which speeds things up significantly
+function update_ll!(gp::GPMC; process::Bool=true, lik::Bool=true, domean::Bool=true, kern::Bool=true)
+    if kern
+        # only need to update the covariance matrix
+        # if the covariance parameters have changed
+        update_cK!(gp)
+    end
+    gp.μ = mean(gp.m,gp.X)
     F = unwhiten(gp.cK,gp.v) + gp.μ
     gp.ll = sum(log_dens(gp.lik,F,gp.y)) #Log-likelihood
 end
 
-
-
-# dlog p(Y|v,θ)
 """ Update gradient of the log-likelihood dlog p(Y|v,θ) """
-function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
+function update_dll!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64;
+    process::Bool=true, # include gradient components for the process itself
     lik::Bool=true,  # include gradient components for the likelihood parameters
-    mean::Bool=true, # include gradient components for the mean parameters
+    domean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
     )
     size(Kgrad) == (gp.nobsv, gp.nobsv) || throw(ArgumentError, 
     @sprintf("Buffer for Kgrad should be a %dx%d matrix, not %dx%d",
              gp.nobsv, gp.nobsv,
              size(Kgrad,1), size(Kgrad,2)))
-    
+    size(L_bar) == (gp.nobsv, gp.nobsv) || throw(ArgumentError, 
+    @sprintf("Buffer for L_bar should be a %dx%d matrix, not %dx%d",
+             gp.nobsv, gp.nobsv,
+             size(L_bar,1), size(L_bar,2)))
+
     n_lik_params = num_params(gp.lik)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
 
-    update_ll!(gp)
-    Lv = unwhiten(gp.cK,gp.v)
-    
-    gp.dll = Array{Float64}(gp.nobsv + lik*n_lik_params + mean*n_mean_params + kern*n_kern_params)
-    dl_df=dlog_dens_df(gp.lik, Lv + gp.μ, gp.y)
+    gp.dll = Array{Float64}(process*gp.nobsv + lik*n_lik_params + domean*n_mean_params + kern*n_kern_params)
 
-    U = triu(gp.cK.chol.factors)
-    L = U'
-    gp.dll[1:gp.nobsv] = L'dl_df
-    
-    i=gp.nobsv+1 
-    if lik  && n_lik_params>0
-        Lgrads = dlog_dens_dθ(gp.lik,Lv + gp.μ, gp.y)
+    Lv = unwhiten(gp.cK, gp.v)
+    dl_df = dlog_dens_df(gp.lik, Lv + gp.μ, gp.y)
+    i = 1
+    if process
+        A_mul_B!(view(gp.dll, i:i+gp.nobsv-1), gp.cK.chol[:U], dl_df)
+        i += gp.nobsv
+    end
+    if lik && n_lik_params > 0
+        Lgrads = dlog_dens_dθ(gp.lik, Lv + gp.μ, gp.y)
         for j in 1:n_lik_params
             gp.dll[i] = sum(Lgrads[:,j])
             i += 1
         end
     end
-    if mean && n_mean_params>0
+    if domean && n_mean_params > 0
         Mgrads = grad_stack(gp.m, gp.X)
         for j in 1:n_mean_params
             gp.dll[i] = dot(dl_df,Mgrads[:,j])
@@ -137,9 +149,16 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
         end
     end
     if kern
-        # L_bar = zeros(gp.nobsv, gp.nobsv)
-        # tril!(LinAlg.BLAS.ger!(1.0, dl_df, gp.v, L_bar)) # grad_ll_L
-        L_bar = tril(dl_df * gp.v')
+        L_bar[:] = 0.0
+        LinAlg.BLAS.ger!(1.0, dl_df, gp.v, L_bar)
+        tril!(L_bar)
+        # ToDo:
+        # the following two steps allocates memory
+        # and are fickle, reaching into the internal
+        # implementation of the cholesky decomposition
+        L = gp.cK.chol[:L].data
+        tril!(L)
+        #
         chol_unblocked_rev!(L, L_bar)
         for iparam in 1:n_kern_params
             grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
@@ -147,6 +166,11 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64;
             i+=1
         end
     end
+end
+
+function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64; kwargs...)
+    update_ll!(gp; kwargs...)
+    update_dll!(gp, Kgrad, L_bar; kwargs...)
 end
 
 
@@ -157,18 +181,27 @@ function initialise_target!(gp::GPMC)
 end    
 
 """ GPMC: Update the target, which is assumed to be the log-posterior, log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ) """
-function update_target!(gp::GPMC)
-    update_ll!(gp)
+function update_target!(gp::GPMC; process::Bool=true, lik::Bool=true, domean::Bool=true, kern::Bool=true)
+    update_ll!(gp; process=process, lik=lik, domean=domean, kern=kern)
     gp.target = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.m) + prior_logpdf(gp.k) 
 end    
 
+function update_dtarget!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64; kwargs...)
+    update_dll!(gp, Kgrad, L_bar; kwargs...)
+    gp.dtarget = gp.dll + prior_gradlogpdf(gp; kwargs...)
+end
+
 """ GPMC: A function to update the target (aka log-posterior) and its derivative """
-function update_target_and_dtarget!(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
-    Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
-    update_target!(gp)
-    update_ll_and_dll!(gp, Kgrad; lik=lik, mean=mean, kern=kern)
-    gp.dtarget = gp.dll + [-gp.v;prior_gradlogpdf(gp.lik);prior_gradlogpdf(gp.m);prior_gradlogpdf(gp.k)] 
-end    
+function update_target_and_dtarget!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64; kwargs...)
+    update_target!(gp; kwargs...)
+    update_dtarget!(gp, Kgrad, L_bar; kwargs...)
+end
+""" GPMC: A function to update the target (aka log-posterior) and its derivative """
+function update_target_and_dtarget!(gp::GPMC; kwargs...)
+    Kgrad = Array{Float64}(gp.nobsv, gp.nobsv)
+    L_bar = Array{Float64}(gp.nobsv, gp.nobsv)
+    update_target_and_dtarget!(gp, Kgrad, L_bar; kwargs...)
+end
 
 
 #Calculate the mean and variance of predictive distribution p(y^*|x^*,D,θ) at test locations x^*
@@ -189,15 +222,7 @@ function _predict{M<:MatF64}(gp::GPMC, X::M)
     fmu =  mean(gp.m,X) + Lck'gp.v     # Predictive mean
     Sigma_raw = cov(gp.k, X) - Lck'Lck # Predictive covariance
     # Add jitter to get stable covariance
-    while true
-        Sigma_raw = try
-            PDMat(Sigma_raw)
-            break
-        catch
-            PDMat(Sigma_raw+(1e-8*sum(diag(Sigma_raw))/n)*I)
-        end
-    end
-    fSigma = PDMat(Sigma_raw)
+    fSigma = tolerant_PDMat(Sigma_raw)
     return fmu, fSigma
 end
 
@@ -212,15 +237,7 @@ function rand!{M<:MatF64}(gp::GPMC, X::M, A::DenseMatrix)
         μ = mean(gp.m, X);
         Σraw = cov(gp.k, X);
         # Add jitter to get stable covariance
-        while true
-            Σraw = try
-                PDMat(Σraw)
-                break
-            catch
-                PDMat(Σraw+(1e8*sum(diag(Σraw))/nobsv)*I)
-            end
-        end
-        Σ = Σraw
+        Σ = tolerant_PDMat(Σraw)
     else
         # Posterior mean and covariance
         μ, Σ = predict_f(gp, X; full_cov=true)
@@ -244,13 +261,13 @@ rand{M<:MatF64}(gp::GPMC,X::M) = vec(rand(gp,X,1))
 rand{V<:VecF64}(gp::GPMC,x::V) = vec(rand(gp,x',1))
 
 
-function get_params(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
+function get_params(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     params = Float64[]
     append!(params, gp.v)
     if lik  && num_params(gp.lik)>0
         append!(params, get_params(gp.lik))
     end
-    if mean && num_params(gp.m)>0
+    if domean && num_params(gp.m)>0
         append!(params, get_params(gp.m))
     end
     if kern
@@ -259,18 +276,21 @@ function get_params(gp::GPMC; lik::Bool=true, mean::Bool=true, kern::Bool=true)
     return params
 end
 
-function set_params!(gp::GPMC, hyp::Vector{Float64}; lik::Bool=true, mean::Bool=true, kern::Bool=true)
+function set_params!(gp::GPMC, hyp::Vector{Float64}; process::Bool=true, lik::Bool=true, domean::Bool=true, kern::Bool=true)
     n_lik_params = num_params(gp.lik)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
 
-    gp.v = hyp[1:gp.nobsv]
-    i=gp.nobsv+1  
+    i = 1
+    if process
+        gp.v = hyp[1:gp.nobsv]
+        i += gp.nobsv
+    end
     if lik  && n_lik_params>0
         set_params!(gp.lik, hyp[i:i+n_lik_params-1]);
         i += n_lik_params
     end
-    if mean && n_mean_params>0
+    if domean && n_mean_params>0
         set_params!(gp.m, hyp[i:i+n_mean_params-1])
         i += n_mean_params
     end
@@ -280,6 +300,23 @@ function set_params!(gp::GPMC, hyp::Vector{Float64}; lik::Bool=true, mean::Bool=
     end
 end
 
+function prior_gradlogpdf(gp::GPMC; process::Bool=true, lik::Bool=true, domean::Bool=true, kern::Bool=true)
+    if process
+        grad = -gp.v
+    else
+        grad = Float64[]
+    end
+    if lik
+        append!(grad, prior_gradlogpdf(gp.lik))
+    end
+    if domean
+        append!(grad, prior_gradlogpdf(gp.m))
+    end
+    if kern
+        append!(grad, prior_gradlogpdf(gp.k))
+    end
+    return grad
+end
 
 
 function show(io::IO, gp::GPMC)

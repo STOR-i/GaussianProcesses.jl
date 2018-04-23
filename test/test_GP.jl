@@ -1,6 +1,6 @@
 using GaussianProcesses
 using GaussianProcesses: distance, KernelData
-#import ScikitLearnBase
+import ScikitLearnBase
 
 d, n = 3, 10
 
@@ -15,18 +15,18 @@ gp = GP(x, y, mZero, kern)
 # are the same as the output observations
 function test_pred_matches_obs(gp::GPE)
     y_pred, sig = predict_y(gp, x)
-    @test isapprox(maximum(abs.(gp.y - y_pred)), 0.0, atol=0.0001)
+    @test isapprox(maximum(abs.(gp.y - y_pred)), 0.0, atol=0.1)
 end
 
 test_pred_matches_obs(gp)
 
-# function sk_test_pred_matches_obs() # ScikitLearn interface test
-#     gp_sk = ScikitLearnBase.fit!(GPE(), x', y)
-#     y_pred = ScikitLearnBase.predict(gp_sk, x')
-#     @test_approx_eq_eps maximum(abs(gp_sk.y - y_pred)) 0.0 1e-4
-# end
+function sk_test_pred_matches_obs() # ScikitLearn interface test
+    gp_sk = ScikitLearnBase.fit!(GPE(), x', y)
+    y_pred = ScikitLearnBase.predict(gp_sk, x')
+    @test isapprox(maximum(abs.(gp_sk.y - y_pred)), 0.0, atol=0.1)
+end
 
-#sk_test_pred_matches_obs()
+sk_test_pred_matches_obs()
 
 # Modify kernel and update
 gp.k.ℓ2 = 4.0
@@ -35,14 +35,4 @@ x_pred = 2π * rand(d, n)
 GaussianProcesses.update_target!(gp)
 y_pred, sig = predict_y(gp, x_pred)
 
-#—————————————————————————————————————————–
-#GPMC test
 
-# z = Φ(y)
-
-# z = convert(Vector{Bool},z)
-# lik = BernLik()
-
-# gp = GP(x, z, mZero, kern, lik)
-# z_pred = predict_y(gp, x)[1]
-# maximum(abs(gp.y - z_pred)) 0.0 1e-4

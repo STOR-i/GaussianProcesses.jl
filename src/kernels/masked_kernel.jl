@@ -48,7 +48,6 @@ function kernel_data_key{K<:Kernel,M<:MatF64}(masked::Masked{K}, X::M)
     return @sprintf("%s_active=%s", k, masked.active_dims)
 end
 
-
 get_params{K<:Kernel}(masked::Masked{K}) = get_params(masked.kern)
 get_param_names{K<:Kernel}(masked::Masked{K}) = get_param_names(masked.kern)
 num_params{K<:Kernel}(masked::Masked{K}) = num_params(masked.kern)

@@ -27,7 +27,6 @@ get_params(mat::Mat52Ard) = [-log.(mat.iℓ2)/2.0; log(mat.σ2)/2.0]
 get_param_names(mat::Mat52Ard) = [get_param_names(mat.iℓ2, :ll); :lσ]
 num_params(mat::Mat52Ard) = length(mat.iℓ2) + 1
 
-metric(mat::Mat52Ard) = WeightedEuclidean(mat.iℓ2)
 cov(mat::Mat52Ard, r::Float64) = mat.σ2*(1+sqrt(5)*r+5/3*r^2)*exp(-sqrt(5)*r)
 
 dk_dll(mat::Mat52Ard, r::Float64, wdiffp::Float64) = mat.σ2*(5/3)*(1+sqrt(5)*r)*exp(-sqrt(5)*r).*wdiffp

@@ -20,6 +20,7 @@ type EmptyData <: KernelData
 end
 
 KernelData{M<:MatF64}(k::Kernel, X::M) = EmptyData()
+kernel_data_key{M<:MatF64}(k::Kernel, X::M) = "EmptyData"
 
 """
 # Description
@@ -37,6 +38,7 @@ function cov{M1<:MatF64,M2<:MatF64}(k::Kernel, X₁::M1, X₂::M2)
     d(x1,x2) = cov(k, x1, x2)
     return map_column_pairs(d, X₁, X₂)
 end
+
 function cov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Kernel, X₁::M1, X₂::M2)
     d(x1,x2) = cov(k, x1, x2)
     return map_column_pairs!(cK, d, X₁, X₂)
@@ -61,6 +63,7 @@ function cov{M<:MatF64}(k::Kernel, X::M, data::EmptyData)
     d(x,y) = cov(k, x, y)
     return map_column_pairs(d, X)
 end
+
 function cov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::EmptyData)
     d(x,y) = cov(k, x, y)
     return map_column_pairs!(cK, d, X)
@@ -71,12 +74,20 @@ cov!{M<:MatF64}(cK:: MatF64, k::Kernel, X::M) = cov!(cK, k, X, KernelData(k, X))
 #=function cov!(cK::Matrix{Float64}, k::Kernel, X::Matrix{Float64}, data::KernelData)=#
 #=    cK[:,:] = cov(k,X,data)=#
 #=end=#
+function addcov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Kernel, X1::M1, X2::M2)
+    cK[:,:] .+= cov(k, X1, X2)
+    return cK
+end
 function addcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M)
     cK[:,:] .+= cov(k, X, KernelData(k, X))
     return cK
 end
 function addcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::KernelData)
     cK[:,:] .+= cov(k, X, data)
+    return cK
+end
+function multcov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Kernel, X1::M1, X2::M2)
+    cK[:,:] .*= cov(k, X1, X2)
     return cK
 end
 function multcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M)
@@ -99,6 +110,7 @@ function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::Kern
     end
     return dK
 end
+
 function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::EmptyData, p::Int)
     dim = size(X,1)
     nobsv = size(X,2)
@@ -110,6 +122,7 @@ function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::Empt
     end
     return dK
 end
+
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients
 function grad_stack!{M<:MatF64}(stack::AbstractArray, k::Kernel, X::M, data::KernelData)
     npars = num_params(k)
@@ -118,10 +131,13 @@ function grad_stack!{M<:MatF64}(stack::AbstractArray, k::Kernel, X::M, data::Ker
     end
     return stack
 end
+
 function grad_stack!{M<:MatF64}(stack::AbstractArray, k::Kernel, X::M)
     grad_stack!(stack, k, X, KernelData(k, X))
 end
+
 grad_stack{M<:MatF64}(k::Kernel, X::M) = grad_stack(k, X, KernelData(k, X))
+
 function grad_stack{M<:MatF64}(k::Kernel, X::M, data::KernelData)
     n = num_params(k)
     n_obsv = size(X, 2)
@@ -178,11 +194,11 @@ function show(io::IO, k::Kernel, depth::Int = 0)
     print(io, "\n")
 end
 
-num_params(k::Kernel)=throw(ArgumentError("Undefined number of parameters"))
+num_params(k::Kernel) = throw(MethodError(num_params, ()))
 
-################
-#Priors
-################
+##########
+# Priors #
+##########
 
 get_priors(k::Kernel) = k.priors
 
@@ -192,26 +208,17 @@ function set_priors!(k::Kernel, priors::Array)
 end
 
 function prior_logpdf(k::Kernel)
-    priors=get_priors(k)
-    if priors==[]
-        return 0.0
-    else
-        return sum(logpdf(prior,param) for (prior, param) in zip(priors,get_params(k)))
-    end    
+    priors = get_priors(k)
+    return isempty(priors)? 0.0 : sum(logpdf(prior,param) for (prior, param) in zip(priors,get_params(k)))
 end
 
 function prior_gradlogpdf(k::Kernel)
-    priors=get_priors(k)
-    if priors==[]
-        return zeros(num_params(k))
-    else
-        return [gradlogpdf(prior,param) for (prior, param) in zip(priors,get_params(k))]
-    end    
+    priors = get_priors(k)
+    return isempty(priors) ? zeros(num_params(k)) : Float64[gradlogpdf(prior,param) for (prior, param) in zip(priors,get_params(k))]
 end
 
-
 include("stationary.jl")
-
+include("distance.jl")
 include("lin.jl")               # Linear covariance function
 include("se.jl")                # Squared exponential covariance function
 include("rq.jl")                # Rational quadratic covariance function

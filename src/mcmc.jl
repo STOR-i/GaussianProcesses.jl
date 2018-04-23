@@ -4,50 +4,93 @@ A function for running a variety of MCMC algorithms for estimating the GP hyperp
 
     # Arguments:
     * `gp::GP`: Predefined Gaussian process type
-        * `start::Vector{Float64}`: Select a starting value, default is taken as current GP parameters
-        * `sampler::Klara.MCSampler`: MCMC sampler selected from the Klara package
-        * `mcrange::Klara.BasicMCRange`: Choose number of MCMC iterations and burnin length, default is nsteps=5000, burnin = 1000
+        * `nIter::Int`: Number of MCMC iterations
+        * `ε::Real`: Stepsize parameter
+        * `L::Int`: Number of leapfrog steps
         """ ->
-function mcmc(gp::GPBase;
-              start::Vector{Float64}=get_params(gp),
-              sampler=Klara.MALA(0.1),
-              mcrange=Klara.BasicMCRange(nsteps=5000, burnin=1000))
-
+function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64=0.1,
+        Lmin::Int=5, Lmax::Int=15,
+        lik::Bool=true,
+        noise::Bool=true,
+        domean::Bool=true,
+        kern::Bool=true)
     
-    function logtarget(hyp::Vector{Float64})  #log-target
+    Kgrad = Array{Float64}(gp.nobsv, gp.nobsv)
+    L_bar = Array{Float64}(gp.nobsv, gp.nobsv)
+    params_kwargs = get_params_kwargs(typeof(gp); domean=domean, kern=kern, noise=noise, lik=lik) 
+    count = 0
+    function calc_target(gp::GPBase, θ::Vector{Float64}) #log-target and its gradient 
+        count += 1
         try
-            set_params!(gp, hyp)
-            return update_target!(gp)
+            set_params!(gp, θ; params_kwargs...)
+            update_target_and_dtarget!(gp, Kgrad, L_bar; params_kwargs...)
+            return true
         catch err
-            if !all(isfinite.(hyp))
-                println(err)
-                return -Inf
+            if !all(isfinite.(θ))
+                return false
             elseif isa(err, ArgumentError)
-                println(err)
-                return -Inf
+                return false
             elseif isa(err, Base.LinAlg.PosDefException)
-                println(err)
-                return -Inf
+                return false
             else
                 throw(err)
             end
         end        
     end
 
-    function dlogtarget(hyp::Vector{Float64}) #gradient of the log-target
-        set_params!(gp, hyp)
-        return update_target_and_dtarget!(gp)
-    end
+
+    θ_cur = get_params(gp; params_kwargs...)
+    D = length(θ_cur)
+    leapSteps = 0                   #accumulator to track number of leap-frog steps
+    post = Array{Float64}(nIter,D)     #posterior samples
+    post[1,:] = θ_cur
     
-    starting = Dict(:p=>start)
-    q = BasicContMuvParameter(:p, logtarget=logtarget, gradlogtarget=dlogtarget) 
-    model = likelihood_model(q, false)               #set-up the model
-    tune = AcceptanceRateMCTuner(0.6, verbose=true)  #set length of tuning (default to burnin length)
-    job = BasicMCJob(model, sampler, mcrange, starting)   #set-up MCMC job
-    print(job)                                #display MCMC set-up for the user
-    run(job)
-    chain = Klara.output(job)
-    set_params!(gp,start)      #reset the parameters stored in the GP to original values
-    return chain.value
+    @assert calc_target(gp, θ_cur)
+    target_cur, grad_cur = gp.target, gp.dtarget
+    
+    num_acceptances = 0
+    for t in 1:nIter
+        θ, target, grad = θ_cur, target_cur, grad_cur
+        
+        ν_cur = randn(D)        
+        ν = ν_cur + 0.5 * ε * grad
+        
+        reject = false
+        L = rand(Lmin:Lmax)
+        leapSteps +=L
+        for l in 1:L
+            θ += ε * ν
+            if  !calc_target(gp,θ)
+                reject=true
+                break
+            end
+            target, grad = gp.target, gp.dtarget
+            ν += ε * grad
+        end
+        ν -= 0.5*ε * grad
+
+        if reject
+            post[t,:] = θ_cur
+        else        
+            α = target - 0.5 * ν'ν - target_cur + 0.5 * ν_cur'ν_cur
+            u = log(rand())
+
+            if u < α 
+                num_acceptances += 1
+                θ_cur = θ
+                target_cur = target
+                grad_cur = grad
+            end
+            post[t,:] = θ_cur
+        end
+    end
+    post = post[burn:thin:end,:]
+    set_params!(gp, θ_cur; params_kwargs...)
+    @printf("Number of iterations = %d, Thinning = %d, Burn-in = %d \n", nIter,thin,burn)
+    @printf("Step size = %f, Average number of leapfrog steps = %f \n", ε,leapSteps/nIter)
+    println("Number of function calls: ", count)
+    @printf("Acceptance rate: %f \n", num_acceptances/nIter)
+    return post'
 end    
+
 

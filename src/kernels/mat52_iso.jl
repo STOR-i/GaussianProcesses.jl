@@ -24,7 +24,6 @@ get_params(mat::Mat52Iso) = Float64[log(mat.ℓ), log(mat.σ2)/2.0]
 get_param_names(mat::Mat52Iso) = [:ll, :lσ]
 num_params(mat::Mat52Iso) = 2
 
-metric(mat::Mat52Iso) = Euclidean()
 cov(mat::Mat52Iso, r::Float64) = mat.σ2*(1+sqrt(5)*r/mat.ℓ+5*r^2/(3*mat.ℓ^2))*exp(-sqrt(5)*r/mat.ℓ)
 
 @inline dk_dll(mat::Mat52Iso, r::Float64) = mat.σ2*(5*r^2/mat.ℓ^2)*((1+sqrt(5)*r/mat.ℓ)/3)*exp(-sqrt(5)*r/mat.ℓ)

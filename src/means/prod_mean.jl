@@ -1,80 +1,38 @@
-type ProdMean <: Mean
+type ProdMean <: CompositeMean
     means::Vector{Mean}
-    function ProdMean(args...)
-        means = Array(Mean, length(args))
-        for (i,m) in enumerate(args)
-            isa(m, Mean) || throw(ArgumentError("All arguments of ProdMean must be Mean objects"))
-            means[i] = m
-        end
-        return new(means)
-    end
+    ProdMean(args::Vararg{Mean}) = new(collect(args))
 end
 
-function show(io::IO, pm::ProdMean, depth::Int = 0)
-    pad = repeat(" ", 2 * depth)
-    println(io, "$(pad)Type: $(typeof(pm))")
-    for m in pm.means
-        show(io, m, depth+1)
-    end
-end
+submeans(pm::ProdMean) = pm.means
 
-function mean(prodmean::ProdMean, x::MatF64)
-    p = 1.0
-    for m in prodmean.means
-        p = p.*mean(m, x)
+mean(pm::ProdMean, x::VecF64) = prod(mean(m,x) for m in submeans(pm))
+function mean(pm::ProdMean, X::MatF64)
+    n = size(X, 2)
+    p = ones(n)
+    for m in submeans(pm)
+        broadcast!(*, p, p, mean(m, X))
     end
     return p
 end
 
-function get_params(prodmean::ProdMean)
-    p = Array{Float64}( 0)
-    for m in prodmean.means
-        append!(p, get_params(m))
+get_param_names(pm::ProdMean) = composite_param_names(pm.means, :pm)
+
+function grad_mean(pm::ProdMean, x::VecF64)
+    np = num_params(pm)
+    dm = Array{Float64}(np)
+    means = submeans(pm)
+    v = 1
+    for (i,m) in enumerate(means)
+        p = prod(mean(m2, x) for (j,m2) in enumerate(means) if i!=j)
+        np_m = num_params(m)
+        dm[v:v+np_m-1] = p * grad_mean(m, x)
+        v+=np_m
     end
-    p
-end
-
-get_param_names(prodmean::ProdMean) = composite_param_names(prodmean.means, :pm)
-
-function num_params(prodmean::ProdMean)
-    n = 0
-    for m in prodmean.means
-        n += num_params(m)
-    end
-    n
-end
-
-function set_params!(prodmean::ProdMean, hyp::Vector{Float64})
-    i, n = 1, num_params(prodmean)
-    length(hyp) == num_params(prodmean) || throw(ArgumentError("ProdMean object requires $(n) hyperparameters"))
-    for m in prodmean.means
-        np = num_params(m)
-        set_params!(m, hyp[i:(i+np-1)])
-        i += np
-    end
-end
-
-
-function grad_mean(prodmean::ProdMean, x::Vector{Float64})
-     dm = Array{Float64}( 0)
-      for m in prodmean.means
-          p = 1.0
-          for j in prodkern.means[find(k.!=prodkern.means)]
-              p = p.*mean(j, x)
-          end
-        append!(dm,grad_mean(m, x).*p)
-      end
-    dm
+    return dm
 end
 
 # Multiplication operators
-function *(m1::ProdMean, m2::Mean)
-    means = [m1.means, m2]
-    ProdMean(means...)
-end
-function *(m1::ProdMean, m2::ProdMean)
-    means = [m1.means, m2.means]
-    ProdMean(means...)
-end
+*(m1::ProdMean, m2::Mean) = ProdMean(m1.means..., m2)
+*(m1::ProdMean, m2::ProdMean) = ProdMean(m1.means..., m2.means...)
 *(m1::Mean, m2::Mean) = ProdMean(m1,m2)
-*(m1::Mean, m2::ProdMean) = *(m2,m1)
+*(m1::Mean, m2::ProdMean) = ProdMean(m1, m2.means...)

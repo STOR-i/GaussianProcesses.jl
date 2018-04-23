@@ -1,11 +1,11 @@
 """
-        # Description
-        Constructor for the Exponential likelihood
+# Description
+Constructor for the Exponential likelihood
 
+    p(y|f) = θ exp(-θy)
 
-        # Arguments:
-        * `θ::Float64`: rate parameter is the exponential of the latent function, i.e. θ = exp(f)
-        """
+where θ = exp(-f), and f is the latent Gaussian process
+"""
 type ExpLik <: Likelihood
     ExpLik() = new()
 end
