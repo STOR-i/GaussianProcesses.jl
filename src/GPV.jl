@@ -3,7 +3,7 @@ import Base.show
 
 @doc """
 # Description
-Fits a Gaussian process to a set of training points. The Gaussian process, with non-Gaussian observations, is defined in terms of its likelihood function, mean and covaiance (kernel) functions, which are user defined. We use a variational method to handle the non-Gaussian likelihood by approximating the latent function with a Gaussian approximation of the form, f ∼ N(Kα,[K⁻¹+diag(λ)]⁻¹), where Kα is a reparameterisation of the mean and K is positive semi-definite matrix. See Opper and Archambeau (2009), "The variational Gaussian approximation revisited" for full details.
+Fits a Gaussian process to a set of training points. The Gaussian process, with non-Gaussian observations, is defined in terms of its likelihood function, mean and covaiance (kernel) functions, which are user defined. We use a variational method to handle the non-Gaussian likelihood by approximating the latent function with a Gaussian approximation of the form, q(f) = N(Kα,[K⁻¹+diag(λ)]⁻¹), where Kα is a reparameterisation of the mean and K is positive semi-definite matrix. See Opper and Archambeau (2009), "The variational Gaussian approximation revisited" for full details.
 
 # Constructors:
     GPV(X, y, m, k, lik)
@@ -32,8 +32,10 @@ type GPV{T<:Real} <: GPBase
     dim::Int                # Dimension of inputs
     
     # Auxiliary data
-    μ::Vector{Float64}      # Mean of Gaussian variational approximation
-    Σ::AbstractPDMat        # Covariance matrix of the variational approximation
+    μ::Vector{Float64}      
+    cK::AbstractPDMat       # (k + exp(2*obsNoise))
+    qμ::Vector{Float64}     # Mean of Gaussian variational approximation
+    qΣ::AbstractPDMat       # Covariance matrix of the variational approximation
     ll::Float64             # Log-likelihood of general GPV model
     dll::Vector{Float64}    # Gradient of log-likelihood
     target::Float64         # Log-target (i.e. Log-posterior)
@@ -63,27 +65,15 @@ GP{T<:Real}(x::Vector{Float64}, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihoo
 """Initialise the variational lower bound on the log-likelihood function of a general GP model"""
 function initialise_ll!(gp::GPV)
 
-    KL = gauss_kl_white(self.q_mu, self.q_sqrt) #KL prior
+    KL = kl(qμ, qΣ) #KL prior
 
     gp.μ = mean(gp.m,gp.X)          #mean function 
     Σ = cov(gp.k, gp.X, gp.data)    #kernel function
     gp.cK = PDMat(Σ + 1e-6*I)       #cholesky
-    F = unwhiten(gp.cK,gp.v) + gp.μ 
-    
-#complete from here
-    q_sqrt_dnn = tf.matrix_band_part(tf.transpose(self.q_sqrt, [2, 0, 1]), -1, 0)  # D x N x N
-
-    L_tiled = tf.tile(tf.expand_dims(L, 0), tf.stack([self.num_latent, 1, 1]))
-
-    LTA = tf.matmul(L_tiled, q_sqrt_dnn)  # D x N x N
-    fvar = tf.reduce_sum(tf.square(LTA), 2)
-
-    fvar = tf.transpose(fvar)
-
-    # Get variational expectations.
-    var_exp = variational_expectations(fmean, fvar, Y)
-
-    gp.ll = sum(var_exp) - KL #Log-likelihood lower bound
+    Fmean = unwhiten(gp.cK, gp.qμ) + gp.μ 
+    Fvar = unwhiten(gp.cK, qΣ)
+    varExp = var_exp(gp.lik, Fmean, Fvar)      # Get variational expectations.
+    gp.ll = sum(varExp) - KL                                 # Log-likelihood lower bound
 end
 
 """

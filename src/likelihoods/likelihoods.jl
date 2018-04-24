@@ -49,8 +49,7 @@ end
 #————————————————————————————————————————————
 #Predict observations at test locations
 
-
-""" Computes the predictive mean and variance given a Gaussian distribution for f using quadrature"""
+""" Computes the predictive mean and variance given a Gaussian distribution for f using quadrature."""
 function predict_obs(lik::Likelihood, fmean::Vector{Float64}, fvar::Vector{Float64}) 
     n_gaussHermite = 20
     nodes, weights = gausshermite(n_gaussHermite)
@@ -68,3 +67,28 @@ function predict_obs(lik::Likelihood, fmean::Vector{Float64}, fvar::Vector{Float
 end
 
 
+#————————————————————————————————————————————
+#Variational expectation
+
+""" Compute the integral of the log-density of the observation model over a Gaussian approximation to the function values, i.e. ∫log p(y|f)q(f)df."""
+function var_exp(lik::Likelihood, fmean::Vector{Float64}, fvar::Vector{Float64})
+    n_gaussHermite = 20
+    nodes, weights = gausshermite(n_gaussHermite)
+    weights /= sqrt(pi)
+    f = fmean .+ sqrt.(2.0*fvar)*nodes'
+    logp = log_dens(lik,f,gp.y)
+    return logp*weights
+
+
+#————————————————————————————————————————————
+#Kullkback-Leibler divergence
+
+""" Compute the KL divergence between q(x) = N(qμ, qΣ²) and p(x) = N(0,K) """    
+function kl(qμ::Vector{Float64}, qΣ::Vector{Float64})
+    alpha = qμ
+    Lq = qΣ
+    mah = sum(alpha.^2)                             # Mahalanobis distance
+    logdet_qcov = sum(log(tf.square(diag(Lq)).^2))  # Log-determinant of the covariance of q(x):
+    trace = sum(Lq.^2)                              # Trace term: tr(Σp⁻¹ Σq)
+    twoKL = mah - logdet_qcov + trace    
+    return 0.5 * twoKL
