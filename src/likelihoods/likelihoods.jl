@@ -78,17 +78,5 @@ function var_exp(lik::Likelihood, fmean::Vector{Float64}, fvar::Vector{Float64})
     f = fmean .+ sqrt.(2.0*fvar)*nodes'
     logp = log_dens(lik,f,gp.y)
     return logp*weights
+end
 
-
-#————————————————————————————————————————————
-#Kullkback-Leibler divergence
-
-""" Compute the KL divergence between q(x) = N(qμ, qΣ²) and p(x) = N(0,K) """    
-function kl(qμ::Vector{Float64}, qΣ::Vector{Float64})
-    alpha = qμ
-    Lq = qΣ
-    mah = sum(alpha.^2)                             # Mahalanobis distance
-    logdet_qcov = sum(log(tf.square(diag(Lq)).^2))  # Log-determinant of the covariance of q(x):
-    trace = sum(Lq.^2)                              # Trace term: tr(Σp⁻¹ Σq)
-    twoKL = mah - logdet_qcov + trace    
-    return 0.5 * twoKL

@@ -44,9 +44,8 @@ type GPV{T<:Real} <: GPBase
     
     function (::Type{GPV{T}}){T<:Real}(X::MatF64, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood)
         dim, nobsv = size(X)
-        v = zeros(nobsv)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        gp = new{T}(m, k, lik, nobsv, X, y, μ, Σ, KernelData(k, X), dim)
+        gp = new{T}(m, k, lik, nobsv, X, y, KernelData(k, X), dim)
         initialise_target!(gp)
         return gp
     end
@@ -54,26 +53,24 @@ end
 
 GPV{T<:Real}(X::Matrix{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPV{T}(X, y, meanf, kernel, lik)
 
-# # Convenience constructor
-GP{T<:Real}(X::Matrix{Float64}, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood) = GPV{T}(X, y, m, k, lik)
-
 # Creates GP object for 1D case
 GPV{T<:Real}(x::Vector{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPV{T}(x', y, meanf, kernel, lik)
 
-GP{T<:Real}(x::Vector{Float64}, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood) = GPV{T}(x', y, m, k, lik)
 
 """Initialise the variational lower bound on the log-likelihood function of a general GP model"""
 function initialise_ll!(gp::GPV)
+    gp.qμ = zeros(gp.nobsv)
+    gp.qΣ = PDMat(eye(gp.nobsv))
 
-    KL = kl(qμ, qΣ) #KL prior
+    kl = 0.5(dot(gp.qμ,gp.qμ) - logdet(gp.qΣ) + sum(diag(gp.qΣ).^2)) #KL prior gives the divergence between two Gaussians
 
     gp.μ = mean(gp.m,gp.X)          #mean function 
     Σ = cov(gp.k, gp.X, gp.data)    #kernel function
-    gp.cK = PDMat(Σ + 1e-6*I)       #cholesky
-    Fmean = unwhiten(gp.cK, gp.qμ) + gp.μ 
-    Fvar = unwhiten(gp.cK, qΣ)
-    varExp = var_exp(gp.lik, Fmean, Fvar)      # Get variational expectations.
-    gp.ll = sum(varExp) - KL                                 # Log-likelihood lower bound
+    gp.cK = PDMat(Σ + 1e-6*I)       
+    Fmean = unwhiten(gp.cK, gp.qμ) + gp.μ      # K⁻¹q_μ 
+    Fvar = unwhiten(gp.cK, gp.qΣ)              # K⁻¹q_Σ
+    varExp = var_exp(gp.lik, Fmean, Fvar)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
+    gp.ll = varExp - KL                                 # Log-likelihood lower bound
 end
 
 """
