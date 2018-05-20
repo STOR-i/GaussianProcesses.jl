@@ -1,118 +1,77 @@
 
 # coding: utf-8
 
-# # Table of Contents
-#  <p>
+# In[7]:
 
-# In[1]:
-
-# get_ipython().magic('matplotlib inline')
-# get_ipython().magic("config InlineBackend.figure_format='retina'")
-
-
-# In[2]:
 
 import GPy
 import numpy as np
 
+d = 10
 nobsv=3000
-X = np.random.normal(size=(nobsv,2))
+X = np.random.normal(size=(nobsv,d))
 Y = np.random.normal(size=(nobsv,1))
-se = GPy.kern.RBF(2, lengthscale=1.0)
-
-gp_se = GPy.models.GPRegression(X, Y, se)
-
-
-# In[3]:
-
-import gc
-gc.collect()
-get_ipython().magic('timeit -n2 gp_se.parameters_changed()')
-
-
-# In[4]:
-
-rq = GPy.kern.RatQuad(2, lengthscale=1.0, power=1.0)
-gp_rq = GPy.models.GPRegression(X, Y, rq)
-
-
-# In[5]:
-
-get_ipython().magic('timeit gp_rq.parameters_changed()')
-
-
-# In[6]:
-
-gp_sum = GPy.models.GPRegression(X, Y, se+rq)
-
-
-# In[7]:
-
-get_ipython().magic('timeit gp_sum.parameters_changed()')
 
 
 # In[8]:
 
-gp_prod = GPy.models.GPRegression(X, Y, se*rq)
+
+import timeit
 
 
 # In[9]:
 
-get_ipython().magic('timeit gp_prod.parameters_changed()')
+
+kern = GPy.kern # shorter
+common_kwargs = {"lengthscale": 1.0, "variance": 1.0}
+kerns = {
+    "se": kern.RBF(d, **common_kwargs),
+    "mat12": kern.Exponential(d, **common_kwargs),
+    "rq": kern.RatQuad(d, power=1.0, **common_kwargs),
+    "se+rq":   kern.RBF(d, **common_kwargs)
+             + kern.RatQuad(d, power=1.0, **common_kwargs),
+    "se*rq":   kern.RBF(d, **common_kwargs)
+             * kern.RatQuad(d, power=1.0, **common_kwargs),
+    "se+se2+rq":   kern.RBF(d, **common_kwargs)+kern.RBF(d, **common_kwargs)
+                 + kern.RatQuad(d, power=1.0, **common_kwargs),
+    "(se+se2)*rq": (kern.RBF(d, **common_kwargs)
+                    +kern.RBF(d, **common_kwargs)
+                   ) * 
+                   kern.RatQuad(d, power=1.0, **common_kwargs),
+    "mask(se, [1])": kern.RBF(1, active_dims=[0], **common_kwargs),
+    "mask(se, [1])+mask(rq, [2:10])":    kern.RBF(1, active_dims=[0], **common_kwargs)  
+                                    + kern.RatQuad(d-1, power=1.0, active_dims=range(1,d), **common_kwargs),
+}
+sefix = kern.RBF(2, **common_kwargs)
+sefix.variance.fix()
+kerns["fix(se, σ)"] = sefix
 
 
 # In[10]:
 
-se2 = GPy.kern.RBF(2, lengthscale=1.0)
+
+mintimes = {}
+for (label, k) in kerns.items():
+    import gc
+    gc.collect()
+    gp = GPy.models.GPRegression(X, Y, k, noise_var=1.0)
+    gc.collect()
+    times = timeit.repeat("gp.parameters_changed()", setup="from __main__ import gp;gc.collect()", repeat=10, number=1)
+    gc.collect()
+    mintimes[label] = np.min(times)
 
 
 # In[11]:
 
-gp_sum = GPy.models.GPRegression(X, Y, se+se2+rq)
+
+for k in mintimes.keys():
+    print("%30s: %4.1f" % (k, mintimes[k]*1000.0))
 
 
 # In[12]:
 
-get_ipython().magic('timeit gp_sum.parameters_changed()')
 
-
-# In[13]:
-
-gp_prod = GPy.models.GPRegression(X, Y, (se+se2)*rq)
-
-
-# In[14]:
-
-get_ipython().magic('timeit gp_prod.parameters_changed()')
-
-
-# In[15]:
-
-semask = GPy.kern.RBF(1, lengthscale=1.0, active_dims=[0])
-rqmask = GPy.kern.RatQuad(1, lengthscale=1.0, power=1.0, active_dims=[1])
-
-
-# In[16]:
-
-gp = GPy.models.GPRegression(X, Y, semask)
-get_ipython().magic('timeit gp.parameters_changed()')
-
-
-# In[17]:
-
-gp = GPy.models.GPRegression(X, Y, semask+rqmask)
-get_ipython().magic('timeit gp.parameters_changed()')
-
-
-# In[18]:
-
-sefix = GPy.kern.RBF(2, lengthscale=1.0)
-sefix.variance.fix()
-gp = GPy.models.GPRegression(X, Y, sefix)
-get_ipython().magic('timeit gp.parameters_changed()')
-
-
-# In[19]:
-
-get_ipython().magic('time gp.parameters_changed()')
+with open("bench_results/GPy.csv", "w") as f:
+    for k,v in mintimes.items():
+        f.write("\"%s\",%f\n" % (k,v*1000))
 
