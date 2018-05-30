@@ -70,5 +70,5 @@ end
 # Addition operators
 +(k1::SumKernel, k2::Kernel) = SumKernel(k1.kerns..., k2)
 +(k1::SumKernel, k2::SumKernel) = SumKernel(k1.kerns..., k2.kerns...)
-+(k1::Kernel, k2::Kernel) = SumKernel(k1,k2)
+# +(k1::Kernel, k2::Kernel) = SumKernel(k1,k2)
 +(k1::Kernel, k2::SumKernel) = SumKernel(k1, k2.kerns...)

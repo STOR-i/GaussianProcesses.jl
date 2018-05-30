@@ -83,3 +83,4 @@ end
 
 include("sum_kernel.jl")        # Sum of kernels
 include("prod_kernel.jl")       # Product of kernels
+include("pair_kernel.jl")

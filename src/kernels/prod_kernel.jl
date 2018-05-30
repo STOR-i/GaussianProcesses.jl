@@ -94,5 +94,5 @@ end
 # Multiplication operators
 *(k1::ProdKernel, k2::Kernel) = ProdKernel(k1.kerns..., k2)
 *(k1::ProdKernel, k2::ProdKernel) = ProdKernel(k1.kerns..., k2.kerns...)
-*(k1::Kernel, k2::Kernel) = ProdKernel(k1,k2)
+# *(k1::Kernel, k2::Kernel) = ProdKernel(k1,k2)
 *(k1::Kernel, k2::ProdKernel) = ProdKernel(k1, k2.kerns...)
