@@ -37,6 +37,9 @@ function cov{M<:MatF64}(poly::Poly, X::M, data::LinIsoData)
     K = _cov(poly, data.XtX)
     return K
 end
+@inline @inbounds function cov_ij(poly::Poly, X::MatF64, data::LinIsoData, i::Int, j::Int, dim::Int)
+    return _cov(poly, data.XtX[i, j])
+end
 
 get_params(poly::Poly) = Float64[log(poly.c), log(poly.σ2)/2.0]
 get_param_names(poly::Poly) = [:lc, :lσ]

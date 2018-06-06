@@ -64,32 +64,14 @@ end
 
 # delegate everything else to the wrapped kernel
 # (is there a better way to do this?)
-cov(fk::FixedKern{K}, args...) where {K} = cov(fk.kern, args...)
-cov{M1<:MatF64,M2<:MatF64}(fk::FixedKern, X₁::M1, X₂::M2) = cov(fk.kern, X₁, X₂)
-cov{M<:MatF64}(fk::FixedKern, X::M) = cov(fk.kern, X)
-cov{M<:MatF64}(fk::FixedKern, X::M, data::EmptyData) = cov(ck.kern,X,data)
+cov_ij(fk::FixedKern{K}, X::MatF64, i::Int, j::Int, dim::Int) where {K<:Kernel} = cov_ij(fk.kern, X, i, j, dim)
+cov_ij(fk::FixedKern{K}, X::MatF64, data::KernelData, i::Int, j::Int, dim::Int) where {K<:Kernel} = cov_ij(fk.kern, X, data, i, j, dim)
+cov_ij(fk::FixedKern{K}, X::MatF64, data::EmptyData, i::Int, j::Int, dim::Int) where {K<:Kernel} = cov_ij(fk, X, i, j, dim)
+cov(fk::FixedKern{K}, x::VecF64, y::VecF64) where {K} = cov(fk.kern, x, y)
 KernelData(fk::FixedKern, args...) = KernelData(fk.kern, args...)
 KernelData{M<:MatF64}(fk::FixedKern, X::M) = KernelData(fk.kern, X)
 kernel_data_key(fk::FixedKern, args...) = kernel_data_key(fk.kern, args...)
 kernel_data_key{M<:MatF64}(fk::FixedKern, X::M) = kernel_data_key(fk.kern, X)
-cov!(cK::MatF64, fk::FixedKern, args...) = cov!(cK, fk.kern, args...)
-cov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, fk::FixedKern, X₁::M1, X₂::M2) = cov!(cK, fk.kern, k, X₁, X₂)
-cov!{M<:MatF64}(cK::MatF64, fk::FixedKern, X::M, data::EmptyData)=cov!(cK, fk.kern,X,data)
-cov!{M<:MatF64}(cK:: MatF64,fk::FixedKern,X::M) = cov!(cK, fk.kern, X)
-addcov!{M<:MatF64}(cK::MatF64, fk::FixedKern, X::M) = addcov!(cK, fk.kern, X)
-addcov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, fk::FixedKern, X1::M1, X2::M2) = addcov!(cK, fk.kern, X1, X2)
-multcov!{M<:MatF64}(cK::MatF64, fk::FixedKern, X::M) = multcov!(cK, fk.kern,X)
-multcov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, fk::FixedKern, X1::M1, X2::M2) = multcov!(cK, fk.kern,X1, X2)
-function multcov!{M<:AbstractArray{Float64,2}}(
-    cK::AbstractArray{Float64,2}, 
-    fk::FixedKern, X::M, data::KernelData)
-    return multcov!(cK, fk.kern, X, data)
-end
-function addcov!{M<:AbstractArray{Float64,2}}(
-    cK::AbstractArray{Float64,2}, 
-    fk::FixedKern, X::M, data::KernelData)
-    return addcov!(cK, fk.kern, X, data)
-end
 
 ##########
 # Priors #

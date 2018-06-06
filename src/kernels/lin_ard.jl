@@ -54,6 +54,13 @@ function cov{M<:MatF64}(lin::LinArd, X::M, data::LinArdData)
     cov!(K,lin,X,data)
     return K
 end
+@inline @inbounds function cov_ij(lin::LinArd, X::MatF64, data::LinArdData, i::Int, j::Int, dim::Int)
+    ck = 0.0
+    for d in 1:dim
+        ck += data.XtX_d[i,j,d] * 1/lin.ℓ[d]^2
+    end
+    return ck
+end
 
 get_params(lin::LinArd) = log.(lin.ℓ)
 get_param_names(lin::LinArd) = get_param_names(lin.ℓ, :ll)

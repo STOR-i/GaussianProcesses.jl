@@ -14,12 +14,6 @@ function test_cov_x1x2(kern::Kernel, X1::Matrix{Float64}, X2::Matrix{Float64})
     j = rand(1:n2)
     cK_ij = GaussianProcesses.cov(kern, X1[:,i], X2[:,j])
     @test cK_ij ≈ spec[i,j]
-    cK_added = zeros(n1,n2)
-    GaussianProcesses.addcov!(cK_added, kern, X1, X2)
-    @test spec ≈ cK_added
-    cK_prod = ones(n1,n2)
-    GaussianProcesses.multcov!(cK_prod, kern, X1, X2)
-    @test spec ≈ cK_prod
 end
 function test_cov(kern::Kernel, X::Matrix{Float64})
     spec = GaussianProcesses.cov(kern, X)
@@ -30,19 +24,11 @@ function test_cov(kern::Kernel, X::Matrix{Float64})
     j = rand(1:n)
     cK_ij = GaussianProcesses.cov(kern, X[:,i], X[:,j])
     @test cK_ij ≈ spec[i,j]
-    cK_added = zeros(n,n)
-    GaussianProcesses.addcov!(cK_added, kern, X)
-    @test spec ≈ cK_added
-    cK_added[:,:] = 0.0
+    cK_ij_nodata = GaussianProcesses.cov_ij(kern, X, i, j, dim)
+    @test cK_ij_nodata ≈ spec[i,j]
     kdata = KernelData(kern,X)
-    GaussianProcesses.addcov!(cK_added, kern, X, kdata)
-    @test spec ≈ cK_added
-    cK_prod = ones(n,n)
-    GaussianProcesses.multcov!(cK_prod, kern, X)
-    @test spec ≈ cK_prod
-    cK_prod[:,:] = 1.0
-    GaussianProcesses.multcov!(cK_prod, kern, X, KernelData(kern,X))
-    @test spec ≈ cK_prod
+    cK_ij_data = GaussianProcesses.cov_ij(kern, X, kdata, i, j, dim)
+    @test cK_ij_data ≈ spec[i,j]
     key = kernel_data_key(kern, X)
     @test typeof(key) == String
     # check we've overwritten the default if necessary

@@ -19,31 +19,33 @@ type Masked{K<:Kernel} <: Kernel
     active_dims::Vector{Int}
 end
 
-function cov{K<:Kernel,M1<:MatF64,M2<:MatF64}(masked::Masked{K}, x1::M1, x2::M2)
+@inline function cov_ij{K<:Kernel}(masked::Masked{K}, X::MatF64, i::Int, j::Int, dim::Int)
+    return cov_ij(masked.kern, @view(X[masked.active_dims, :]), i, j, dim-1)
+end
+@inline function cov_ij{K<:Kernel}(masked::Masked{K}, X::MatF64, data::KernelData, i::Int, j::Int, dim::Int)
+    return cov_ij(masked.kern, @view(X[masked.active_dims, :]), data, i, j, dim-1)
+end
+@inline function cov_ij{K<:Kernel}(masked::Masked{K}, X::MatF64, data::EmptyData, i::Int, j::Int, dim::Int)
+    return cov_ij(masked.kern, X, i, j, dim)
+end
+
+function cov{K<:Kernel}(masked::Masked{K}, x1::MatF64, x2::MatF64)
     return cov(masked.kern, view(x1,masked.active_dims,:), view(x2,masked.active_dims,:))
 end
 function cov{K<:Kernel,V1<:VecF64,V2<:VecF64}(masked::Masked{K}, x1::V1, x2::V2)
     return cov(masked.kern, view(x1,masked.active_dims), view(x2,masked.active_dims))
 end
-function cov{K<:Kernel,M<:MatF64}(masked::Masked{K}, X::M, data::KernelData)
+function cov{K<:Kernel}(masked::Masked{K}, X::MatF64, data::KernelData)
     return cov(masked.kern, view(X,masked.active_dims,:), data)
 end
-function cov!{K<:Kernel,M1<:MatF64, M2<:MatF64}(
-    s::M1, masked::Masked{K}, X::M2, data::KernelData)
+function cov!{K<:Kernel}(
+    s::MatF64, masked::Masked{K}, X::MatF64, data::KernelData)
     return cov!(s, masked.kern, view(X,masked.active_dims,:), data)
 end
-function addcov!{K<:Kernel,M1<:MatF64, M2<:MatF64}(
-    s::M1, masked::Masked{K}, X::M2, data::KernelData)
-    return addcov!(s, masked.kern, view(X,masked.active_dims,:), data)
-end
-function multcov!{K<:Kernel,M1<:MatF64, M2<:MatF64}(
-    s::M1, masked::Masked{K}, X::M2, data::KernelData)
-    return multcov!(s, masked.kern, view(X,masked.active_dims,:), data)
-end
-function KernelData{K<:Kernel,M<:MatF64}(masked::Masked{K}, X::M)
+function KernelData{K<:Kernel}(masked::Masked{K}, X::MatF64)
     return KernelData(masked.kern, view(X,masked.active_dims,:))
 end
-function kernel_data_key{K<:Kernel,M<:MatF64}(masked::Masked{K}, X::M)
+function kernel_data_key{K<:Kernel}(masked::Masked{K}, X::MatF64)
     k = kernel_data_key(masked.kern, view(X,masked.active_dims,:))
     return @sprintf("%s_active=%s", k, masked.active_dims)
 end
@@ -52,8 +54,8 @@ get_params{K<:Kernel}(masked::Masked{K}) = get_params(masked.kern)
 get_param_names{K<:Kernel}(masked::Masked{K}) = get_param_names(masked.kern)
 num_params{K<:Kernel}(masked::Masked{K}) = num_params(masked.kern)
 set_params!{K<:Kernel}(masked::Masked{K}, hyp) = set_params!(masked.kern, hyp)
-function grad_slice!{K<:Kernel, M1<:MatF64, M2<:MatF64}(
-    dK::M1, masked::Masked{K}, X::M2, data::KernelData, iparam::Int)
+function grad_slice!{K<:Kernel}(
+    dK::MatF64, masked::Masked{K}, X::MatF64, data::KernelData, iparam::Int)
     return grad_slice!(dK, masked.kern, view(X,masked.active_dims,:), data, iparam)
 end
 
@@ -61,20 +63,12 @@ end
 function cov{K<:Kernel,M<:MatF64}(masked::Masked{K}, X::M, data::EmptyData)
     return cov(masked.kern, view(X,masked.active_dims,:), data)
 end
-function cov!{K<:Kernel,M1<:MatF64, M2<:MatF64}(
-    s::M1, masked::Masked{K}, X::M2, data::EmptyData)
+function cov!{K<:Kernel}(
+    s::MatF64, masked::Masked{K}, X::MatF64, data::EmptyData)
     return cov!(s, masked.kern, view(X,masked.active_dims,:), data)
 end
-function addcov!{K<:Kernel,M1<:MatF64, M2<:MatF64}(
-    s::M1, masked::Masked{K}, X::M2, data::EmptyData)
-    return addcov!(s, masked.kern, view(X,masked.active_dims,:), data)
-end
-function multcov!{K<:Kernel,M1<:MatF64, M2<:MatF64}(
-    s::M1, masked::Masked{K}, X::M2, data::EmptyData)
-    return multcov!(s, masked.kern, view(X,masked.active_dims,:), data)
-end
-function grad_slice!{K<:Kernel, M1<:MatF64, M2<:MatF64}(
-    dK::M1, masked::Masked{K}, X::M2, data::EmptyData, iparam::Int)
+function grad_slice!{K<:Kernel}(
+    dK::MatF64, masked::Masked{K}, X::MatF64, data::EmptyData, iparam::Int)
     return grad_slice!(dK, masked.kern, view(X,masked.active_dims,:), data, iparam)
 end
 

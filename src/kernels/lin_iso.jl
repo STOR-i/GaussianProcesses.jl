@@ -31,6 +31,9 @@ function cov{V1<:VecF64,V2<:VecF64}(lin::LinIso, x::V1, y::V2)
     return K
 end
 
+@inline @inbounds function cov_ij(lin::LinIso, X::MatF64, data::LinIsoData, i::Int, j::Int, dim::Int)
+    return _cov(lin, data.XtX[i, j])
+end
 function cov{M<:MatF64}(lin::LinIso, X::M, data::LinIsoData)
     K = _cov(lin, data.XtX)
     return K

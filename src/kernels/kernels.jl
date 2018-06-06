@@ -59,45 +59,44 @@ Constructs covariance matrix from kernel and kernel data
 # See also
 Kernel, KernelData
 """
-function cov{M<:MatF64}(k::Kernel, X::M, data::EmptyData)
-    d(x,y) = cov(k, x, y)
-    return map_column_pairs(d, X)
+cov(k::Kernel, X::MatF64, data::EmptyData) = cov(k, X)
+cov!(k::Kernel, X::MatF64, data::EmptyData) = cov!(cK, k, X)
+
+function cov!(cK::MatF64, k::Kernel, X::MatF64)
+    dim, nobsv = size(X)
+    @inbounds for j in 1:nobsv
+        cK[j,j] = cov_ij(k, X, j, j, dim)
+        for i in 1:j-1
+            cK[i,j] = cov_ij(k, X, i, j, dim)
+            cK[j,i] = cK[i,j]
+        end
+    end
+    return cK
+end
+function cov(k::Kernel, X::MatF64)
+    dim, nobsv = size(X)
+    cK = Array{Float64}(nobsv, nobsv)
+    cov!(cK, k, X)
+end
+function cov!(cK::MatF64, k::Kernel, X::MatF64, data::KernelData)
+    dim, nobsv = size(X)
+    @inbounds for j in 1:nobsv
+        cK[j,j] = cov_ij(k, X, data, j, j, dim)
+        for i in 1:j-1
+            cK[i,j] = cov_ij(k, X, data, i, j, dim)
+            cK[j,i] = cK[i,j]
+        end
+    end
+    return cK
+end
+function cov(k::Kernel, X::MatF64, data::KernelData)
+    dim, nobsv = size(X)
+    cK = Array{Float64}(nobsv, nobsv)
+    cov!(cK, k, X, data)
 end
 
-function cov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::EmptyData)
-    d(x,y) = cov(k, x, y)
-    return map_column_pairs!(cK, d, X)
-end
-
-cov{M<:MatF64}(k::Kernel, X::M) = cov(k, X, KernelData(k, X))
-cov!{M<:MatF64}(cK:: MatF64, k::Kernel, X::M) = cov!(cK, k, X, KernelData(k, X))
-#=function cov!(cK::Matrix{Float64}, k::Kernel, X::Matrix{Float64}, data::KernelData)=#
-#=    cK[:,:] = cov(k,X,data)=#
-#=end=#
-function addcov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Kernel, X1::M1, X2::M2)
-    cK[:,:] .+= cov(k, X1, X2)
-    return cK
-end
-function addcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M)
-    cK[:,:] .+= cov(k, X, KernelData(k, X))
-    return cK
-end
-function addcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::KernelData)
-    cK[:,:] .+= cov(k, X, data)
-    return cK
-end
-function multcov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Kernel, X1::M1, X2::M2)
-    cK[:,:] .*= cov(k, X1, X2)
-    return cK
-end
-function multcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M)
-    cK[:,:] .*= cov(k, X, KernelData(k, X))
-    return cK
-end
-function multcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::KernelData)
-    cK[:,:] .*= cov(k, X, data)
-    return cK
-end
+@inline cov_ij(k::K, X::M, i::Int, j::Int, dim::Int) where {K<:Kernel, M<:MatF64} = cov(k, @view(X[:,i]), @view(X[:,j]))
+@inline cov_ij(k::K, X::M, data::EmptyData, i::Int, j::Int, dim::Int) where {K<:Kernel, M<:MatF64} = cov_ij(k, X, i, j, dim)
 
 function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::KernelData, p::Int)
     dim = size(X,1)

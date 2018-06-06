@@ -13,20 +13,22 @@ function cov(sk::AddKernel{K1, K2}, x::V1, y::V2) where {V1<:VecF64, V2<:VecF64,
     cov(sk.kleft, x, y) + cov(sk.kright, x, y)
 end
 
-function addcov!{M<:MatF64}(s::MatF64, addkern::AddKernel, X::M, data::PairData)
-    addcov!(s, addkern.kleft, X, data.data1)
-    addcov!(s, addkern.kright, X, data.data2)
-    return s
-end
-function cov!{M<:MatF64}(s::MatF64, addkern::AddKernel, X::M, data::PairData)
-    cov!(s, addkern.kleft, X, data.data1)
-    addcov!(s, addkern.kright, X, data.data2)
-end
-function cov{M<:MatF64}(addkern::AddKernel, X::M, data::PairData)
-    d, nobsv = size(X)
-    s = zeros(nobsv, nobsv)
-    cov!(s, addkern, X, data)
-end
+# function addcov!{M<:MatF64}(s::MatF64, addkern::AddKernel, X::M, data::PairData)
+    # addcov!(s, addkern.kleft, X, data.data1)
+    # addcov!(s, addkern.kright, X, data.data2)
+    # return s
+# end
+# function cov{M<:MatF64}(addkern::AddKernel, X::M, data::PairData)
+    # d, nobsv = size(X)
+    # s = zeros(nobsv, nobsv)
+    # cov!(s, addkern, X, data)
+# end
+# function cov!{M<:MatF64}(s::MatF64, addkern::AddKernel, X::M, data::PairData)
+    # cov!(s, addkern.kleft, X, data.data1)
+    # addcov!(s, addkern.kright, X, data.data2)
+# end
+@inline cov_ij(k::K, X::M, i::Int, j::Int, dim::Int) where {K<:AddKernel, M<:MatF64} = cov_ij(k.kleft, X, i, j, dim) + cov_ij(k.kright, X, i, j, dim)
+@inline cov_ij(k::K, X::M, data::PairData, i::Int, j::Int, dim::Int) where {K<:AddKernel, M<:MatF64} = cov_ij(k.kleft, X, data.data1, i, j, dim) + cov_ij(k.kright, X, data.data2, i, j, dim)
     
 @inline function dKij_dθp(addkern::AddKernel{K1, K2}, X::M, i::Int, j::Int, p::Int, dim::Int) where {M<:MatF64, K1, K2}
     np = num_params(addkern.kleft)
