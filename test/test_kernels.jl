@@ -102,8 +102,9 @@ end
 # from an ARD kernel to make it have the right number
 # of parameters when masked
 function _test_masked_ARD(kern::Kernel, x::Matrix, x2::Matrix, y::Vector)
-    par = get_params(kern)[2:end]
-    k_masked = typeof(kern)([par[1]], par[2:end]...)
+    dim = size(x, 1)
+    par = get_params(kern)
+    k_masked = typeof(kern)([par[1]], par[dim+1:end]...)
     masked = Masked(k_masked, [1])
     test_cov(masked, x)
     test_cov_x1x2(masked, x, x2)
@@ -131,7 +132,7 @@ function test_Kernel(kern::Kernel, x::Matrix, x2::Matrix, y::Vector)
     test_masked(kern, x, x2, y)
 end
     
-d, n, n2 = 2, 10, 5
+d, n, n2 = 3, 10, 5
 ll = rand(d)
 x = randn(d, n)
 x2 = randn(d, n2)
@@ -219,3 +220,6 @@ test_Kernel(fix(rq), x, x2, y)
 # Sum and Product and Fix
 sum_prod_kern = se * mat12 + lin * fix(rq, :lσ)
 test_Kernel(sum_prod_kern, x, x2, y)
+
+# Masked Sum Kernel
+masked_sum = Masked(se, [1]) + Masked(rq, [2,3])

@@ -18,22 +18,23 @@ type Masked{K<:Kernel} <: Kernel
     kern::K
     active_dims::Vector{Int}
 end
+num_dims(m::Masked) = length(m.active_dims)
 
 @inline function cov_ij{K<:Kernel}(masked::Masked{K}, X::MatF64, i::Int, j::Int, dim::Int)
-    return cov_ij(masked.kern, @view(X[masked.active_dims, :]), i, j, dim-1)
+    return cov_ij(masked.kern, @view(X[masked.active_dims, :]), i, j, num_dims(masked))
 end
 @inline function cov_ij{K<:Kernel}(masked::Masked{K}, X::MatF64, data::KernelData, i::Int, j::Int, dim::Int)
-    return cov_ij(masked.kern, @view(X[masked.active_dims, :]), data, i, j, dim-1)
+    return cov_ij(masked.kern, @view(X[masked.active_dims, :]), data, i, j, num_dims(masked))
 end
 @inline function cov_ij{K<:Kernel}(masked::Masked{K}, X::MatF64, data::EmptyData, i::Int, j::Int, dim::Int)
     return cov_ij(masked.kern, X, i, j, dim)
 end
 
 @inline function dKij_dθp{K<:Kernel}(masked::Masked{K}, X::MatF64, data::KernelData, i::Int, j::Int, p::Int, dim::Int)
-    return dKij_dθp(masked.kern, @view(X[masked.active_dims, :]), data, i, j, p, dim-1)
+    return dKij_dθp(masked.kern, @view(X[masked.active_dims, :]), data, i, j, p, num_dims(masked))
 end
 @inline function dKij_dθp{K<:Kernel}(masked::Masked{K}, X::MatF64, i::Int, j::Int, p::Int, dim::Int)
-    return dKij_dθp(masked.kern, @view(X[masked.active_dims, :]), i, j, p, dim-1)
+    return dKij_dθp(masked.kern, @view(X[masked.active_dims, :]), i, j, p, num_dims(masked))
 end
 @inline function dKij_dθp{K<:Kernel}(masked::Masked{K}, X::MatF64, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
     return dKij_dθp(masked, X, i, j, p, dim)
