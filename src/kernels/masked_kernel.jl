@@ -29,6 +29,16 @@ end
     return cov_ij(masked.kern, X, i, j, dim)
 end
 
+@inline function dKij_dθp{K<:Kernel}(masked::Masked{K}, X::MatF64, data::KernelData, i::Int, j::Int, p::Int, dim::Int)
+    return dKij_dθp(masked.kern, @view(X[masked.active_dims, :]), data, i, j, p, dim-1)
+end
+@inline function dKij_dθp{K<:Kernel}(masked::Masked{K}, X::MatF64, i::Int, j::Int, p::Int, dim::Int)
+    return dKij_dθp(masked.kern, @view(X[masked.active_dims, :]), i, j, p, dim-1)
+end
+@inline function dKij_dθp{K<:Kernel}(masked::Masked{K}, X::MatF64, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
+    return dKij_dθp(masked, X, i, j, p, dim)
+end
+
 function cov{K<:Kernel}(masked::Masked{K}, x1::MatF64, x2::MatF64)
     return cov(masked.kern, view(x1,masked.active_dims,:), view(x2,masked.active_dims,:))
 end
@@ -60,15 +70,13 @@ function grad_slice!{K<:Kernel}(
 end
 
 # with EmptyData
-function cov{K<:Kernel,M<:MatF64}(masked::Masked{K}, X::M, data::EmptyData)
+function cov{K<:Kernel}(masked::Masked{K}, X::MatF64, data::EmptyData)
     return cov(masked.kern, view(X,masked.active_dims,:), data)
 end
-function cov!{K<:Kernel}(
-    s::MatF64, masked::Masked{K}, X::MatF64, data::EmptyData)
+function cov!{K<:Kernel}(s::MatF64, masked::Masked{K}, X::MatF64, data::EmptyData)
     return cov!(s, masked.kern, view(X,masked.active_dims,:), data)
 end
-function grad_slice!{K<:Kernel}(
-    dK::MatF64, masked::Masked{K}, X::MatF64, data::EmptyData, iparam::Int)
+function grad_slice!{K<:Kernel}(dK::MatF64, masked::Masked{K}, X::MatF64, data::EmptyData, iparam::Int)
     return grad_slice!(dK, masked.kern, view(X,masked.active_dims,:), data, iparam)
 end
 

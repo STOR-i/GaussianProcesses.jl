@@ -55,10 +55,10 @@ end
 function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, fk::FixedKern, X::M2, data::EmptyData, p::Int)
     return grad_slice!(dK, fk.kern, X, data, fk.free[p])
 end
-@inline function dKij_dθp(fk::FixedKern{K},X::M,i::Int,j::Int,p::Int,dim::Int) where {M<:MatF64,K}
+@inline function dKij_dθp(fk::FixedKern{K},X::MatF64,i::Int,j::Int,p::Int,dim::Int) where {K<:Kernel}
     return dKij_dθp(fk.kern, X, i, j, fk.free[p], dim)
 end
-@inline function dKij_dθp(fk::FixedKern{K},X::M,data::D,i::Int,j::Int,p::Int,dim::Int) where {M<:MatF64,D<:KernelData,K}
+@inline function dKij_dθp(fk::FixedKern{K},X::MatF64,data::KernelData,i::Int,j::Int,p::Int,dim::Int) where {K<:Kernel}
     return dKij_dθp(fk.kern, X, data, i, j, fk.free[p], dim)
 end
 
@@ -69,9 +69,9 @@ cov_ij(fk::FixedKern{K}, X::MatF64, data::KernelData, i::Int, j::Int, dim::Int) 
 cov_ij(fk::FixedKern{K}, X::MatF64, data::EmptyData, i::Int, j::Int, dim::Int) where {K<:Kernel} = cov_ij(fk, X, i, j, dim)
 cov(fk::FixedKern{K}, x::VecF64, y::VecF64) where {K} = cov(fk.kern, x, y)
 KernelData(fk::FixedKern, args...) = KernelData(fk.kern, args...)
-KernelData{M<:MatF64}(fk::FixedKern, X::M) = KernelData(fk.kern, X)
+KernelData(fk::FixedKern, X::MatF64) = KernelData(fk.kern, X)
 kernel_data_key(fk::FixedKern, args...) = kernel_data_key(fk.kern, args...)
-kernel_data_key{M<:MatF64}(fk::FixedKern, X::M) = kernel_data_key(fk.kern, X)
+kernel_data_key(fk::FixedKern, X::MatF64) = kernel_data_key(fk.kern, X)
 
 ##########
 # Priors #

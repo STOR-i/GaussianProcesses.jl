@@ -160,25 +160,47 @@ function update_mll!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tr
     gp.mll = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
 
+function dmll_kern!(dmll::V, k::K, X::M1,  ααinvcKI::M2) where {M1<:MatF64, M2<:MatF64, K<:Kernel, V<:AbstractVector{R} where {R<:Real}}
+    dim = size(X, 1)
+    nparams = num_params(k)
+    @assert nparams == length(dmll)
+    nobsv = size(X, 2)
+    dmll[:] = 0.0
+    @inbounds for j in 1:nobsv
+        # off-diagonal
+        for i in 1:j-1
+            for iparam in 1:nparams
+                dKij = dKij_dθp(k,X,i,j,iparam,dim)
+                dmll[iparam] += dKij * ααinvcKI[i, j]
+            end
+        end
+        # diagonal
+        for iparam in 1:nparams
+            dKjj = dKij_dθp(k,X,j,j,iparam,dim)
+             dmll[iparam] += (dKjj * ααinvcKI[j, j]) / 2.0
+        end
+    end
+    return dmll
+end
 """ GPE: Update gradient of marginal log-likelihood """
 function update_dmll!(gp::GPE,
-    Kgrad::MatF64,
     ααinvcKI::MatF64
     ; 
     noise::Bool=true, # include gradient component for the logNoise term
     domean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
     )
-    size(Kgrad) == (gp.nobsv, gp.nobsv) || throw(ArgumentError(
-                @sprintf("Buffer for Kgrad should be a %dx%d matrix, not %dx%d",
+    size(ααinvcKI) == (gp.nobsv, gp.nobsv) || throw(ArgumentError(
+                @sprintf("Buffer for ααinvcKI should be a %dx%d matrix, not %dx%d",
                          gp.nobsv, gp.nobsv,
-                         size(Kgrad,1), size(Kgrad,2))))
+                         size(ααinvcKI,1), size(ααinvcKI,2))))
+    update_target!(gp; noise=noise, domean=domean, kern=kern)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
     gp.dmll = Array{Float64}( noise + domean*n_mean_params + kern*n_kern_params)
 
     get_ααinvcKI!(ααinvcKI, gp.cK, gp.alpha)
-    
+
     i=1
     if noise
         gp.dmll[i] = exp(2.0*gp.logNoise)*trace(ααinvcKI)
@@ -193,21 +215,17 @@ function update_dmll!(gp::GPE,
         end
     end
     if kern
-        for iparam in 1:n_kern_params
-            grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
-            gp.dmll[i] = vecdot(Kgrad,ααinvcKI)/2.0
-            i+=1
-        end
+        dmll_k = @view(gp.dmll[i:end])
+        dmll_kern!(dmll_k, gp.k, gp.X, ααinvcKI)
     end
 end
 
 """ GPE: Update gradient of marginal log-likelihood """
 function update_mll_and_dmll!(gp::GPE,
-        Kgrad::MatF64,
         ααinvcKI::MatF64;
         kwargs...)
     update_mll!(gp; kwargs...)
-    update_dmll!(gp, Kgrad, ααinvcKI; kwargs...)
+    update_dmll!(gp, ααinvcKI; kwargs...)
 end
 
 
@@ -226,7 +244,7 @@ function update_target!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool
 end
 
 function update_dtarget!(gp::GPE, Kgrad::MatF64, L_bar::MatF64; kwargs...)
-    update_dmll!(gp, Kgrad, L_bar; kwargs...)
+    update_dmll!(gp, L_bar; kwargs...)
     gp.dtarget = gp.dmll + prior_gradlogpdf(gp; kwargs...)
 end
 
@@ -239,10 +257,9 @@ end
 
 """ GPE: A function to update the target (aka log-posterior) and its derivative """
 function update_target_and_dtarget!(gp::GPE; kwargs...)
-    Kgrad = Array{Float64}( gp.nobsv, gp.nobsv)
     ααinvcKI = Array{Float64}(gp.nobsv, gp.nobsv)
     update_target!(gp; kwargs...)
-    update_dmll!(gp, Kgrad, ααinvcKI; kwargs...)
+    update_dmll!(gp, ααinvcKI; kwargs...)
     gp.dtarget = gp.dmll + prior_gradlogpdf(gp; kwargs...)
 end
 

@@ -7,22 +7,22 @@ using StatsFuns
 """ Not much of a test really... just checks that it doesn't crash
     and that the final mll is better that the initial value
 """
-function test_gpe_optim(mean::Mean, kern::Kernel, X::Matrix{Float64}, y::Vector{Float64})
-	gp = GPE(X, y, mean, kern, -3.0)
+function test_gpe_optim(meanf::Mean, kern::Kernel, X::Matrix{Float64}, y::Vector{Float64})
+	gp = GPE(X, y, meanf, kern, -3.0)
 	init_target = gp.target
 	optimize!(gp)
 	@test gp.target > init_target
 end
 
-function test_gpmc_optim(mean::Mean, kern::Kernel, lik::Likelihood, X::Matrix{Float64}, y::Vector{<:Real})
-	gp = GPMC(X, y, mean, kern, lik)
+function test_gpmc_optim(meanf::Mean, kern::Kernel, lik::Likelihood, X::Matrix{Float64}, y::Vector{<:Real})
+	gp = GPMC(X, y, meanf, kern, lik)
 	init_target = gp.target
 	optimize!(gp)
 	@test gp.target > init_target
 end
 
-function test_gpe_optim_params_options(mean::Mean, kern::Kernel, noise::Float64, X::Matrix{Float64}, y::Vector{Float64})
-    gp = GPE(X, y, mean, kern, noise)
+function test_gpe_optim_params_options(meanf::Mean, kern::Kernel, noise::Float64, X::Matrix{Float64}, y::Vector{Float64})
+    gp = GPE(X, y, meanf, kern, noise)
     init_params = get_params(gp; domean=true, kern=true, noise=true)
     
     # Check mean fixed
@@ -45,14 +45,14 @@ function test_gpe_optim_params_options(mean::Mean, kern::Kernel, noise::Float64,
     @test noise_params == get_params(gp; domean=false, kern=false, noise=true)
 end
 
-function test_gpmc_optim_params_options(mean::Mean, kern::Kernel, lik::Likelihood, X::Matrix{Float64}, y::Vector{<:Real})
-    gp = GPMC(X, y, mean, kern, lik)
+function test_gpmc_optim_params_options(meanf::Mean, kern::Kernel, lik::Likelihood, X::Matrix{Float64}, y::Vector{<:Real})
+    gp = GPMC(X, y, meanf, kern, lik)
     init_params = get_params(gp; domean=true, kern=true, lik=true)
     
     # Check mean fixed
     mean_params = get_params(gp.m)
     optimize!(gp; domean=false, kern=true, lik=true)
-    @test mean_params == get_params(mean)
+    @test mean_params == get_params(meanf)
 
     set_params!(gp, init_params; domean=true, kern=true, lik=true)
     
@@ -87,22 +87,22 @@ d, n = 2, 20
 X = 2π * rand(d, n)
 y = X'rand(d) + 0.1*randn(n)
 
-mean = MeanLin(zeros(d))
+meanf = MeanLin(zeros(d))
 kern = SE(1.0, 1.0)
 noise = 0.0
 
-test_gpe_optim(mean, kern, X, y)
-test_gpe_optim_params_options(mean, kern, noise, X, y)
+test_gpe_optim(meanf, kern, X, y)
+test_gpe_optim_params_options(meanf, kern, noise, X, y)
 
 # GPMC tests
 X = 2π * randn(d, n)
 f = X'rand(d) + 0.1*randn(n)
 y = collect(rand(n) .< normcdf.(f)) # Binary data
 lik = BernLik();  # Bernoulli likelihood for binary data {0,1}
-test_gpmc_optim(mean, kern, lik, X, y)
-test_gpmc_optim_params_options(mean, kern, lik, X, y)
+test_gpmc_optim(meanf, kern, lik, X, y)
+test_gpmc_optim_params_options(meanf, kern, lik, X, y)
 
 
 # update_target_and_dtarget!(gp; lik=true, domean=false, kern=true)
 
-# showall(get_params(gp; mean=true, kern=true, lik=true))
+# showall(get_params(gp; domean=true, kern=true, lik=true))
