@@ -27,7 +27,7 @@ function benchmark_kernel(group, kern)
     Y = randn(nt)
     buf1=Array{Float64}(nt,nt)
     buf2=Array{Float64}(nt,nt)
-    gp = GP(X, Y, MeanConst(0.0), kern, log(0.0))
+    gp = GP(X, Y, MeanConst(0.0), kern, log(1.0))
     group["cK"] = @benchmarkable update_cK!($gp)
     group["mll_and_dmll"] = @benchmarkable update_mll_and_dmll!($gp, $buf1, $buf2)
 end
@@ -50,3 +50,27 @@ df = DataFrame(kernel = knames, times=times)
 print(df)
 
 writetable("bench_results/GaussianProcesses_jl.csv", df, header=false)
+
+srand(1)
+X = randn(d, nt) # Training data
+Y = randn(nt)
+XY_df = DataFrame(X')
+XY_df[:Y] = Y
+XY_df
+writetable("simdata.csv", XY_df, header=true)
+
+buf1=Array{Float64}(nt,nt)
+buf2=Array{Float64}(nt,nt)
+gp = GPE(X, Y, MeanConst(0.0), kerns["se"], log(1.0))
+update_mll_and_dmll!(gp, buf1, buf2)
+gp.mll, gp.dmll # SE kernel
+
+buf1=Array{Float64}(nt,nt)
+buf2=Array{Float64}(nt,nt)
+gp = GPE(X, Y, MeanConst(0.0), kerns["rq"], log(1.0))
+Profile.clear()
+update_mll_and_dmll!(gp, buf1, buf2)
+@profile update_mll_and_dmll!(gp, buf1, buf2)
+@profile update_mll_and_dmll!(gp, buf1, buf2)
+
+Profile.print(mincount=10)

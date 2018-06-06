@@ -19,7 +19,7 @@ kernels('mask(se, [1])') = {@covMask, {1,@covSEiso}};
 kernels('mask(se, [1])+mask(rq, [2:10])') = { 
     @covSum, { 
         {@covMask, {1, @covSEiso}}, 
-        {@covMask, {2:dim, @covRQiso}} 
+        {@covMask, {2:10, @covRQiso}}  % mask out the first dimension
         } 
     };
 % kernels('fix(se, σ)') = ?
@@ -38,6 +38,7 @@ params('mask(se, [1])+mask(rq, [2:10])') = [0 0 0 0 0];
 kernel_names = keys(kernels);
 num_kern = length(kernel_names);
 timings = zeros(num_kern, 1);
+
 
 for ikern=1:num_kern
     kname = kernel_names{ikern};
@@ -61,12 +62,15 @@ end
 function t = time_GP(kern, par)
     meanfunc = [];                    % empty: don't use a mean function
     likfunc = @likGauss;              % Gaussian likelihood
-    nobsv=3000;
-    dim=10;
     hyp = struct('mean', [], 'cov', par, 'lik', 0);
-    X = randn(nobsv, dim);
-    Y = randn(nobsv, 1);
+
+    dim=10;
+    XY_data = csvread("simdata.csv", 1);
+    X = XY_data(:, 1:dim);
+    Y = XY_data(:, dim+1);
+    nobsv = length(Y);
+
     tic();
-    gp(hyp, @infGaussLik, meanfunc, kern, likfunc, X, Y);
+    [nlZ dnlZ] = gp(hyp, @infGaussLik, meanfunc, kern, likfunc, X, Y);
     t = toc();
 end
