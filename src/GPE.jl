@@ -194,7 +194,6 @@ function update_dmll!(gp::GPE,
                 @sprintf("Buffer for ααinvcKI should be a %dx%d matrix, not %dx%d",
                          gp.nobsv, gp.nobsv,
                          size(ααinvcKI,1), size(ααinvcKI,2))))
-    update_target!(gp; noise=noise, domean=domean, kern=kern)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
     gp.dmll = Array{Float64}( noise + domean*n_mean_params + kern*n_kern_params)
