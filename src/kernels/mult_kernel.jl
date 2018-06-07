@@ -12,20 +12,6 @@ function cov(sk::MultKernel{K1, K2}, x::V1, y::V2) where {V1<:VecF64, V2<:VecF64
     cov(sk.kleft, x, y) * cov(sk.kright, x, y)
 end
 
-# function multcov!{M<:MatF64}(s::MatF64, multkern::MultKernel, X::M, data::PairData)
-    # multcov!(s, multkern.kleft, X, data.data1)
-    # multcov!(s, multkern.kright, X, data.data2)
-    # return s
-# end
-# function cov!{M<:MatF64}(s::MatF64, multkern::MultKernel, X::M, data::PairData)
-    # cov!(s, multkern.kleft, X, data.data1)
-    # multcov!(s, multkern.kright, X, data.data2)
-# end
-# function cov{M<:MatF64}(multkern::MultKernel, X::M, data::PairData)
-    # d, nobsv = size(X)
-    # s = zeros(nobsv, nobsv)
-    # cov!(s, multkern, X, data)
-# end
 @inline cov_ij(k::K, X::M, i::Int, j::Int, dim::Int) where {K<:MultKernel, M<:MatF64} = cov_ij(k.kleft, X, i, j, dim) * cov_ij(k.kright, X, i, j, dim)
 @inline cov_ij(k::K, X::M, data::PairData, i::Int, j::Int, dim::Int) where {K<:MultKernel, M<:MatF64} = cov_ij(k.kleft, X, data.data1, i, j, dim) * cov_ij(k.kright, X, data.data2, i, j, dim)
 
@@ -51,19 +37,6 @@ end
         return dKij_sub * cK_other
     end
 end
-
-# function grad_slice!{M<:MatF64}(dK::MatF64, multkern::MultKernel, X::M, data::PairData, p::Int)
-    # np = num_params(multkern.kleft)
-    # if p<=np
-        # grad_slice!(dK, multkern.kleft, X, data.data1, p)
-        # multcov!(dK, multkern.kright, X, data.data2)
-        # return dK
-    # else
-        # grad_slice!(dK, multkern.kright, X, data.data2, p-np)
-        # multcov!(dK, multkern.kleft, X, data.data1)
-        # return dK
-    # end
-# end
 
 # Multiplication operators
 *(kleft::Kernel, kright::Kernel) = MultKernel(kleft,kright)
