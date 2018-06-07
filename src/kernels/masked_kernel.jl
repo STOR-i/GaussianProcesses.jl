@@ -14,11 +14,16 @@ the active dimensions.
 * `kern::Kernel`: The wrapper kernel
 * `active_dims::Vector{Int}`: A vector of dimensions on which the kernel applies
 """
-type Masked{K<:Kernel} <: Kernel
+struct Masked{K<:Kernel, DIM} <: Kernel
     kern::K
-    active_dims::Vector{Int}
+    active_dims::SVector{DIM, Int}
 end
-num_dims(m::Masked) = length(m.active_dims)
+num_dims(masked::Masked{K, DIM}) where {K, DIM} = DIM
+function Masked(kern::Kernel, active_dims::AbstractVector{Int})
+    dim = length(active_dims)
+    K = typeof(kern)
+    return Masked{K,dim}(kern, SVector{dim, Int}(active_dims))
+end
 
 @inline function cov_ij{K<:Kernel}(masked::Masked{K}, X::MatF64, i::Int, j::Int, dim::Int)
     return cov_ij(masked.kern, @view(X[masked.active_dims, :]), i, j, num_dims(masked))

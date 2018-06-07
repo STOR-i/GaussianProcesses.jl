@@ -7,4 +7,4 @@ ScikitLearnBase 0.3.0
 Compat 0.63.0
 RecipesBase 0.2.3
 FastGaussQuadrature 0.3.0
-
+StaticArrays 0.6

@@ -1,5 +1,6 @@
 module GaussianProcesses
 using Optim, PDMats, Distances, FastGaussQuadrature, Compat, RecipesBase, Distributions
+using StaticArrays
 import Compat: view, cholfact!
 import Distributions: logpdf, gradlogpdf
 import Base: +, *, rand, rand!, mean, cov, push!
