@@ -160,7 +160,7 @@ function update_mll!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tr
     gp.mll = -dot((gp.y - μ),gp.alpha)/2.0 - logdet(gp.cK)/2.0 - gp.nobsv*log(2π)/2.0 # Marginal log-likelihood
 end
 
-function dmll_kern!(dmll::V, k::K, X::M1,  ααinvcKI::M2) where {M1<:MatF64, M2<:MatF64, K<:Kernel, V<:AbstractVector{R} where {R<:Real}}
+function dmll_kern!(dmll::VecF64, k::Kernel, X::MatF64, data::KernelData, ααinvcKI::MatF64)
     dim = size(X, 1)
     nparams = num_params(k)
     @assert nparams == length(dmll)
@@ -170,14 +170,14 @@ function dmll_kern!(dmll::V, k::K, X::M1,  ααinvcKI::M2) where {M1<:MatF64, M2
         # off-diagonal
         for i in 1:j-1
             for iparam in 1:nparams
-                dKij = dKij_dθp(k,X,i,j,iparam,dim)
+                dKij = dKij_dθp(k,X,data,i,j,iparam,dim)
                 dmll[iparam] += dKij * ααinvcKI[i, j]
             end
         end
         # diagonal
         for iparam in 1:nparams
-            dKjj = dKij_dθp(k,X,j,j,iparam,dim)
-             dmll[iparam] += (dKjj * ααinvcKI[j, j]) / 2.0
+            dKjj = dKij_dθp(k,X,data,j,j,iparam,dim)
+            dmll[iparam] += (dKjj * ααinvcKI[j, j]) / 2.0
         end
     end
     return dmll
@@ -215,7 +215,7 @@ function update_dmll!(gp::GPE,
     end
     if kern
         dmll_k = @view(gp.dmll[i:end])
-        dmll_kern!(dmll_k, gp.k, gp.X, ααinvcKI)
+        dmll_kern!(dmll_k, gp.k, gp.X, gp.data, ααinvcKI)
     end
 end
 
