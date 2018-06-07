@@ -18,7 +18,7 @@ ard_weights(kernel::Stationary{WeightedSqEuclidean}) = kernel.iℓ2
 ard_weights(kernel::Stationary{WeightedEuclidean}) = kernel.iℓ2
 
 cov{V1<:VecF64,V2<:VecF64}(k::Stationary, x::V1, y::V2) = cov(k, distance(k, x, y))
-@inline function cov_ij(k::K, X::M, i::Int, j::Int, dim::Int) where {K<:Stationary, M<:MatF64}
+@inline function cov_ij(k::K, X::MatF64, i::Int, j::Int, dim::Int) where {K<:Stationary}
     cov(k, distij(metric(k), X, i, j, dim))
 end
 @inline function cov_ij(k::Stationary, X::MatF64, data::KernelData, i::Int, j::Int, dim::Int)
@@ -47,7 +47,7 @@ function cov(k::Stationary, X1::MatF64, X2::MatF64)
     return cK
 end
 
-function cov!{M<:MatF64}(cK::MatF64, k::Stationary, X::M)
+function cov!(cK::MatF64, k::Stationary, X::MatF64)
     dim, nobsv = size(X)
     nobsv==size(cK,1) || throw(ArgumentError("X and cK incompatible nobsv"))
     nobsv==size(cK,2) || throw(ArgumentError("X and cK incompatible nobsv"))
@@ -68,7 +68,7 @@ function cov(k::Stationary, X::MatF64, data::StationaryData)
     cK = Matrix{Float64}(nobsv, nobsv)
     cov!(cK, k, X, data)
 end
-function cov{M<:MatF64}(k::Stationary, X::M)
+function cov(k::Stationary, X::MatF64)
     nobsv = size(X, 2)
     cK = Matrix{Float64}(nobsv, nobsv)
     cov!(cK, k, X)
@@ -83,21 +83,21 @@ type IsotropicData <: StationaryData
     R::Matrix{Float64}
 end
 
-function KernelData{M<:MatF64}(k::Isotropic, X::M)
+function KernelData(k::Isotropic, X::MatF64)
      IsotropicData(distance(k, X))
 end
-function kernel_data_key{M<:MatF64}(k::Isotropic, X::M)
+function kernel_data_key(k::Isotropic, X::MatF64)
     return @sprintf("%s_%s", "IsotropicData", metric(k))
 end
 
-@inline function cov_ij(kern::Isotropic, X::M, data::IsotropicData, i::Int, j::Int, dim::Int) where {M<:MatF64}
+@inline function cov_ij(kern::Isotropic, X::MatF64, data::IsotropicData, i::Int, j::Int, dim::Int)
     return cov(kern, data.R[i,j])
 end
-@inline function dKij_dθp{M<:MatF64}(kern::Isotropic,X::M,i::Int,j::Int,p::Int,dim::Int)
-    return dk_dθp(kern, distij(metric(kern),X,i,j,dim),p)
+@inline function dKij_dθp(kern::Isotropic,X::MatF64,i::Int,j::Int,p::Int,dim::Int)
+    return dk_dθp(kern, distij(metric(kern),X,i,j,dim), p)
 end
-@inline function dKij_dθp{M<:MatF64}(kern::Isotropic,X::M,data::IsotropicData,i::Int,j::Int,p::Int,dim::Int)
-    return dk_dθp(kern, data.R[i,j],p)
+@inline function dKij_dθp(kern::Isotropic,X::MatF64,data::IsotropicData,i::Int,j::Int,p::Int,dim::Int)
+    return dk_dθp(kern, data.R[i,j], p)
 end
 function grad_kern{V1<:VecF64,V2<:VecF64}(kern::Isotropic, x::V1, y::V2)
     dist=distance(kern,x,y)
@@ -113,7 +113,7 @@ type StationaryARDData <: StationaryData
 end
 
 # May need to customized in subtypes
-function KernelData{M<:MatF64}(k::StationaryARD, X::M)
+function KernelData(k::StationaryARD, X::MatF64)
     dim, nobsv = size(X)
     dist_stack = Array{Float64}( nobsv, nobsv, dim)
     for d in 1:dim
@@ -122,5 +122,5 @@ function KernelData{M<:MatF64}(k::StationaryARD, X::M)
     end
     StationaryARDData(dist_stack)
 end
-kernel_data_key{M<:MatF64}(k::StationaryARD, X::M) = @sprintf("%s_%s", "StationaryARDData", metric(k))
+kernel_data_key(k::StationaryARD, X::MatF64) = @sprintf("%s_%s", "StationaryARDData", metric(k))
 
