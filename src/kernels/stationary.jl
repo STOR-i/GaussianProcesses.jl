@@ -90,13 +90,13 @@ function kernel_data_key(k::Isotropic, X::MatF64)
     return @sprintf("%s_%s", "IsotropicData", metric(k))
 end
 
-@inline function cov_ij(kern::Isotropic, X::MatF64, data::IsotropicData, i::Int, j::Int, dim::Int)
+@inline @inbounds function cov_ij(kern::Isotropic, X::MatF64, data::IsotropicData, i::Int, j::Int, dim::Int)
     return cov(kern, data.R[i,j])
 end
 @inline function dKij_dθp(kern::Isotropic,X::MatF64,i::Int,j::Int,p::Int,dim::Int)
     return dk_dθp(kern, distij(metric(kern),X,i,j,dim), p)
 end
-@inline function dKij_dθp(kern::Isotropic,X::MatF64,data::IsotropicData,i::Int,j::Int,p::Int,dim::Int)
+@inline @inbounds function dKij_dθp(kern::Isotropic,X::MatF64,data::IsotropicData,i::Int,j::Int,p::Int,dim::Int)
     return dk_dθp(kern, data.R[i,j], p)
 end
 function grad_kern{V1<:VecF64,V2<:VecF64}(kern::Isotropic, x::V1, y::V2)
