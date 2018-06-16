@@ -80,7 +80,3 @@ end
 function kernel_data_key{M<:MatF64}(compkern::CompositeKernel, X::M)
     join(["CompositeData" ; sort(unique(kernel_data_key(k, X) for k in subkernels(compkern)))])
 end
-
-include("sum_kernel.jl")        # Sum of kernels
-include("prod_kernel.jl")       # Product of kernels
-include("pair_kernel.jl")

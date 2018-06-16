@@ -1,98 +1,42 @@
-type ProdKernel <: CompositeKernel
-    kerns::Vector{Kernel}
-    ProdKernel(args::Vararg{Kernel}) = new(collect(args))
+type ProdKernel{K1<:Kernel, K2<:Kernel} <: PairKernel{K1,K2}
+    kleft::K1
+    kright::K2
+end
+leftkern(prodkern::ProdKernel) = prodkern.kleft
+rightkern(prodkern::ProdKernel) = prodkern.kright
+
+subkernels(prodkern::ProdKernel) = [prodkern.kleft, prodkern.kright]
+get_param_names(prodkern::ProdKernel) = composite_param_names(subkernels(prodkern), :ak)
+
+function cov(sk::ProdKernel{K1, K2}, x::V1, y::V2) where {V1<:VecF64, V2<:VecF64, K1, K2}
+    cov(sk.kleft, x, y) * cov(sk.kright, x, y)
 end
 
-subkernels(pk::ProdKernel) = pk.kerns
-get_param_names(pk::ProdKernel) = composite_param_names(pk.kerns, :pk)
+@inline cov_ij(k::K, X::M, i::Int, j::Int, dim::Int) where {K<:ProdKernel, M<:MatF64} = cov_ij(k.kleft, X, i, j, dim) * cov_ij(k.kright, X, i, j, dim)
+@inline cov_ij(k::K, X::M, data::PairData, i::Int, j::Int, dim::Int) where {K<:ProdKernel, M<:MatF64} = cov_ij(k.kleft, X, data.data1, i, j, dim) * cov_ij(k.kright, X, data.data2, i, j, dim)
 
-cov{V1<:VecF64,V2<:VecF64}(pk::ProdKernel, x::V1, y::V2) = prod(cov(k, x, y) for k in subkernels(pk))
-
-function cov{M<:MatF64}(prodkern::ProdKernel, X::M)
-    d, nobsv = size(X)
-    p = ones(nobsv, nobsv)
-    for k in prodkern.kerns
-        p[:,:] .*= cov(k, X)
-    end
-    return p
-end
-
-function cov!{M<:MatF64}(s::MatF64, prodkern::ProdKernel, X::M, data::CompositeData)
-    s[:,:] = 1.0
-    for (ikern,kern) in enumerate(prodkern.kerns)
-        multcov!(s, kern, X, data.datadict[data.keys[ikern]])
-    end
-    return s
-end
-
-function cov{M<:MatF64}(prodkern::ProdKernel, X::M, data::CompositeData)
-    d, nobsv = size(X)
-    s = Array{Float64}( nobsv, nobsv)
-    cov!(s, prodkern, X, data)
-end
-
-#=# This function is extremely inefficient=#
-#=function grad_kern(prodkern::ProdKernel, x::Vector{Float64}, y::Vector{Float64})=#
-#=     dk = Array{Float64}( 0)=#
-#=      for k in prodkern.kerns=#
-#=          p = 1.0=#
-#=          for j in prodkern.kerns[find(k.!=prodkern.kerns)]=#
-#=              p = p.*cov(j, x, y)=#
-#=          end=#
-#=        append!(dk,grad_kern(k, x, y).*p) =#
-#=      end=#
-#=    dk=#
-#=end=#
-
-@inline function dKij_dθp{M<:MatF64}(prodkern::ProdKernel, X::M, i::Int, j::Int, p::Int, dim::Int)
-    cKij = cov(prodkern, X[:,i], X[:,j])
-    s=0
-    for k in prodkern.kerns
-        np = num_params(k)
-        if p<=np+s
-            cKk = cov(k, X[:,i], X[:,j])
-            return dKij_dθp(k,X,i,j,p-s,dim)*cKij/cKk
-        end
-        s += np
+@inline function dKij_dθp(prodkern::ProdKernel{K1, K2}, X::M, i::Int, j::Int, p::Int, dim::Int) where {M<:MatF64, K1, K2}
+    np = num_params(prodkern.kleft)
+    if p<=np
+        cK_other = cov_ij(prodkern.kright, X, i, j, dim)
+        return dKij_dθp(prodkern.kleft, X, i,j,p,dim)*cK_other
+    else
+        cK_other = cov_ij(prodkern.kleft, X, i, j, dim)
+        return dKij_dθp(prodkern.kright, X, i,j,p-np,dim)*cK_other
     end
 end
-@inline function dKij_dθp{M<:MatF64}(prodkern::ProdKernel, X::M, data::CompositeData, i::Int, j::Int, p::Int, dim::Int)
-    cKij = cov(prodkern, X[:,i], X[:,j])
-    s=0
-    for (ikern,kern) in enumerate(prodkern.kerns)
-        np = num_params(kern)
-        if p<=np+s
-            cKk = cov(kern, X[:,i], X[:,j])
-            return dKij_dθp(kern, X, data.datadict[data.keys[ikern]],i,j,p-s,dim)*cKij/cKk
-        end
-        s += np
+@inline function dKij_dθp{M<:MatF64}(prodkern::ProdKernel, X::M, data::PairData, i::Int, j::Int, p::Int, dim::Int)
+    np = num_params(prodkern.kleft)
+    if p<=np
+        cK_other = cov_ij(prodkern.kright, X, i, j, dim)
+        dKij_sub = dKij_dθp(prodkern.kleft, X, data.data1,i,j,p,dim)
+        return dKij_sub * cK_other
+    else
+        cK_other = cov_ij(prodkern.kleft, X, i, j, dim)
+        dKij_sub = dKij_dθp(prodkern.kright, X, data.data2,i,j,p-np,dim)
+        return dKij_sub * cK_other
     end
-end
-function grad_slice!{M1<:MatF64, M2<:MatF64}(
-    dK::M1, prodkern::ProdKernel, X::M2, data::CompositeData, iparam::Int)
-    istart=0
-    for (ikern,kern) in enumerate(prodkern.kerns)
-        np = num_params(kern)
-        if istart<iparam<=np+istart
-            grad_slice!(dK, kern, X, data.datadict[data.keys[ikern]],iparam-istart)
-            break
-        end
-        istart += np
-    end
-    istart=0
-    for (ikern,kern) in enumerate(prodkern.kerns)
-        np = num_params(kern)
-        if !(istart<iparam<=np+istart)
-            multcov!(dK, kern, X, data.datadict[data.keys[ikern]])
-        end
-        istart += np
-    end
-
-    return dK
 end
 
 # Multiplication operators
-*(k1::ProdKernel, k2::Kernel) = ProdKernel(k1.kerns..., k2)
-*(k1::ProdKernel, k2::ProdKernel) = ProdKernel(k1.kerns..., k2.kerns...)
-# *(k1::Kernel, k2::Kernel) = ProdKernel(k1,k2)
-*(k1::Kernel, k2::ProdKernel) = ProdKernel(k1, k2.kerns...)
+*(kleft::Kernel, kright::Kernel) = ProdKernel(kleft,kright)

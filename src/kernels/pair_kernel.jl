@@ -65,7 +65,3 @@ function kernel_data_key{M<:MatF64}(pairkern::PairKernel, X::M)
     kr = rightkern(pairkern)
     @sprintf("PairData:%s+%s", kernel_data_key(kl, X), kernel_data_key(kr, X))
 end
-
-
-include("add_kernel.jl")
-include("mult_kernel.jl")

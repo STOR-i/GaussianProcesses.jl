@@ -1,74 +1,46 @@
-type SumKernel <: CompositeKernel
-    kerns::Vector{Kernel}
-    SumKernel(args::Vararg{Kernel}) = new(collect(args))
+type SumKernel{K1<:Kernel, K2<:Kernel} <: PairKernel{K1, K2}
+    kleft::K1
+    kright::K2
 end
-
-subkernels(sumkern::SumKernel) = sumkern.kerns
-get_param_names(sumkern::SumKernel) = composite_param_names(sumkern.kerns, :pk)
-
-cov{V1<:VecF64,V2<:VecF64}(sk::SumKernel, x::V1, y::V2) = sum(cov(k, x, y) for k in subkernels(sk))
+leftkern(sumkern::SumKernel) = sumkern.kleft
+rightkern(sumkern::SumKernel) = sumkern.kright
 
 
-function addcov!{M<:MatF64}(s::MatF64, sumkern::SumKernel, X::M, data::CompositeData)
-    for (ikern,kern) in enumerate(sumkern.kerns)
-        addcov!(s, kern, X, data.datadict[data.keys[ikern]])
-    end
-    return s
+subkernels(sumkern::SumKernel) = [sumkern.kleft, sumkern.kright]
+get_param_names(sumkern::SumKernel) = composite_param_names(subkernels(sumkern), :ak)
+
+function cov(sk::SumKernel{K1, K2}, x::V1, y::V2) where {V1<:VecF64, V2<:VecF64, K1, K2}
+    cov(sk.kleft, x, y) + cov(sk.kright, x, y)
 end
-function cov!{M<:MatF64}(s::MatF64, sumkern::SumKernel, X::M, data::CompositeData)
-    s[:,:] = 0.0
-    addcov!(s, sumkern, X, data)
-end
-function cov{M<:MatF64}(sumkern::SumKernel, X::M, data::CompositeData)
-    d, nobsv = size(X)
-    s = zeros(nobsv, nobsv)
-    cov!(s, sumkern, X, data)
-end
+
+@inline cov_ij(k::K, X::M, i::Int, j::Int, dim::Int) where {K<:SumKernel, M<:MatF64} = cov_ij(k.kleft, X, i, j, dim) + cov_ij(k.kright, X, i, j, dim)
+@inline cov_ij(k::K, X::M, data::PairData, i::Int, j::Int, dim::Int) where {K<:SumKernel, M<:MatF64} = cov_ij(k.kleft, X, data.data1, i, j, dim) + cov_ij(k.kright, X, data.data2, i, j, dim)
     
-
-function grad_kern{V1<:VecF64,V2<:VecF64}(sumkern::SumKernel, x::V1, y::V2)
-     dk = Array{Float64}(0)
-      for k in sumkern.kerns
-        append!(dk,grad_kern(k, x, y))
-      end
-    dk
-end
-
-@inline function dKij_dθp{M<:MatF64}(sumkern::SumKernel, X::M, i::Int, j::Int, p::Int, dim::Int)
-    s=0
-    for k in sumkern.kerns
-        np = num_params(k)
-        if p<=np+s
-            return dKij_dθp(k, X, i,j,p-s,dim)
-        end
-        s += np
+@inline function dKij_dθp(sumkern::SumKernel{K1, K2}, X::M, i::Int, j::Int, p::Int, dim::Int) where {M<:MatF64, K1, K2}
+    np = num_params(sumkern.kleft)
+    if p<=np
+        return dKij_dθp(sumkern.kleft, X, i, j, p, dim)
+    else
+        return dKij_dθp(sumkern.kright, X, i, j, p-np, dim)
     end
 end
-@inline function dKij_dθp{M<:MatF64}(sumkern::SumKernel, X::M, data::CompositeData, i::Int, j::Int, p::Int, dim::Int)
-    s=0
-    for (ikern,kern) in enumerate(sumkern.kerns)
-        np = num_params(kern)
-        if p<=np+s
-            return dKij_dθp(kern, X, data.datadict[data.keys[ikern]],i,j,p-s,dim)
-        end
-        s += np
+@inline function dKij_dθp{M<:MatF64}(sumkern::SumKernel, X::M, data::PairData, i::Int, j::Int, p::Int, dim::Int)
+    np = num_params(sumkern.kleft)
+    if p<=np
+        return dKij_dθp(sumkern.kleft, X, data.data1, i, j, p, dim)
+    else
+        return dKij_dθp(sumkern.kright, X, data.data2, i, j, p-np, dim)
     end
 end
 
-function grad_slice!{M<:MatF64}(dK::MatF64, sumkern::SumKernel, X::M, data::CompositeData, p::Int)
-    s=0
-    for (ikern,kern) in enumerate(sumkern.kerns)
-        np = num_params(kern)
-        if p<=np+s
-            return grad_slice!(dK, kern, X, data.datadict[data.keys[ikern]],p-s)
-        end
-        s += np
+function grad_slice!{M<:MatF64}(dK::MatF64, sumkern::SumKernel, X::M, data::PairData, p::Int)
+    np = num_params(sumkern.kleft)
+    if p<=np
+        return grad_slice!(dK, sumkern.kleft, X, data.data1, p)
+    else
+        return grad_slice!(dK, sumkern.kright, X, data.data2, p-np)
     end
-    return dK
 end
         
 # Addition operators
-+(k1::SumKernel, k2::Kernel) = SumKernel(k1.kerns..., k2)
-+(k1::SumKernel, k2::SumKernel) = SumKernel(k1.kerns..., k2.kerns...)
-# +(k1::Kernel, k2::Kernel) = SumKernel(k1,k2)
-+(k1::Kernel, k2::SumKernel) = SumKernel(k1, k2.kerns...)
++(kleft::Kernel, kright::Kernel) = SumKernel(kleft,kright)
