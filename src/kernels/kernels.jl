@@ -98,6 +98,22 @@ end
 @inline cov_ij(k::K, X::M, i::Int, j::Int, dim::Int) where {K<:Kernel, M<:MatF64} = cov(k, @view(X[:,i]), @view(X[:,j]))
 @inline cov_ij(k::K, X::M, data::EmptyData, i::Int, j::Int, dim::Int) where {K<:Kernel, M<:MatF64} = cov_ij(k, X, i, j, dim)
 
+############################
+##### Kernel Gradients #####
+############################
+@inline @inbounds function dKij_dθ!(dK::VecF64, kern::Kernel, X::MatF64, 
+                                    i::Int, j::Int, dim::Int, npars::Int)
+    for p in 1:npars
+        dK[p] = dKij_dθp(kern, X, i, j, p, dim)
+    end
+end
+@inline @inbounds function dKij_dθ!(dK::VecF64, kern::Kernel, X::MatF64, data::KernelData, 
+                                    i::Int, j::Int, dim::Int, npars::Int)
+    for iparam in 1:npars
+        dK[iparam] = dKij_dθp(kern, X, data, i, j, iparam, dim)
+    end
+end
+
 function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::KernelData, p::Int)
     dim = size(X,1)
     nobsv = size(X,2)

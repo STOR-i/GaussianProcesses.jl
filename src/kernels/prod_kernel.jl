@@ -37,6 +37,21 @@ end
         return dKij_sub * cK_other
     end
 end
+@inline @inbounds function dKij_dθ!(dK::VecF64, prodkern::ProdKernel, X::MatF64, data::PairData, 
+                                    i::Int, j::Int, dim::Int, npars::Int)
+    cov_left  = cov_ij(prodkern.kleft,  X, data.data1, i, j, dim)
+    cov_right = cov_ij(prodkern.kright, X, data.data2, i, j, dim)
+    npright = num_params(prodkern.kright)
+    npleft = num_params(prodkern.kleft)
+    dKij_dθ!(dK, prodkern.kright, X, data.data2, i, j, dim, npars-npleft)
+    for ipar in npright:-1:1
+        dK[npleft+ipar] = dK[ipar]*cov_left
+    end
+    dKij_dθ!(dK,  prodkern.kleft,  X, data.data1, i, j, dim, npleft)
+    for ipar in 1:npleft
+        dK[ipar] *= cov_right
+    end
+end
 
 # Multiplication operators
 *(kleft::Kernel, kright::Kernel) = ProdKernel(kleft,kright)

@@ -32,6 +32,15 @@ end
         return dKij_dθp(sumkern.kright, X, data.data2, i, j, p-np, dim)
     end
 end
+@inline @inbounds function dKij_dθ!(dK::VecF64, sumkern::SumKernel, X::MatF64, data::PairData, i::Int, j::Int, dim::Int, npars::Int)
+    npright = num_params(sumkern.kright) 
+    npleft = num_params(sumkern.kleft)
+    dKij_dθ!(dK, sumkern.kright, X, data.data2, i, j, dim, npars-npleft)
+    for ipar in npright:-1:1
+        dK[npleft+ipar] = dK[ipar]
+    end
+    dKij_dθ!(dK,  sumkern.kleft,  X, data.data1, i, j, dim, npleft)
+end
 
 function grad_slice!{M<:MatF64}(dK::MatF64, sumkern::SumKernel, X::M, data::PairData, p::Int)
     np = num_params(sumkern.kleft)

@@ -99,9 +99,18 @@ end
 @inline @inbounds function dKij_dθp(kern::Isotropic,X::MatF64,data::IsotropicData,i::Int,j::Int,p::Int,dim::Int)
     return dk_dθp(kern, data.R[i,j], p)
 end
-function grad_kern{V1<:VecF64,V2<:VecF64}(kern::Isotropic, x::V1, y::V2)
-    dist=distance(kern,x,y)
-    return [dk_dθp(kern,dist,k) for k in 1:num_params(kern)]
+@inline @inbounds function dKij_dθ!(dK::VecF64, kern::Isotropic, X::MatF64, i::Int, j::Int, dim::Int, npars::Int)
+    r = distij(metric(kern),X,i,j,dim)
+    for p in 1:npars
+        dK[p] = dk_dθp(kern, r, p)
+    end
+end
+@inline @inbounds function dKij_dθ!(dK::VecF64, kern::Isotropic, X::MatF64, data::IsotropicData, 
+                                    i::Int, j::Int, dim::Int, npars::Int)
+    r = data.R[i,j]
+    for iparam in 1:npars
+        dK[iparam] = dk_dθp(kern, r, iparam)
+    end
 end
 
 # StationaryARD Kernels

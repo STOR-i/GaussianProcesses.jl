@@ -161,23 +161,23 @@ function update_mll!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tr
 end
 
 function dmll_kern!(dmll::VecF64, k::Kernel, X::MatF64, data::KernelData, ααinvcKI::MatF64)
-    dim = size(X, 1)
+    dim, nobsv = size(X)
     nparams = num_params(k)
     @assert nparams == length(dmll)
-    nobsv = size(X, 2)
+    dK_buffer = Vector{Float64}(nparams)
     dmll[:] = 0.0
     @inbounds for j in 1:nobsv
         # off-diagonal
         for i in 1:j-1
-            for iparam in 1:nparams
-                dKij = dKij_dθp(k,X,data,i,j,iparam,dim)
-                dmll[iparam] += dKij * ααinvcKI[i, j]
+            dKij_dθ!(dK_buffer, k, X, data, i, j, dim, nparams)
+            @simd for iparam in 1:nparams
+                dmll[iparam] += dK_buffer[iparam] * ααinvcKI[i, j]
             end
         end
         # diagonal
+        dKij_dθ!(dK_buffer, k, X, data, j, j, dim, nparams)
         for iparam in 1:nparams
-            dKjj = dKij_dθp(k,X,data,j,j,iparam,dim)
-            dmll[iparam] += (dKjj * ααinvcKI[j, j]) / 2.0
+            dmll[iparam] += dK_buffer[iparam] * ααinvcKI[j, j] / 2.0
         end
     end
     return dmll
