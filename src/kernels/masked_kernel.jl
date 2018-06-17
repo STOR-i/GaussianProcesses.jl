@@ -44,6 +44,10 @@ end
 @inline function dKij_dθp{K<:Kernel}(masked::Masked{K}, X::MatF64, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
     return dKij_dθp(masked, X, i, j, p, dim)
 end
+@inline @inbounds function dKij_dθ!(dK::VecF64, masked::Masked, X::MatF64, data::KernelData, i::Int, j::Int, dim::Int, npars::Int)
+    Xmasked = @view(X[masked.active_dims,:])
+    return dKij_dθ!(dK, masked.kern, Xmasked, data, i, j, dim, npars)
+end
 
 function cov{K<:Kernel}(masked::Masked{K}, x1::MatF64, x2::MatF64)
     return cov(masked.kern, view(x1,masked.active_dims,:), view(x2,masked.active_dims,:))
