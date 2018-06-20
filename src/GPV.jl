@@ -60,7 +60,7 @@ GPV{T<:Real}(x::Vector{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik:
 """Initialise the variational lower bound on the log-likelihood function of a general GP model"""
 function initialise_ll!(gp::GPV)
     gp.qμ = zeros(gp.nobsv)
-    gp.qΣ = PDMat(eye(gp.nobsv))
+    gp.qΣ = eye(gp.nobsv)
 
     kl = 0.5(dot(gp.qμ,gp.qμ) - logdet(gp.qΣ) + sum(diag(gp.qΣ).^2)) #KL prior gives the divergence between two Gaussians
 
@@ -171,16 +171,16 @@ function update_ll_and_dll!(gp::GPV, Kgrad::MatF64, L_bar::MatF64; kwargs...)
 end
 
 
-""" GPV: Initialise the target, which is assumed to be the log-posterior, log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ) """
+""" GPV: Initialise the target, which is assumed to be the log-posterior, log p(θ|y) ∝ log p(y|θ) +  log p(θ) """
 function initialise_target!(gp::GPV)
     initialise_ll!(gp)
-    gp.target = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.m) + prior_logpdf(gp.k) 
+    gp.target = gp.ll + prior_logpdf(gp.lik) + prior_logpdf(gp.m) + prior_logpdf(gp.k) 
 end    
 
-""" GPV: Update the target, which is assumed to be the log-posterior, log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ) """
+""" GPV: Update the target, which is assumed to be the log-posterior, log p(θ|y) ∝ log p(y|θ) +  log p(θ) """
 function update_target!(gp::GPV; process::Bool=true, lik::Bool=true, domean::Bool=true, kern::Bool=true)
     update_ll!(gp; process=process, lik=lik, domean=domean, kern=kern)
-    gp.target = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.m) + prior_logpdf(gp.k) 
+    gp.target = gp.ll + prior_logpdf(gp.lik) + prior_logpdf(gp.m) + prior_logpdf(gp.k) 
 end    
 
 function update_dtarget!(gp::GPV, Kgrad::MatF64, L_bar::MatF64; kwargs...)
@@ -333,7 +333,7 @@ function show(io::IO, gp::GPV)
         show(io, gp.X)
         print(io,"\n  Output observations = ")
         show(io, gp.y)
-        print(io,"\n  Log-posterior = ")
+        print(io,"\n  Variational lower bound = ")
         show(io, round(gp.target,3))
     end
 end
