@@ -1,24 +1,15 @@
-using GaussianProcesses
-using Base.Test
+using Random
 
-# Add tests here...
-println("Running test_utils.jl...")
-include("test_utils.jl")
+Random.seed!(1)
 
-println("Running test_means.jl...")
-include("test_means.jl")
+const TESTS = ["utils.jl",
+               "means.jl",
+               "kernels.jl",
+               "gp.jl",
+               "optim.jl",
+               "mcmc.jl",
+               "gpmc.jl"]
 
-println("Running test_kernels.jl...")
-include("test_kernels.jl")
-
-println("Running test_GP.jl...")
-include("test_GP.jl")
-
-println("Running test_optim.jl...")
-include("test_optim.jl")
-
-println("Running test_mcmc.jl...")
-include("test_mcmc.jl")
-
-println("Running test_gpmc.jl...")
-include("test_gpmc.jl")
+for test in TESTS
+    @time include(test)
+end
