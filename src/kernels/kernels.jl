@@ -1,105 +1,102 @@
 # This file contains a list of the currently available covariance functions
 
-import Base.show
-
-@compat abstract type Kernel end
+abstract type Kernel end
 
 """
-Data to be used with a kernel object to
-calculate a covariance matrix, which is independent of kernel hyperparameters.
+    KernelData
 
-# See also
-`EmptyData`
-"""
-@compat abstract type KernelData end
+Data to be used with a kernel object to calculate a covariance matrix,
+which is independent of kernel hyperparameters.
 
+See also [`EmptyData`](@ref).
 """
-Default KernelData type which is empty.
-"""
-type EmptyData <: KernelData
-end
-
-KernelData{M<:MatF64}(k::Kernel, X::M) = EmptyData()
-kernel_data_key{M<:MatF64}(k::Kernel, X::M) = "EmptyData"
+abstract type KernelData end
 
 """
-# Description
-Constructs covariance matrix from kernel and input observations
+    EmptyData <: KernelData
 
-# Arguments
-* `k::Kernel`: kernel for calculating covariance between pairs of points
-* `X₁::Matrix{Float64}`: matrix of observations (each column is an observation)
-* `X₂::Matrix{Float64}`: another matrix of observations
-
-# Return
-`Σ::Matrix{Float64}`: covariance matrix where `Σ[i,j]` is the covariance of the Gaussian process between points `X[:,i]` and `Y[:,j]`.
+Default empty `KernelData`.
 """
-function cov{M1<:MatF64,M2<:MatF64}(k::Kernel, X₁::M1, X₂::M2)
+struct EmptyData <: KernelData end
+
+KernelData(k::Kernel, X::MatF64) = EmptyData()
+kernel_data_key(k::Kernel, X::MatF64) = "EmptyData"
+
+"""
+    cov(k::Kernel, X₁::Matrix{Float64}, X₂::Matrix{Float64})
+
+Create covariance matrix from kernel `k` and matrices of observations `X₁` and `X₂`, where
+each column is an observation.
+"""
+function Statistics.cov(k::Kernel, X₁::MatF64, X₂::MatF64)
     d(x1,x2) = cov(k, x1, x2)
     return map_column_pairs(d, X₁, X₂)
 end
 
-function cov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Kernel, X₁::M1, X₂::M2)
+"""
+    cov!(cK::Matrix{Float64}, k::Kernel, X₁::Matrix{Float64}, X₂::Matrix{Float64})
+
+Like [`cov(k, X₁, X₂)`](@ref), but stores the result in `cK` rather than a new matrix.
+"""
+function cov!(cK::MatF64, k::Kernel, X₁::MatF64, X₂::MatF64)
     d(x1,x2) = cov(k, x1, x2)
     return map_column_pairs!(cK, d, X₁, X₂)
 end
 
 """
-# Description
-Constructs covariance matrix from kernel and kernel data
+    cov(k::Kernel, X::Matrix{Float64}[, data::KernelData = KernelData(k, X)])
 
-# Arguments
-* `k::Kernel`: kernel for calculating covariance between pairs of points
-* `X::Matrix{Float64}`: matrix of input observations (each column is an observation)    
-* `data::KernelData`: data, constructed from input observations, used for calculating covariance matrix
-
-# Return
-`Σ::Matrix{Float64}`: covariance matrix where `Σ[i,j]` is the covariance of the Gaussian process between points `X[:,i]` and `X[:,j]`.
-
-# See also
-Kernel, KernelData
+Create covariance function from kernel `k`, matrix of observations `X`, where each column is
+an observation, and kernel data `data` constructed from input observations.
 """
-function cov{M<:MatF64}(k::Kernel, X::M, data::EmptyData)
+function Statistics.cov(k::Kernel, X::MatF64, data::EmptyData)
     d(x,y) = cov(k, x, y)
     return map_column_pairs(d, X)
 end
 
-function cov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::EmptyData)
+Statistics.cov(k::Kernel, X::MatF64) = cov(k, X, KernelData(k, X))
+
+"""
+    cov!(cK::Matrix{Float64}, k::Kernel,
+         X::Matrix{Float64}[, data::KernelData = KernelData(k, X)])
+
+Like [`cov(k, X, data)`](@ref), but stores the result in `cK` rather than a new matrix.
+"""
+function cov!(cK::MatF64, k::Kernel, X::MatF64, data::EmptyData)
     d(x,y) = cov(k, x, y)
     return map_column_pairs!(cK, d, X)
 end
 
-cov{M<:MatF64}(k::Kernel, X::M) = cov(k, X, KernelData(k, X))
-cov!{M<:MatF64}(cK:: MatF64, k::Kernel, X::M) = cov!(cK, k, X, KernelData(k, X))
+cov!(cK:: MatF64, k::Kernel, X::MatF64) = cov!(cK, k, X, KernelData(k, X))
 #=function cov!(cK::Matrix{Float64}, k::Kernel, X::Matrix{Float64}, data::KernelData)=#
 #=    cK[:,:] = cov(k,X,data)=#
 #=end=#
-function addcov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Kernel, X1::M1, X2::M2)
-    cK[:,:] .+= cov(k, X1, X2)
+function addcov!(cK::MatF64, k::Kernel, X1::MatF64, X2::MatF64)
+    cK .+= cov(k, X1, X2)
     return cK
 end
-function addcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M)
-    cK[:,:] .+= cov(k, X, KernelData(k, X))
+function addcov!(cK::MatF64, k::Kernel, X::MatF64)
+    cK .+= cov(k, X, KernelData(k, X))
     return cK
 end
-function addcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::KernelData)
-    cK[:,:] .+= cov(k, X, data)
+function addcov!(cK::MatF64, k::Kernel, X::MatF64, data::KernelData)
+    cK .+= cov(k, X, data)
     return cK
 end
-function multcov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Kernel, X1::M1, X2::M2)
-    cK[:,:] .*= cov(k, X1, X2)
+function multcov!(cK::MatF64, k::Kernel, X1::MatF64, X2::MatF64)
+    cK .*= cov(k, X1, X2)
     return cK
 end
-function multcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M)
-    cK[:,:] .*= cov(k, X, KernelData(k, X))
+function multcov!(cK::MatF64, k::Kernel, X::MatF64)
+    cK .*= cov(k, X, KernelData(k, X))
     return cK
 end
-function multcov!{M<:MatF64}(cK::MatF64, k::Kernel, X::M, data::KernelData)
-    cK[:,:] .*= cov(k, X, data)
+function multcov!(cK::MatF64, k::Kernel, X::MatF64, data::KernelData)
+    cK .*= cov(k, X, data)
     return cK
 end
 
-function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::KernelData, p::Int)
+function grad_slice!(dK::MatF64, k::Kernel, X::MatF64, data::KernelData, p::Int)
     dim = size(X,1)
     nobsv = size(X,2)
     @inbounds for j in 1:nobsv
@@ -111,7 +108,7 @@ function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::Kern
     return dK
 end
 
-function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::EmptyData, p::Int)
+function grad_slice!(dK::MatF64, k::Kernel, X::MatF64, data::EmptyData, p::Int)
     dim = size(X,1)
     nobsv = size(X,2)
     @inbounds for j in 1:nobsv
@@ -124,7 +121,7 @@ function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, k::Kernel, X::M2, data::Empt
 end
 
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients
-function grad_stack!{M<:MatF64}(stack::AbstractArray, k::Kernel, X::M, data::KernelData)
+function grad_stack!(stack::AbstractArray, k::Kernel, X::MatF64, data::KernelData)
     npars = num_params(k)
     for p in 1:npars
         grad_slice!(view(stack,:,:,p),k,X,data,p)
@@ -132,13 +129,13 @@ function grad_stack!{M<:MatF64}(stack::AbstractArray, k::Kernel, X::M, data::Ker
     return stack
 end
 
-function grad_stack!{M<:MatF64}(stack::AbstractArray, k::Kernel, X::M)
+function grad_stack!(stack::AbstractArray, k::Kernel, X::MatF64)
     grad_stack!(stack, k, X, KernelData(k, X))
 end
 
-grad_stack{M<:MatF64}(k::Kernel, X::M) = grad_stack(k, X, KernelData(k, X))
+grad_stack(k::Kernel, X::MatF64) = grad_stack(k, X, KernelData(k, X))
 
-function grad_stack{M<:MatF64}(k::Kernel, X::M, data::KernelData)
+function grad_stack(k::Kernel, X::MatF64, data::KernelData)
     n = num_params(k)
     n_obsv = size(X, 2)
     stack = Array{Float64}( n_obsv, n_obsv, n)
@@ -161,19 +158,22 @@ get_param_names(obj::Union{Kernel, Mean}) =
     get_param_names(num_params(obj),
                     Symbol(typeof(obj).name.name, :_param_))
 
-""" `composite_param_names(objects, prefix)`, where `objects` is a
-vector of kernels/means, calls `get_param_names` on each object and prefixes the
-name returned with `prefix` + object #. Eg.
+"""
+    composite_param_names(objects, prefix)
 
-    get_param_names(ProdKernel(Mat(1/2, 1/2, 1/2), SEArd([0.0, 1.0],0.0)))
+Call `get_param_names` on each element of `objects` and prefix the returned name of the
+element at index `i` with `prefix * i * '_'`.
 
-yields
-
-    :pk1_ll  
-    :pk1_lσ  
-    :pk2_ll_1
-    :pk2_ll_2
-    :pk2_lσ  
+# Examples
+```jldoctest
+julia> get_param_names(ProdKernel(Mat(1/2, 1/2, 1/2), SEArd([0.0, 1.0], 0.0)))
+5-element Array{Symbol,1}:
+ :pk1_ll
+ :pk1_lσ
+ :pk2_ll_1
+ :pk2_ll_2
+ :pk2_lσ
+```
 """
 function composite_param_names(objects, prefix)
     p = Symbol[]
@@ -183,7 +183,7 @@ function composite_param_names(objects, prefix)
     p
 end
 
-function show(io::IO, k::Kernel, depth::Int = 0)
+function Base.show(io::IO, k::Kernel, depth::Int = 0)
     pad = repeat(" ", 2*depth)
     print(io, "$(pad)Type: $(typeof(k)), Params: ")
     # params_dict = zip(get_param_names(k), get_params(k))
@@ -209,7 +209,7 @@ end
 
 function prior_logpdf(k::Kernel)
     priors = get_priors(k)
-    return isempty(priors)? 0.0 : sum(logpdf(prior,param) for (prior, param) in zip(priors,get_params(k)))
+    return isempty(priors) ? 0.0 : sum(logpdf(prior,param) for (prior, param) in zip(priors,get_params(k)))
 end
 
 function prior_gradlogpdf(k::Kernel)

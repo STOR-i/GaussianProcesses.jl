@@ -1,33 +1,30 @@
 """
-# Description
-Constructor for the Binomial likelihood
+    BinLik <: Likelihood
 
-    p(y=k|f) = (n!/k!(n-k)!) × θᵏ(1-θ)ⁿ⁻ᵏ, for k = 0,1,...,n
-
-where θ = exp(f)/(1+exp(f)), k is the number of successes
-out of `n` Bernoulli trials, and f is the latent Gaussian
-process
-    
-# Arguments:
-* `n::Int64`: (fixed) number of trials
+Binomial likelihood
+```math
+p(y = k | f) = k!/(n!(n-k)!) θᵏ(1 - θ)^{n-k}
+```
+for number of successes ``k ∈ \\{0, 1, …, n\\}`` out of ``n`` Bernoulli trials, where
+``θ = \\exp(f)/(1 + \\exp(f))`` and ``f`` is the latent Gaussian process.
 """
-type BinLik <: Likelihood
-    n::Int64    # number of trials
-    BinLik(n::Int64) = new(n)
+struct BinLik <: Likelihood
+    "Fixed number of trials"
+    n::Int64
 end
 
-function log_dens(binomial::BinLik, f::Vector{Float64}, y::Vector{Int64})
-    θ = exp.(f)./(1.0+exp.(f))
+function log_dens(binomial::BinLik, f::VecF64, y::Vector{Int64})
+    θ = @. exp(f) / (1 + exp(f))
     return Float64[lgamma(binomial.n+1.0) - lgamma(yi+1.0) - lgamma(binomial.n-yi+1.0) + yi*log(θi) + (binomial.n-yi)*log(1-θi) for (θi,yi) in zip(θ,y)]
 end
 
-function dlog_dens_df(binomial::BinLik, f::Vector{Float64}, y::Vector{Int64})
+function dlog_dens_df(binomial::BinLik, f::VecF64, y::Vector{Int64})
     return Float64[yi/(1.0+exp(fi)) - (binomial.n-yi)*exp(fi)/(1+exp(fi)) for (fi,yi) in zip(f,y)]
-end                   
+end
 
 #mean and variance under the likelihood
-mean_lik(binomial::BinLik, f::Vector{Float64}) = Float64[binomial.n*exp(fi)/(1.0+exp(fi)) for fi in f]
-var_lik(binomial::BinLik, f::Vector{Float64}) = Float64[binomial.n*(exp(fi)/(1.0+exp(fi)))*(1.0/(1.0+exp(fi))) for fi in f]
+mean_lik(binomial::BinLik, f::VecF64) = Float64[binomial.n*exp(fi)/(1.0+exp(fi)) for fi in f]
+var_lik(binomial::BinLik, f::VecF64) = Float64[binomial.n*(exp(fi)/(1.0+exp(fi)))*(1.0/(1.0+exp(fi))) for fi in f]
 
 get_params(binomial::BinLik) = []
 num_params(binomial::BinLik) = 0

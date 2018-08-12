@@ -1,52 +1,61 @@
-import Base.show
 # Main GaussianProcess type
 
-@doc """
-# Description
-Fits a Gaussian process to a set of training points. The Gaussian process, with non-Gaussian observations, is defined in terms of its likelihood function, mean and covaiance (kernel) functions, which are user defined. We use a Monte Carlo method to handle the non-Gaussian likelihood. The latent function values are represented by centered (whitened) variables, where:
-        v ~ N(0, I)
-        f = Lv + m(x)
-        with
-        L L^T = K_θ
+mutable struct GPMC{T<:Real} <: GPBase
+    "Mean object"
+    m:: Mean
+    "Kernel object"
+    k::Kernel
+    "Likelihood"
+    lik::Likelihood
 
-
-# Constructors:
-    GPMC(X, y, m, k, lik)
-    GPMC(; m=MeanZero(), k=SE(0.0, 0.0), lik=Likelihood()) # observation-free constructor
-
-# Arguments:
-* `X::Matrix{Float64}`: Input observations
-* `y::Vector{Float64}`: Output observations
-* `m::Mean`           : Mean function
-* `k::kernel`         : Covariance function
-* `lik::likelihood`   : Likelihood function
-
-# Returns:
-* `gp::GPMC`          : Gaussian process object, fitted to the training data if provided
-""" ->
-type GPMC{T<:Real} <: GPBase 
-    m:: Mean                # Mean object
-    k::Kernel               # Kernel object
-    lik::Likelihood         # Likelihood is Gaussian for GPMC regression
-    
     # Observation data
-    nobsv::Int              # Number of observations
-    X::MatF64               # Input observations
-    y::Vector{T}            # Output observations
-    v::Vector{Float64}      # Vector of latent (whitened) variables - N(0,1)
-    data::KernelData        # Auxiliary observation data (to speed up calculations)
-    dim::Int                # Dimension of inputs
-    
-    # Auxiliary data
-    μ::Vector{Float64} 
-    cK::AbstractPDMat       # (k + exp(2*obsNoise))
-    ll::Float64             # Log-likelihood of general GPMC model
-    dll::Vector{Float64}    # Gradient of log-likelihood
-    target::Float64         # Log-target (i.e. Log-posterior)
-    dtarget::Vector{Float64}# Gradient of the log-target (i.e. grad log-posterior)
+    "Number of observations"
+    nobsv::Int
+    "Input observations"
+    X::MatF64
+    "Output observations"
+    y::Vector{T}
+    "Latent (whitened) variables - N(0,1)"
+    v::VecF64
+    "Auxiliary observation data (to speed up calculations)"
+    data::KernelData
+    "Dimension of inputs"
+    dim::Int
 
-    
-    function (::Type{GPMC{T}}){T<:Real}(X::MatF64, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood)
+    # Auxiliary data
+    μ::Vector{Float64}
+    "`(k + exp(2*obsNoise))`"
+    cK::AbstractPDMat
+    "Log-likelihood"
+    ll::Float64
+    "Gradient of log-likelihood"
+    dll::VecF64
+    "Log-target (marginal log-likelihood + log priors)"
+    target::Float64
+    "Gradient of log-target (gradient of marginal log-likelihood + gradient of log priors)"
+    dtarget::VecF64
+
+    """
+        GPMC(X, y, m, k, lik)
+        GPMC(; m=MeanZero(), k=SE(0.0, 0.0), lik=Likelihood()) # observation-free constructor
+
+    Fit a Gaussian process to a set of training points. The Gaussian process with
+    non-Gaussian observations is defined in terms of its user-defined likelihood function,
+    mean and covaiance (kernel) functions.
+
+    The non-Gaussian likelihood is handled by a Monte Carlo method. The latent function
+    values are represented by centered (whitened) variables ``f(x) = m(x) + Lv`` where
+    ``v ∼ N(0, I)`` and ``LLᵀ = K_θ``.
+
+    # Arguments:
+    - `X::Matrix{Float64}`: Input observations
+    - `y::Vector{Float64}`: Output observations
+    - `m::Mean`: Mean function
+    - `k::kernel`: Covariance function
+    - `lik::likelihood`: Likelihood function
+    """
+    function GPMC{T}(X::MatF64, y::Vector{T}, m::Mean, k::Kernel,
+                     lik::Likelihood) where T<:Real
         dim, nobsv = size(X)
         v = zeros(nobsv)
         length(y) == nobsv || throw(ArgumentError("Input and output observations must have consistent dimensions."))
@@ -56,28 +65,39 @@ type GPMC{T<:Real} <: GPBase
     end
 end
 
-GPMC{T<:Real}(X::Matrix{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPMC{T}(X, y, meanf, kernel, lik)
+GPMC(X::MatF64, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) where T<:Real =
+    GPMC{T}(X, y, meanf, kernel, lik)
 
 # # Convenience constructor
-GP{T<:Real}(X::Matrix{Float64}, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(X, y, m, k, lik)
+GP(X::MatF64, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood) where T<:Real =
+    GPMC{T}(X, y, m, k, lik)
 
 # Creates GP object for 1D case
-GPMC{T<:Real}(x::Vector{Float64}, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) = GPMC{T}(x', y, meanf, kernel, lik)
+GPMC(x::VecF64, y::Vector{T}, meanf::Mean, kernel::Kernel, lik::Likelihood) where T<:Real =
+    GPMC{T}(x', y, meanf, kernel, lik)
 
-GP{T<:Real}(x::Vector{Float64}, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood) = GPMC{T}(x', y, m, k, lik)
 
-"""Initialise the log-likelihood function of a general GP model"""
+GP(x::VecF64, y::Vector{T}, m::Mean, k::Kernel, lik::Likelihood) where T<:Real =
+    GPMC{T}(x', y, m, k, lik)
+
+"""
+    initialise_ll!(gp::GPMC)
+
+Initialise the log-likelihood of Gaussian process `gp`.
+"""
 function initialise_ll!(gp::GPMC)
-    # log p(Y|v,θ) 
+    # log p(Y|v,θ)
     gp.μ = mean(gp.m,gp.X)
     Σ = cov(gp.k, gp.X, gp.data)
     gp.cK = PDMat(Σ + 1e-6*I)
-    F = unwhiten(gp.cK,gp.v) + gp.μ 
+    F = unwhiten(gp.cK,gp.v) + gp.μ
     gp.ll = sum(log_dens(gp.lik,F,gp.y)) #Log-likelihood
 end
 
 """
-Update the covariance matrix and its Cholesky decomposition.
+    update_cK!(gp::GPMC)
+
+Update the covariance matrix and its Cholesky decomposition of Gaussian process `gp`.
 """
 function update_cK!(gp::GPMC)
     old_cK = gp.cK
@@ -87,8 +107,8 @@ function update_cK!(gp::GPMC)
         Σbuffer[i,i] += 1e-6 # no logNoise for GPMC
     end
     chol_buffer = old_cK.chol.factors
-    copy!(chol_buffer, Σbuffer)
-    chol = cholfact!(Symmetric(chol_buffer))
+    copyto!(chol_buffer, Σbuffer)
+    chol = cholesky!(Symmetric(chol_buffer))
     gp.cK = PDMats.PDMat(Σbuffer, chol)
 end
 
@@ -105,18 +125,22 @@ function update_ll!(gp::GPMC; process::Bool=true, lik::Bool=true, domean::Bool=t
     gp.ll = sum(log_dens(gp.lik,F,gp.y)) #Log-likelihood
 end
 
-""" Update gradient of the log-likelihood dlog p(Y|v,θ) """
+"""
+     update_dll!(gp::GPMC, ...)
+
+Update the gradient of the log-likelihood of Gaussian process `gp`.
+"""
 function update_dll!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64;
     process::Bool=true, # include gradient components for the process itself
     lik::Bool=true,  # include gradient components for the likelihood parameters
     domean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
     )
-    size(Kgrad) == (gp.nobsv, gp.nobsv) || throw(ArgumentError, 
+    size(Kgrad) == (gp.nobsv, gp.nobsv) || throw(ArgumentError,
     @sprintf("Buffer for Kgrad should be a %dx%d matrix, not %dx%d",
              gp.nobsv, gp.nobsv,
              size(Kgrad,1), size(Kgrad,2)))
-    size(L_bar) == (gp.nobsv, gp.nobsv) || throw(ArgumentError, 
+    size(L_bar) == (gp.nobsv, gp.nobsv) || throw(ArgumentError,
     @sprintf("Buffer for L_bar should be a %dx%d matrix, not %dx%d",
              gp.nobsv, gp.nobsv,
              size(L_bar,1), size(L_bar,2)))
@@ -125,13 +149,14 @@ function update_dll!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64;
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
 
-    gp.dll = Array{Float64}(process*gp.nobsv + lik*n_lik_params + domean*n_mean_params + kern*n_kern_params)
+    gp.dll = Array{Float64}(undef, process * gp.nobsv + lik * n_lik_params +
+                            domean * n_mean_params + kern * n_kern_params)
 
     Lv = unwhiten(gp.cK, gp.v)
     dl_df = dlog_dens_df(gp.lik, Lv + gp.μ, gp.y)
     i = 1
     if process
-        A_mul_B!(view(gp.dll, i:i+gp.nobsv-1), gp.cK.chol[:U], dl_df)
+        mul!(view(gp.dll, i:i+gp.nobsv-1), gp.cK.chol.U, dl_df)
         i += gp.nobsv
     end
     if lik && n_lik_params > 0
@@ -149,20 +174,20 @@ function update_dll!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64;
         end
     end
     if kern
-        L_bar[:] = 0.0
-        LinAlg.BLAS.ger!(1.0, dl_df, gp.v, L_bar)
+        fill!(L_bar, 0)
+        BLAS.ger!(1.0, dl_df, gp.v, L_bar)
         tril!(L_bar)
         # ToDo:
         # the following two steps allocates memory
         # and are fickle, reaching into the internal
         # implementation of the cholesky decomposition
-        L = gp.cK.chol[:L].data
+        L = gp.cK.chol.L.data
         tril!(L)
         #
         chol_unblocked_rev!(L, L_bar)
         for iparam in 1:n_kern_params
             grad_slice!(Kgrad, gp.k, gp.X, gp.data, iparam)
-            gp.dll[i] = vecdot(Kgrad, L_bar)
+            gp.dll[i] = dot(Kgrad, L_bar)
             i+=1
         end
     end
@@ -174,48 +199,80 @@ function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64; kwargs...)
 end
 
 
-""" GPMC: Initialise the target, which is assumed to be the log-posterior, log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ) """
+"""
+    initialise_target!(gp::GPMC)
+
+Initialise the log-posterior
+```math
+\\log p(θ, v | y) ∝ \\log p(y | v, θ) + \\log p(v) + \\log p(θ)
+```
+of a Gaussian process `gp`.
+"""
 function initialise_target!(gp::GPMC)
     initialise_ll!(gp)
-    gp.target = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.m) + prior_logpdf(gp.k) 
-end    
+    gp.target = gp.ll - 0.5 * (sum(abs2, gp.v) + log(2 * pi) * length(gp.v)) +
+        prior_logpdf(gp.lik) + prior_logpdf(gp.m) .+ prior_logpdf(gp.k)
+end
 
-""" GPMC: Update the target, which is assumed to be the log-posterior, log p(θ,v|y) ∝ log p(y|v,θ) + log p(v) +  log p(θ) """
+"""
+    update_target!(gp::GPMC, ...)
+
+Update the log-posterior
+```math
+\\log p(θ, v | y) ∝ \\log p(y | v, θ) + \\log p(v) + \\log p(θ)
+```
+of a Gaussian process `gp`.
+"""
 function update_target!(gp::GPMC; process::Bool=true, lik::Bool=true, domean::Bool=true, kern::Bool=true)
     update_ll!(gp; process=process, lik=lik, domean=domean, kern=kern)
-    gp.target = gp.ll + sum(-0.5*gp.v.*gp.v-0.5*log(2*pi)) + prior_logpdf(gp.lik) + prior_logpdf(gp.m) + prior_logpdf(gp.k) 
-end    
+    gp.target = gp.ll - 0.5 * (sum(abs2, gp.v) + log(2 * pi) * length(gp.v)) +
+        prior_logpdf(gp.lik) + prior_logpdf(gp.m) + prior_logpdf(gp.k)
+end
 
 function update_dtarget!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64; kwargs...)
     update_dll!(gp, Kgrad, L_bar; kwargs...)
     gp.dtarget = gp.dll + prior_gradlogpdf(gp; kwargs...)
 end
 
-""" GPMC: A function to update the target (aka log-posterior) and its derivative """
+"""
+    update_target_and_dtarget!(gp::GPMC, ...)
+
+Update the log-posterior
+```math
+\\log p(θ, v | y) ∝ \\log p(y | v, θ) + \\log p(v) + \\log p(θ)
+```
+of a Gaussian process `gp` and its derivative.
+"""
 function update_target_and_dtarget!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64; kwargs...)
     update_target!(gp; kwargs...)
     update_dtarget!(gp, Kgrad, L_bar; kwargs...)
 end
-""" GPMC: A function to update the target (aka log-posterior) and its derivative """
+
 function update_target_and_dtarget!(gp::GPMC; kwargs...)
-    Kgrad = Array{Float64}(gp.nobsv, gp.nobsv)
-    L_bar = Array{Float64}(gp.nobsv, gp.nobsv)
+    Kgrad = Array{Float64}(undef, gp.nobsv, gp.nobsv)
+    L_bar = Array{Float64}(undef, gp.nobsv, gp.nobsv)
     update_target_and_dtarget!(gp, Kgrad, L_bar; kwargs...)
 end
 
 
-#Calculate the mean and variance of predictive distribution p(y^*|x^*,D,θ) at test locations x^*
-function predict_y{M<:MatF64}(gp::GPMC, x::M; full_cov::Bool=false)
+"""
+    predict_y(gp::GPMC, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
+
+Return the predictive mean and variance of Gaussian Process `gp` at specfic points which
+are given as columns of matrix `x`. If `full_cov` is `true`, the full covariance matrix is
+returned instead of only variances.
+"""
+function predict_y(gp::GPMC, x::MatF64; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
     return predict_obs(gp.lik, μ, σ2)
 end
 
 # 1D Case for prediction
-predict_y{V<:VecF64}(gp::GPMC, x::V; full_cov::Bool=false) = predict_y(gp, x'; full_cov=full_cov)
+predict_y(gp::GPMC, x::VecF64; full_cov::Bool=false) = predict_y(gp, x'; full_cov=full_cov)
 
 
 ## compute predictions
-function _predict{M<:MatF64}(gp::GPMC, X::M)
+function _predict(gp::GPMC, X::MatF64)
     n = size(X, 2)
     cK = cov(gp.k, X, gp.X)
     Lck = whiten(gp.cK, cK')
@@ -227,8 +284,8 @@ function _predict{M<:MatF64}(gp::GPMC, X::M)
 end
 
 
-# Sample from functions from the GP 
-function rand!{M<:MatF64}(gp::GPMC, X::M, A::DenseMatrix)
+# Sample from functions from the GP
+function Random.rand!(gp::GPMC, X::MatF64, A::DenseMatrix)
     nobsv = size(X,2)
     n_sample = size(A,2)
 
@@ -242,23 +299,23 @@ function rand!{M<:MatF64}(gp::GPMC, X::M, A::DenseMatrix)
         # Posterior mean and covariance
         μ, Σ = predict_f(gp, X; full_cov=true)
     end
-    
+
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobsv, n_sample)))
 end
 
 #Samples random function values f
-function rand{M<:MatF64}(gp::GPMC, X::M, n::Int)
-    nobsv=size(X,2)
-    A = Array{Float64}( nobsv, n)
+function Random.rand(gp::GPMC, X::MatF64, n::Int)
+    nobsv = size(X, 2)
+    A = Array{Float64}(undef, nobsv, n)
     return rand!(gp, X, A)
 end
 
 # Sample from 1D GP
-rand{V<:VecF64}(gp::GPMC, x::V, n::Int) = rand(gp, x', n)
+Random.rand(gp::GPMC, x::VecF64, n::Int) = rand(gp, x', n)
 
 # Generate only one sample from the GP and returns a vector
-rand{M<:MatF64}(gp::GPMC,X::M) = vec(rand(gp,X,1))
-rand{V<:VecF64}(gp::GPMC,x::V) = vec(rand(gp,x',1))
+Random.rand(gp::GPMC, X::MatF64) = vec(rand(gp,X,1))
+Random.rand(gp::GPMC, x::VecF64) = vec(rand(gp,x',1))
 
 
 function get_params(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true)
@@ -276,7 +333,15 @@ function get_params(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true
     return params
 end
 
-function set_params!(gp::GPMC, hyp::Vector{Float64}; process::Bool=true, lik::Bool=true, domean::Bool=true, kern::Bool=true)
+function num_params(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true)
+    n = length(gp.v)
+    lik && (n += num_params(gp.lik))
+    domean && (n += num_params(gp.m))
+    kern && (n += num_params(gp.k))
+    n
+end
+
+function set_params!(gp::GPMC, hyp::VecF64; process::Bool=true, lik::Bool=true, domean::Bool=true, kern::Bool=true)
     n_lik_params = num_params(gp.lik)
     n_mean_params = num_params(gp.m)
     n_kern_params = num_params(gp.k)
@@ -319,7 +384,7 @@ function prior_gradlogpdf(gp::GPMC; process::Bool=true, lik::Bool=true, domean::
 end
 
 
-function show(io::IO, gp::GPMC)
+function Base.show(io::IO, gp::GPMC)
     println(io, "GP Monte Carlo object:")
     println(io, "  Dim = $(gp.dim)")
     println(io, "  Number of observations = $(gp.nobsv)")
@@ -337,7 +402,7 @@ function show(io::IO, gp::GPMC)
         print(io,"\n  Output observations = ")
         show(io, gp.y)
         print(io,"\n  Log-posterior = ")
-        show(io, round(gp.target,3))
+        show(io, round(gp.target; digits=3))
     end
 end
 

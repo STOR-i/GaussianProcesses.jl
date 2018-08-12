@@ -1,8 +1,8 @@
-@compat abstract type CompositeMean <: Mean end
+abstract type CompositeMean <: Mean end
 
 submeans(m::CompositeMean) = throw(MethodError(submeans, (m,)))
 
-function show(io::IO, cm::CompositeMean, depth::Int = 0)
+function Base.show(io::IO, cm::CompositeMean, depth::Int = 0)
     pad = repeat(" ", 2 * depth)
     println(io, "$(pad)Type: $(typeof(cm))")
     for m in submeans(cm)
@@ -13,7 +13,7 @@ end
 num_params(cm::CompositeMean) = sum(num_params(m) for m in submeans(cm))
 
 function get_params(cm::CompositeMean)
-    p = Array{Float64}(0)
+    p = Array{Float64}(undef, 0)
     for m in submeans(cm)
         append!(p, get_params(m))
     end

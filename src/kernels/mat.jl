@@ -1,25 +1,25 @@
 # A class of Matern isotropic functions including the Matrern 3/2 and 5/2, where d= 3 or 5. Also the exponential function, where d=1
-@compat abstract type MaternIso <: Isotropic{Euclidean} end
-@compat abstract type MaternARD <: StationaryARD{WeightedEuclidean} end
+abstract type MaternIso <: Isotropic{Euclidean} end
+abstract type MaternARD <: StationaryARD{WeightedEuclidean} end
 
-@inline function dKij_dθp{M<:MatF64}(mat::MaternARD, X::M, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(mat::MaternARD, X::MatF64, i::Int, j::Int, p::Int, dim::Int)
     r=distij(metric(mat),X,i,j,dim)
     if p <= dim
         wdiffp=dist2ijk(metric(mat),X,i,j,p)
-        return wdiffp==0.0?0.0:dk_dll(mat,r,wdiffp)
+        return wdiffp == 0.0 ? 0.0 : dk_dll(mat,r,wdiffp)
     elseif p==dim+1
         return dk_dlσ(mat, r)
     else
         return NaN
     end
 end
-@inline function dKij_dθp{M<:MatF64}(mat::MaternARD, X::M, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(mat::MaternARD, X::MatF64, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
     return dKij_dθp(mat,X,i,j,p,dim)
 end
 
 @inline function dk_dθp(mat::MaternIso, r::Float64, p::Int)
     if p==1
-        return r==0.0?0.0:dk_dll(mat, r)
+        return r == 0.0 ? 0.0 : dk_dll(mat, r)
     elseif p==2
         return dk_dlσ(mat, r)
     else
@@ -36,13 +36,15 @@ include("mat32_ard.jl")
 include("mat52_iso.jl")
 include("mat52_ard.jl")
 
-@doc """
-# Description
-Constructor the Matern kernel, where ν defines the Matern type (i.e. ν = 1/2, 3/2 or 5/2).
+"""
+    Matern(ν::Float64, ll::Union{Float64,Vector{Float64}}, lσ::Float64)
 
-# See also
-Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard
-""" ->
+Create Matérn kernel of type `ν` (i.e. `ν = 1/2`, `ν = 3/2`, or `ν = 5/2`) with length scale
+`exp.(ll)` and signal standard deviation `exp(σ)`.
+
+See also [`Mat12Iso`](@ref), [`Mat12Ard`](@ref), [`Mat32Iso`](@ref), [`Mat32Ard`](@ref),
+[`Mat52Iso`](@ref), and [`Mat52Ard`](@ref).
+"""
 function Matern(ν::Float64,ll::Float64, lσ::Float64)
     if ν==1/2
         kern = Mat12Iso(ll, lσ)
@@ -53,9 +55,9 @@ function Matern(ν::Float64,ll::Float64, lσ::Float64)
     else throw(ArgumentError("Only Matern 1/2, 3/2 and 5/2 are implementable"))
     end
     return kern
-end    
+end
 
-function Matern(ν::Float64,ll::Vector{Float64}, lσ::Float64)
+function Matern(ν::Float64,ll::VecF64, lσ::Float64)
     if ν==1/2
         kern = Mat12Ard(ll, lσ)
     elseif ν==3/2
@@ -65,6 +67,6 @@ function Matern(ν::Float64,ll::Vector{Float64}, lσ::Float64)
     else throw(ArgumentError("Only Matern 1/2, 3/2 and 5/2 are implementable"))
     end
     return kern
-end    
+end
 
 @deprecate Mat Matern

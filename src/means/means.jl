@@ -1,10 +1,8 @@
 #This file contains a list of the currently available mean functions
 
-import Base.show
+abstract type Mean end
 
-@compat abstract type Mean end
-
-function show(io::IO, m::Mean, depth::Int = 0)
+function Base.show(io::IO, m::Mean, depth::Int = 0)
     pad = repeat(" ", 2*depth)
     print(io, "$(pad)Type: $(typeof(m)), Params: ")
     show(io, get_params(m))
@@ -12,8 +10,8 @@ function show(io::IO, m::Mean, depth::Int = 0)
 end
 
 # Calculate mean for matrix of observations
-function mean(m::Mean, X::MatF64)
-    mu = Array{Float64}(size(X, 2))
+function Statistics.mean(m::Mean, X::MatF64)
+    mu = Array{Float64}(undef, size(X, 2))
     for i in 1:size(X,2)
         @inbounds mu[i] = mean(m, X[:, i])
     end
@@ -25,7 +23,7 @@ end
 function grad_stack(m::Mean, X::MatF64)
     n = num_params(m)
     d, nobsv = size(X)
-    mat = Array{Float64}(nobsv, n)
+    mat = Array{Float64}(undef, nobsv, n)
     @inbounds for i in 1:nobsv
         mat[i,:] = grad_mean(m, view(X,:,i))
     end
@@ -49,7 +47,7 @@ function prior_logpdf(m::Mean)
         return 0.0
     else
         return sum(logpdf(prior,param) for (prior, param) in zip(m.priors,get_params(m)))
-    end    
+    end
 end
 
 function prior_gradlogpdf(m::Mean)
@@ -58,7 +56,7 @@ function prior_gradlogpdf(m::Mean)
         return zeros(num_params(m))
     else
         return [gradlogpdf(prior,param) for (prior, param) in zip(priors, get_params(m))]
-    end    
+    end
 end
 
 

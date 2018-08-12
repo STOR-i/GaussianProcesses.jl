@@ -1,8 +1,8 @@
-@compat abstract type CompositeKernel <: Kernel end
+abstract type CompositeKernel <: Kernel end
 
 subkernels(k::CompositeKernel) = throw(MethodError(subkernels, (k,)))
 
-function show(io::IO, compkern::CompositeKernel, depth::Int = 0)
+function Base.show(io::IO, compkern::CompositeKernel, depth::Int = 0)
     pad = repeat(" ", 2 * depth)
     println(io, "$(pad)Type: $(typeof(compkern))")
     for k in subkernels(compkern)
@@ -11,7 +11,7 @@ function show(io::IO, compkern::CompositeKernel, depth::Int = 0)
 end
 
 function get_params(compkern::CompositeKernel)
-    p = Array{Float64}( 0)
+    p = Array{Float64}(undef, 0)
     for k in subkernels(compkern)
         append!(p, get_params(k))
     end
@@ -23,7 +23,7 @@ get_param_names(compkern::CompositeKernel) = composite_param_names(subkernels(co
 num_params(ck::CompositeKernel) = sum(num_params(k) for k in subkernels(ck))
 
 
-function set_params!(compkern::CompositeKernel, hyp::Vector{Float64})
+function set_params!(compkern::CompositeKernel, hyp::VecF64)
     i, n = 1, num_params(compkern)
     length(hyp) == num_params(compkern) || throw(ArgumentError("CompositeKernel object requires $(n) hyperparameters"))
     for k in subkernels(compkern)
@@ -59,12 +59,12 @@ end
 # CompositeData #
 #################
 
-type CompositeData <: KernelData
+struct CompositeData <: KernelData
     datadict::Dict{String, KernelData}
     keys::Vector{String}
 end
 
-function KernelData{M<:MatF64}(compkern::CompositeKernel, X::M)
+function KernelData(compkern::CompositeKernel, X::MatF64)
     datadict = Dict{String, KernelData}()
     datakeys = String[]
     for k in subkernels(compkern)
@@ -77,7 +77,7 @@ function KernelData{M<:MatF64}(compkern::CompositeKernel, X::M)
     CompositeData(datadict, datakeys)
 end
 
-function kernel_data_key{M<:MatF64}(compkern::CompositeKernel, X::M)
+function kernel_data_key(compkern::CompositeKernel, X::MatF64)
     join(["CompositeData" ; sort(unique(kernel_data_key(k, X) for k in subkernels(compkern)))])
 end
 
