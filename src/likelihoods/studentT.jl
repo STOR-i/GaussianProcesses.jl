@@ -11,18 +11,18 @@ with degrees of freedom ``ν ∈ N₀``, where scale ``σ`` is a non-fixed hyper
 """
 mutable struct StuTLik <: Likelihood
     "Degrees of freedom"
-    ν::Int64
+    ν::Int
     "Scale"
     σ::Float64
     "Priors for likelihood parameters"
     priors::Array
 
     """
-        StuTLik(ν::Int64, lσ::Float64)
+        StuTLik(ν::Int, lσ::Float64)
 
     Create a `StuTLik` with degrees of freedom `ν` and scale `exp(lσ)`.
     """
-    StuTLik(ν::Int64, lσ::Float64) = new(ν, exp(lσ), [])
+    StuTLik(ν::Int, lσ::Float64) = new(ν, exp(lσ), [])
 end
 
 #log of probability density

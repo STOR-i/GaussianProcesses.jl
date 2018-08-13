@@ -10,15 +10,15 @@ for number of successes ``k ∈ \\{0, 1, …, n\\}`` out of ``n`` Bernoulli tria
 """
 struct BinLik <: Likelihood
     "Fixed number of trials"
-    n::Int64
+    n::Int
 end
 
-function log_dens(binomial::BinLik, f::VecF64, y::Vector{Int64})
+function log_dens(binomial::BinLik, f::VecF64, y::Vector{Int})
     θ = @. exp(f) / (1 + exp(f))
     return Float64[lgamma(binomial.n+1.0) - lgamma(yi+1.0) - lgamma(binomial.n-yi+1.0) + yi*log(θi) + (binomial.n-yi)*log(1-θi) for (θi,yi) in zip(θ,y)]
 end
 
-function dlog_dens_df(binomial::BinLik, f::VecF64, y::Vector{Int64})
+function dlog_dens_df(binomial::BinLik, f::VecF64, y::Vector{Int})
     return Float64[yi/(1.0+exp(fi)) - (binomial.n-yi)*exp(fi)/(1+exp(fi)) for (fi,yi) in zip(f,y)]
 end
 

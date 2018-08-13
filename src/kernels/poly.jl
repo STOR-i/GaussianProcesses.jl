@@ -15,17 +15,17 @@ mutable struct Poly <: Kernel
     "Signal variance"
     σ2::Float64
     "Degree of polynomial"
-    deg::Int64
+    deg::Int
     "Priors for kernel parameters"
     priors::Array
 
     """
-        Poly(lc::Float64, lσ::Float64, deg::Int64)
+        Poly(lc::Float64, lσ::Float64, deg::Int)
 
     Create `Poly` with signal standard deviation `exp(lσ)`, additive constant `exp(lc)`,
     and degree `deg`.
     """
-    Poly(lc::Float64, lσ::Float64, deg::Int64) = new(exp(lc), exp(2 * lσ), deg, [])
+    Poly(lc::Float64, lσ::Float64, deg::Int) = new(exp(lc), exp(2 * lσ), deg, [])
 end
 
 function KernelData(k::Poly, X::MatF64)
