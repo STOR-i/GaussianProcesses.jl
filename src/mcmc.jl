@@ -7,9 +7,9 @@ Gaussian process `gp`.
 function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64=0.1,
               Lmin::Int=5, Lmax::Int=15, lik::Bool=true, noise::Bool=true,
               domean::Bool=true, kern::Bool=true)
-    Kgrad = Array{Float64}(undef, gp.nobsv, gp.nobsv)
-    L_bar = Array{Float64}(undef, gp.nobsv, gp.nobsv)
-    params_kwargs = get_params_kwargs(typeof(gp); domean=domean, kern=kern, noise=noise, lik=lik)
+    Kgrad = Array{Float64}(undef, gp.nobs, gp.nobs)
+    L_bar = Array{Float64}(undef, gp.nobs, gp.nobs)
+    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     count = 0
     function calc_target(gp::GPBase, θ::VecF64) #log-target and its gradient
         count += 1
@@ -84,5 +84,3 @@ function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64
     @printf("Acceptance rate: %f \n", num_acceptances/nIter)
     return post'
 end
-
-

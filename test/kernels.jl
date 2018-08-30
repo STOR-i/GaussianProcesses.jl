@@ -120,6 +120,7 @@ using LinearAlgebra, Statistics, Calculus
                 numer_grad = Calculus.gradient(init_params) do params
                     set_params!(gp, params)
                     update_target!(gp)
+                    gp.target
                 end
                 @test theor_grad ≈ numer_grad rtol=1e-3 atol=1e-3
             end

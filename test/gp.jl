@@ -27,7 +27,7 @@ import ScikitLearnBase
 
     # Modify kernel and update
     @testset "Update" begin
-        gp.k.ℓ2 = 4.0
+        gp.kernel.ℓ2 = 4.0
         X_pred = 2π * rand(d, n)
 
         GaussianProcesses.update_target!(gp)

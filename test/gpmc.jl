@@ -32,12 +32,14 @@ using Random, Calculus
         set_params!(gp, params)
 
         # Exact gradient
-        exact_grad = GaussianProcesses.update_target_and_dtarget!(gp)
+        GaussianProcesses.update_target_and_dtarget!(gp)
+        exact_grad = gp.dtarget
 
         # Numerical approximation
         num_grad = Calculus.gradient(params) do params
             set_params!(gp, params)
             update_target!(gp)
+            gp.target
         end
 
         @test num_grad ≈ exact_grad

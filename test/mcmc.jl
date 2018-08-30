@@ -12,16 +12,16 @@ using Distributions
     # Just checks that it doesn't crash
     @testset "Basic" begin
         @testset "Without likelihood" begin
-	          gp = GP(X, y, MeanZero(), kern)
-            set_priors!(gp.k, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
-	          mcmc(gp)
+            gp = GP(X, y, MeanZero(), kern)
+            set_priors!(gp.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
+            mcmc(gp)
         end
 
         @testset "With likelihood" begin
             lik = GaussLik(-1.0)
             gp = GP(X, y, MeanZero(), kern, lik)
-            set_priors!(gp.k, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
-	          mcmc(gp)
+            set_priors!(gp.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
+            mcmc(gp)
         end
     end
 end

@@ -1,5 +1,5 @@
-get_params_kwargs(::Type{GPE}; kwargs...) = delete!(Dict(kwargs), :lik)
-get_params_kwargs(::Type{<:GPMC}; kwargs...) = delete!(Dict(kwargs), :noise)
+get_params_kwargs(::GPE; kwargs...) = delete!(Dict(kwargs), :lik)
+get_params_kwargs(::GPMC; kwargs...) = delete!(Dict(kwargs), :noise)
 
 """
     optimize!(gp::GPBase; kwargs...)
@@ -15,7 +15,7 @@ Optimise the hyperparameters of Gaussian process `gp` based on type II maximum l
 """
 function optimize!(gp::GPBase; method = LBFGS(), domean::Bool = true, kern::Bool = true,
                    noise::Bool = true, lik::Bool = true, kwargs...)
-    params_kwargs = get_params_kwargs(typeof(gp); domean=domean, kern=kern, noise=noise, lik=lik)
+    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     # println(params_kwargs)
     func = get_optim_target(gp; params_kwargs...)
     init = get_params(gp; params_kwargs...)  # Initial hyperparameter values
@@ -84,4 +84,3 @@ function get_optim_target(gp::GPBase; params_kwargs...)
     func = OnceDifferentiable(ltarget, dltarget!, ltarget_and_dltarget!, xinit)
     return func
 end
-

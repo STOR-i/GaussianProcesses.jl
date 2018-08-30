@@ -71,10 +71,10 @@ using StatsFuns
         # Just checks that it doesn't crash
         # and that the final mll is better that the initial value
         @testset "Basic" begin
-	          gp = GPMC(X, y, mean, kern, lik)
-	          init_target = gp.target
-	          optimize!(gp)
-	          @test gp.target > init_target
+            gp = GPMC(X, y, mean, kern, lik)
+            init_target = gp.target
+            optimize!(gp)
+            @test gp.target > init_target
         end
 
         @testset "Keyword arguments" begin
@@ -82,14 +82,14 @@ using StatsFuns
             init_params = GaussianProcesses.get_params(gp; domean=true, kern=true, lik=true)
 
             # Check mean fixed
-            mean_params = GaussianProcesses.get_params(gp.m)
+            mean_params = GaussianProcesses.get_params(gp.mean)
             optimize!(gp; domean=false, kern=true, lik=true)
             @test mean_params == GaussianProcesses.get_params(mean)
 
             set_params!(gp, init_params; domean=true, kern=true, lik=true)
 
             # Check kern fixed
-            kern_params = GaussianProcesses.get_params(gp.k)
+            kern_params = GaussianProcesses.get_params(gp.kernel)
             optimize!(gp; domean=true, kern=false, lik=true)
             @test kern_params == GaussianProcesses.get_params(kern)
 
