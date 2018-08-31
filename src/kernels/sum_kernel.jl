@@ -1,16 +1,15 @@
-struct SumKernel <: CompositeKernel
-    kerns::Vector{Kernel}
-    SumKernel(args::Vararg{Kernel}) = new(collect(args))
+struct SumKernel{T<:NTuple{N,Kernel} where N} <: CompositeKernel
+    kernels::T
 end
 
-subkernels(sumkern::SumKernel) = sumkern.kerns
-get_param_names(sumkern::SumKernel) = composite_param_names(sumkern.kerns, :pk)
+SumKernel(kernels::Kernel...) = SumKernel(kernels)
 
-Statistics.cov(sk::SumKernel, x::VecF64, y::VecF64) = sum(cov(k, x, y) for k in subkernels(sk))
+get_param_names(sumkern::SumKernel) = composite_param_names(components(sumkern), :sk)
 
+Statistics.cov(sk::SumKernel, x::VecF64, y::VecF64) = sum(cov(k, x, y) for k in components(sk))
 
 function addcov!(s::MatF64, sumkern::SumKernel, X::MatF64, data::CompositeData)
-    for (ikern,kern) in enumerate(sumkern.kerns)
+    for (ikern,kern) in enumerate(components(sumkern))
         addcov!(s, kern, X, data.datadict[data.keys[ikern]])
     end
     return s
@@ -27,47 +26,47 @@ end
 
 function grad_kern(sumkern::SumKernel, x::VecF64, y::VecF64)
     dk = Array{Float64}(undef, 0)
-    for k in sumkern.kerns
+    for k in components(sumkern)
         append!(dk, grad_kern(k, x, y))
     end
     dk
 end
 
 @inline function dKij_dθp(sumkern::SumKernel, X::MatF64, i::Int, j::Int, p::Int, dim::Int)
-    s=0
-    for k in sumkern.kerns
-        np = num_params(k)
-        if p<=np+s
+    s = 0
+    for k in components(sumkern)
+        t = s + num_params(k)
+        if p <= t
             return dKij_dθp(k, X, i,j,p-s,dim)
         end
-        s += np
+        s = t
     end
 end
 @inline function dKij_dθp(sumkern::SumKernel, X::MatF64, data::CompositeData, i::Int, j::Int, p::Int, dim::Int)
-    s=0
-    for (ikern,kern) in enumerate(sumkern.kerns)
-        np = num_params(kern)
-        if p<=np+s
+    s = 0
+    for (ikern,kern) in enumerate(components(sumkern))
+        t = s + num_params(kern)
+        if p <= t
             return dKij_dθp(kern, X, data.datadict[data.keys[ikern]],i,j,p-s,dim)
         end
-        s += np
+        s = t
     end
 end
 
 function grad_slice!(dK::MatF64, sumkern::SumKernel, X::MatF64, data::CompositeData, p::Int)
-    s=0
-    for (ikern,kern) in enumerate(sumkern.kerns)
-        np = num_params(kern)
-        if p<=np+s
+    s = 0
+    for (ikern,kern) in enumerate(components(sumkern))
+        t = s + num_params(kern)
+        if p <= t
             return grad_slice!(dK, kern, X, data.datadict[data.keys[ikern]],p-s)
         end
-        s += np
+        s = t
     end
     return dK
 end
 
 # Addition operators
-Base.:+(k1::SumKernel, k2::Kernel) = SumKernel(k1.kerns..., k2)
-Base.:+(k1::SumKernel, k2::SumKernel) = SumKernel(k1.kerns..., k2.kerns...)
-Base.:+(k1::Kernel, k2::Kernel) = SumKernel(k1,k2)
-Base.:+(k1::Kernel, k2::SumKernel) = SumKernel(k1, k2.kerns...)
+Base.:+(k1::SumKernel, k2::Kernel) = SumKernel(k1.kernels..., k2)
+Base.:+(k1::SumKernel, k2::SumKernel) = SumKernel(k1.kernels..., k2.kernels...)
+Base.:+(k1::Kernel, k2::Kernel) = SumKernel(k1, k2)
+Base.:+(k1::Kernel, k2::SumKernel) = SumKernel(k1, k2.kernels...)

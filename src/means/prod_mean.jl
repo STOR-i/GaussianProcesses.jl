@@ -1,39 +1,28 @@
-struct ProdMean <: CompositeMean
-    means::Vector{Mean}
+struct ProdMean{T<:NTuple{N,Mean} where N} <: CompositeMean
+    means::T
 end
 
-ProdMean(args::Vararg{Mean}) = ProdMean(collect(args))
+ProdMean(means::Mean...) = ProdMean(means)
 
-submeans(pm::ProdMean) = pm.means
+Statistics.mean(pm::ProdMean, x::VecF64) = prod(mean(m, x) for m in components(pm))
 
-Statistics.mean(pm::ProdMean, x::VecF64) = prod(mean(m,x) for m in submeans(pm))
-function Statistics.mean(pm::ProdMean, X::MatF64)
-    n = size(X, 2)
-    p = ones(n)
-    for m in submeans(pm)
-        broadcast!(*, p, p, mean(m, X))
-    end
-    return p
-end
-
-get_param_names(pm::ProdMean) = composite_param_names(pm.means, :pm)
+get_param_names(pm::ProdMean) = composite_param_names(components(pm), :pm)
 
 function grad_mean(pm::ProdMean, x::VecF64)
-    np = num_params(pm)
-    dm = Array{Float64}(undef, np)
-    means = submeans(pm)
+    dm = Array{Float64}(undef, num_params(pm))
+    means = [mean(m, x) for m in components(pm)]
     v = 1
-    for (i,m) in enumerate(means)
-        p = prod(mean(m2, x) for (j,m2) in enumerate(means) if i!=j)
-        np_m = num_params(m)
-        dm[v:v+np_m-1] = p * grad_mean(m, x)
-        v+=np_m
+    for (i, m) in enumerate(components(pm))
+        p = prod(m2 for (j, m2) in enumerate(means) if i != j)
+        w = v + num_params(m)
+        dm[v:(w - 1)] = p * grad_mean(m, x)
+        v = w
     end
-    return dm
+    dm
 end
 
 # Multiplication operators
 Base.:*(m1::ProdMean, m2::Mean) = ProdMean(m1.means..., m2)
 Base.:*(m1::ProdMean, m2::ProdMean) = ProdMean(m1.means..., m2.means...)
-Base.:*(m1::Mean, m2::Mean) = ProdMean(m1,m2)
+Base.:*(m1::Mean, m2::Mean) = ProdMean(m1, m2)
 Base.:*(m1::Mean, m2::ProdMean) = ProdMean(m1, m2.means...)
