@@ -45,7 +45,7 @@ Create Matérn kernel of type `ν` (i.e. `ν = 1/2`, `ν = 3/2`, or `ν = 5/2`) 
 See also [`Mat12Iso`](@ref), [`Mat12Ard`](@ref), [`Mat32Iso`](@ref), [`Mat32Ard`](@ref),
 [`Mat52Iso`](@ref), and [`Mat52Ard`](@ref).
 """
-function Matern(ν::Float64,ll::Float64, lσ::Float64)
+function Matern(ν::Float64, ll::Float64, lσ::Float64)
     if ν==1/2
         kern = Mat12Iso(ll, lσ)
     elseif ν==3/2
@@ -57,7 +57,7 @@ function Matern(ν::Float64,ll::Float64, lσ::Float64)
     return kern
 end
 
-function Matern(ν::Float64,ll::VecF64, lσ::Float64)
+function Matern(ν::Float64, ll::Vector{Float64}, lσ::Float64)
     if ν==1/2
         kern = Mat12Ard(ll, lσ)
     elseif ν==3/2

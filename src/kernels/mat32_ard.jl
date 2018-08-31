@@ -12,7 +12,7 @@ with length scale ``ℓ = (ℓ₁, ℓ₂, …)`` and signal standard deviation 
 """
 mutable struct Mat32Ard <: MaternARD
     "Inverse squared length scale"
-    iℓ2::VecF64
+    iℓ2::Vector{Float64}
     "Signal variance"
     σ2::Float64
     "Priors for kernel parameters"
@@ -23,20 +23,20 @@ mutable struct Mat32Ard <: MaternARD
 
     Create `Mat32Ard` with length scale `exp.(ll)` and signal standard deviation `exp(lσ)`.
     """
-    Mat32Ard(ll::VecF64, lσ::Float64) = new(exp.(-2 * ll), exp(2 * lσ), [])
+    Mat32Ard(ll::Vector{Float64}, lσ::Float64) = new(exp.(-2 .* ll), exp(2 * lσ), [])
 end
 
 function set_params!(mat::Mat32Ard, hyp::VecF64)
     length(hyp) == num_params(mat) || throw(ArgumentError("Mat32 kernel only has $(num_params(mat)) parameters"))
-    d=length(mat.iℓ2)
-    mat.iℓ2 = exp.(-2.0*hyp[1:d])
-    mat.σ2 = exp(2.0*hyp[d+1])
+    @views @. mat.iℓ2 = exp(-2 * hyp[1:(end-1)])
+    mat.σ2 = exp(2 * hyp[end])
 end
 
-get_params(mat::Mat32Ard) = [-log.(mat.iℓ2)/2.0; log(mat.σ2)/2.0]
+get_params(mat::Mat32Ard) = [-log.(mat.iℓ2) / 2; log(mat.σ2) / 2]
 get_param_names(mat::Mat32Ard) = [get_param_names(mat.iℓ2, :ll); :lσ]
 num_params(mat::Mat32Ard) = length(mat.iℓ2) + 1
 
-Statistics.cov(mat::Mat32Ard, r::Float64) = mat.σ2*(1+sqrt(3)*r)*exp(-sqrt(3)*r)
+Statistics.cov(mat::Mat32Ard, r::Float64) =
+    (s = √3 * r; mat.σ2 * (1 + s) * exp(-s))
 
-dk_dll(mat::Mat32Ard, r::Float64, wdiffp::Float64) = 3.0*mat.σ2*wdiffp*exp(-sqrt(3)*r)
+dk_dll(mat::Mat32Ard, r::Float64, wdiffp::Float64) = 3 * mat.σ2 * wdiffp * exp(-√3 * r)
