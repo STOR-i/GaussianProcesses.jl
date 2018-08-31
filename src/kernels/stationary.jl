@@ -130,7 +130,7 @@ end
 function multcov!(cK::MatF64, k::Stationary, X::MatF64, data::StationaryData)
     multcov!(cK, k, X)
 end
-dk_dlσ(k::Stationary, r::Float64) = 2.0*cov(k,r)
+dk_dlσ(k::Stationary, r::Float64) = 2 * cov(k,r)
 
 # Isotropic Kernels
 
@@ -188,4 +188,3 @@ function KernelData(k::StationaryARD, X::MatF64)
     StationaryARDData(dist_stack)
 end
 kernel_data_key(k::StationaryARD, X::MatF64) = @sprintf("%s_%s", "StationaryARDData", metric(k))
-
