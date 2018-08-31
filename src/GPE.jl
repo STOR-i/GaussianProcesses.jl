@@ -341,11 +341,7 @@ function Random.rand!(gp::GPE, x::MatF64, A::DenseMatrix)
     A
 end
 
-function Random.rand(gp::GPE, x::MatF64, n::Int)
-    nobs=size(x,2)
-    A = Array{Float64}( nobs, n)
-    return rand!(gp, x, A)
-end
+Random.rand(gp::GPE, x::MatF64, n::Int) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n))
 
 # Sample from 1D GPE
 Random.rand(gp::GPE, x::VecF64, n::Int) = rand(gp, x', n)
