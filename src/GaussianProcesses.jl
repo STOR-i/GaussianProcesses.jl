@@ -7,6 +7,7 @@ using LinearAlgebra, Printf, Random, Statistics
 
 # Functions that should be available to package
 # users should be explicitly exported here
+export GPBase, GP, GPE, GPMC, predict_f, predict_y, Kernel, Likelihood, CompositeKernel, SumKernel, ProdKernel, Masked, FixedKernel, fix, Noise, Const, SE, SEIso, SEArd, Periodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Matern, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, #kernel functions
     MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, #mean functions
     GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
     mcmc, optimize!,                                           #inference functions
