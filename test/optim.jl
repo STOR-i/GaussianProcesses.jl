@@ -1,5 +1,8 @@
-using GaussianProcesses, Test
-using StatsFuns
+module TestOptim
+using GaussianProcesses, StatsFuns
+using Test, Random
+
+Random.seed!(1)
 
 @testset "Optim" begin
     d, n = 2, 20
@@ -101,4 +104,5 @@ using StatsFuns
             @test lik_params == GaussianProcesses.get_params(lik)
         end
     end
+end
 end

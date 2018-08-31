@@ -1,12 +1,25 @@
-using GaussianProcesses, Test
-using LinearAlgebra, Statistics, Calculus
+module TestKernels
+using GaussianProcesses, Calculus
+using Test, LinearAlgebra, Statistics, Random
+
+Random.seed!(1)
 
 @testset "Kernels" begin
     d, n, n2 = 2, 10, 5
-    ll = rand(d)
     X = randn(d, n)
     X2 = randn(d, n2)
     y = randn(n)
+    ll = rand(d)
+
+    # Random columns
+    i, j = rand(1:n), rand(1:n2)
+    Xi = view(X, :, i)
+    Xj = view(X, :, j) # works since n2 < n
+    X2j = view(X2, :, j)
+
+    # Preallocate some matrices
+    cK = zeros(n, n)
+    cK2 = zeros(n, n2)
 
     kernels = [# Isotropic kernels
                SEIso(1.0, 1.0), Mat12Iso(1.0,1.0), Mat32Iso(1.0,1.0), Mat52Iso(1.0,1.0),
@@ -30,7 +43,7 @@ using LinearAlgebra, Statistics, Calculus
                Lin(1.0) * fix(RQIso(1.0, 1.0, 1.0), :lσ)]
 
     @testset "Kernel $(typeof(kernel))" for kernel in kernels
-        println("\tTesting kernel ", typeof(kernel), "...")
+        println("\tTesting ", nameof(typeof(kernel)), "...")
         @test length(GaussianProcesses.get_param_names(kernel)) ==
             length(GaussianProcesses.get_params(kernel)) ==
             GaussianProcesses.num_params(kernel)
@@ -53,23 +66,26 @@ using LinearAlgebra, Statistics, Calculus
 
             @testset "Variance" begin
                 spec = cov(kern, X)
-                gen = invoke(cov, Tuple{Kernel, Matrix{Float64}}, kern, X)
-                @test spec ≈ gen
-                i, j = rand(1:n), rand(1:n)
-                @test spec[i, j] ≈ cov(kern, X[:, i], X[:, j])
-                cK = zeros(n, n)
+                @test spec ≈ invoke(cov, Tuple{Kernel, Matrix{Float64}}, kern, X)
+                @test spec[i, j] ≈ cov(kern, Xi, Xj)
+
+                fill!(cK, 0)
                 GaussianProcesses.addcov!(cK, kern, X)
                 @test spec ≈ cK
+
                 fill!(cK, 0)
                 kdata = GaussianProcesses.KernelData(kern, X)
                 GaussianProcesses.addcov!(cK, kern, X, kdata)
                 @test spec ≈ cK
+
                 fill!(cK, 1)
                 GaussianProcesses.multcov!(cK, kern, X)
                 @test spec ≈ cK
+
                 fill!(cK, 1)
                 GaussianProcesses.multcov!(cK, kern, X, kdata)
                 @test spec ≈ cK
+
                 key = GaussianProcesses.kernel_data_key(kern, X)
                 @test typeof(key) == String
                 # check we've overwritten the default if necessary
@@ -80,14 +96,15 @@ using LinearAlgebra, Statistics, Calculus
 
             @testset "Covariance" begin
                 spec = cov(kern, X, X2)
-                i, j = rand(1:n), rand(1:n2)
-                @test spec[i,j] ≈ cov(kern, X[:, i], X2[:, j])
-                cK = zeros(n, n2)
-                GaussianProcesses.addcov!(cK, kern, X, X2)
-                @test spec ≈ cK
-                fill!(cK, 1)
-                GaussianProcesses.multcov!(cK, kern, X, X2)
-                @test spec ≈ cK
+                @test spec[i,j] ≈ cov(kern, Xi, X2j)
+
+                fill!(cK2, 0)
+                GaussianProcesses.addcov!(cK2, kern, X, X2)
+                @test spec ≈ cK2
+
+                fill!(cK2, 1)
+                GaussianProcesses.multcov!(cK2, kern, X, X2)
+                @test spec ≈ cK2
             end
 
             @testset "Gradient" begin
@@ -126,4 +143,5 @@ using LinearAlgebra, Statistics, Calculus
             end
         end
     end
+end
 end

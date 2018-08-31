@@ -1,12 +1,14 @@
-#This file checks that each of the likelihoods work
-using GaussianProcesses, Test
-using Random, Calculus
+module TestGPMC
+using GaussianProcesses, Calculus, Distributions
+using Test, Random
+
+Random.seed!(1)
 
 @testset "GPMC" begin
     d, n = 3, 20
     ll = rand(d)
     X = 2π * rand(d, n)
-    f = [sum(sin, X[:, i]) / d for i in 1:n]
+    f = [sum(sin, view(X, :, i)) / d for i in 1:n]
 
     # Test Bernoulli, binomial, exponential, Gaussian, Poisson, and Student-t likelihood
     liks = (BernLik(), BinLik(n), ExpLik(), GaussLik(-1.0), PoisLik(), StuTLik(3, 0.1))
@@ -19,10 +21,10 @@ using Random, Calculus
 
     # Mean and kernel function
     mZero = MeanZero()
-    kern = SE(0.0,0.0)
+    kern = SE(0.0, 0.0)
 
     @testset "Likelihood $(typeof(lik))" for (lik, y) in zip(liks, ys)
-        println("\tTesting ", typeof(lik), "...")
+        println("\tTesting ", nameof(typeof(lik)), "...")
 
         # Fit GP
         gp = GP(X, y, mZero, kern, lik)
@@ -44,4 +46,5 @@ using Random, Calculus
 
         @test num_grad ≈ exact_grad
     end
+end
 end

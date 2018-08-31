@@ -1,5 +1,8 @@
-using GaussianProcesses, Test
-using Distributions
+module TestMCMC
+using GaussianProcesses, Distributions
+using Test, Random
+
+Random.seed!(1)
 
 @testset "MCMC" begin
     d, n = 2, 20
@@ -24,4 +27,5 @@ using Distributions
             mcmc(gp)
         end
     end
+end
 end

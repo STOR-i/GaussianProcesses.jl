@@ -1,4 +1,8 @@
-using GaussianProcesses, Test
+module TestUtils
+using GaussianProcesses
+using Test, Random
+
+Random.seed!(1)
 
 @testset "Utils" begin
     d, n = 5, 10
@@ -9,4 +13,4 @@ using GaussianProcesses, Test
 
     @test GaussianProcesses.distance(kern, X, data) ≈ GaussianProcesses.distance(kern, X)
 end
-
+end

@@ -1,5 +1,8 @@
-using GaussianProcesses, Test
-using Statistics, Calculus
+module TestMeans
+using GaussianProcesses, Calculus
+using Test, Statistics, Random
+
+Random.seed!(1)
 
 @testset "Means" begin
     n = 5 # number of observations
@@ -14,39 +17,38 @@ using Statistics, Calculus
              MeanLin(rand(d)) + MeanPoly(rand(d, D))]
 
     X = rand(d, n)
+    x = view(X, :, 1)
 
     @testset "Mean $(typeof(m))" for m in means
-        println("\tTesting mean ", typeof(m), "...")
+        println("\tTesting ", nameof(typeof(m)), "...")
+
+        means = mean(m, X)
+        params = GaussianProcesses.get_params(m)
 
         @testset "Run" begin
-            mean(m, X[:,1])
-            mean(m, X)
-            GaussianProcesses.grad_mean(m, X[:,1])
+            mean(m, x)
+            GaussianProcesses.grad_mean(m, x)
             GaussianProcesses.grad_stack(m, X)
             show(devnull, m)
-            p = GaussianProcesses.get_params(m)
-            set_params!(m, p)
             GaussianProcesses.get_param_names(m)
+            set_params!(m, params)
         end
 
         @testset "Consistency" begin
-            spec = mean(m, X)
-            gen = invoke(mean, Tuple{GaussianProcesses.Mean, Matrix{Float64}}, m, X)
-            @test spec ≈ gen
+            @test means ≈ invoke(mean, Tuple{GaussianProcesses.Mean, Matrix{Float64}}, m, X)
         end
 
         @testset "Gradients" begin
-            init_params = GaussianProcesses.get_params(m)
-
             @testset "Observation #$i" for i in 1:n
-                x = X[:, i]
-                theor_grad = GaussianProcesses.grad_mean(m, x)
-                num_grad = Calculus.gradient(init_params) do params
+                Xi = view(X, :, i)
+                theor_grad = GaussianProcesses.grad_mean(m, Xi)
+                num_grad = Calculus.gradient(params) do params
                     set_params!(m, params)
-                    mean(m, x)
+                    mean(m, Xi)
                 end
                 @test theor_grad ≈ num_grad rtol=1e-6
             end
         end
     end
+end
 end
