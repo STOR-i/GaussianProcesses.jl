@@ -31,19 +31,21 @@ end
 
 function set_params!(rq::RQIso, hyp::VecF64)
     length(hyp) == 3 || throw(ArgumentError("Rational Quadratic function has three parameters"))
-    rq.ℓ2, rq.σ2, rq.α = exp(2.0*hyp[1]), exp(2.0*hyp[2]), exp(hyp[3])
+    rq.ℓ2, rq.σ2, rq.α = exp(2 * hyp[1]), exp(2 * hyp[2]), exp(hyp[3])
 end
 
-get_params(rq::RQIso) = Float64[log(rq.ℓ2)/2.0, log(rq.σ2)/2.0, log(rq.α)]
+get_params(rq::RQIso) = Float64[log(rq.ℓ2) / 2, log(rq.σ2) / 2, log(rq.α)]
 get_param_names(rq::RQIso) = [:ll, :lσ, :lα]
 num_params(rq::RQIso) = 3
 
-Statistics.cov(rq::RQIso, r::Float64) = rq.σ2*(1.0+r/(2.0*rq.α*rq.ℓ2))^(-rq.α)
+Statistics.cov(rq::RQIso, r::Float64) = rq.σ2 * (1 + r / (2 * rq.α * rq.ℓ2))^(-rq.α)
 
-@inline dk_dll(rq::RQIso, r::Float64) = rq.σ2*(r/rq.ℓ2)*(1.0+r/(2.0*rq.α*rq.ℓ2))^(-rq.α-1.0) # dK_d(log ℓ)dK_dℓ
+@inline dk_dll(rq::RQIso, r::Float64) =
+    (s = r / rq.ℓ2; rq.σ2 * s * (1 + s / (2 * rq.α))^(-rq.α - 1)) # dK_d(log ℓ)dK_dℓ
 @inline function dk_dlα(rq::RQIso, r::Float64)
-    part = (1.0+r/(2.0*rq.α*rq.ℓ2))
-    return rq.σ2*part^(-rq.α)*((r)/(2.0*rq.ℓ2*part)-rq.α*log(part))  # dK_d(log α)
+    s = r / rq.ℓ2
+    part = 1 + s / (2 * rq.α)
+    rq.σ2 * part^(-rq.α) * (s / (2 * part) - rq.α * log(part))  # dK_d(log α)
 end
 @inline function dk_dθp(rq::RQIso, r::Float64, p::Int)
     if p==1

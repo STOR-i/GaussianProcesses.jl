@@ -12,7 +12,7 @@ with length scale ``ℓ = (ℓ₁, ℓ₂, …)``, signal standard deviation ``�
 """
 mutable struct RQArd <: StationaryARD{WeightedSqEuclidean}
     "Inverse squared length scale"
-    iℓ2::VecF64
+    iℓ2::Vector{Float64}
     "Signal variance"
     σ2::Float64
     "Shape parameter"
@@ -26,28 +26,28 @@ mutable struct RQArd <: StationaryARD{WeightedSqEuclidean}
     Create `RQArd` with length scale `exp.(ll)`, signal standard deviation `exp(lσ)`, and
     shape parameter `exp(lα)`.
     """
-    RQArd(ll::VecF64, lσ::Float64, lα::Float64) =
-        new(exp.(-2 * ll), exp(2 * lσ), exp(lα), [])
+    RQArd(ll::Vector{Float64}, lσ::Float64, lα::Float64) =
+        new(exp.(-2 .* ll), exp(2 * lσ), exp(lα), [])
 end
 
 function set_params!(rq::RQArd, hyp::VecF64)
     length(hyp) == num_params(rq) || throw(ArgumentError("RQArd kernel has $(num_params(rq_ard)) parameters"))
-    d = length(rq.iℓ2)
-    rq.iℓ2 = exp.(-2.0*hyp[1:d])
-    rq.σ2 = exp(2.0*hyp[d+1])
-    rq.α = exp(hyp[d+2])
+    @views @. rq.iℓ2 = exp(-2 * hyp[1:(end-2)])
+    rq.σ2 = exp(2 * hyp[end-1])
+    rq.α = exp(hyp[end])
 end
 
-get_params(rq::RQArd) = [-log.(rq.iℓ2)/2.0; log(rq.σ2)/2.0; log(rq.α)]
+get_params(rq::RQArd) = [-log.(rq.iℓ2) / 2; log(rq.σ2) / 2; log(rq.α)]
 get_param_names(rq::RQArd) = [get_param_names(rq.iℓ2, :ll); :lσ; :lα]
 num_params(rq::RQArd) = length(rq.iℓ2) + 2
 
 Statistics.cov(rq::RQArd,r::Float64) = rq.σ2*(1+0.5*r/rq.α)^(-rq.α)
 
-@inline dk_dll(rq::RQArd, r::Float64, wdiffp::Float64) = rq.σ2*wdiffp*(1.0+0.5*r/rq.α)^(-rq.α-1.0)
+@inline dk_dll(rq::RQArd, r::Float64, wdiffp::Float64) =
+    rq.σ2 * wdiffp * (1 + r / (2 * rq.α))^(-rq.α - 1)
 @inline function dk_dlα(rq::RQArd, r::Float64)
-    part  = (1+0.5*r/rq.α)
-    return rq.σ2*part^(-rq.α)*(0.5*r/part-rq.α*log(part))
+    part = (1 + r / (2 * rq.α))
+    return rq.σ2 * part^(-rq.α) * (r / (2 * part) - rq.α * log(part))
 end
 @inline function dKij_dθp(rq::RQArd, X::MatF64, i::Int, j::Int, p::Int, dim::Int)
     if p <= dim

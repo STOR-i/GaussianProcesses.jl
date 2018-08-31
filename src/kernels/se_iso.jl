@@ -25,10 +25,10 @@ end
 
 function set_params!(se::SEIso, hyp::VecF64)
     length(hyp) == 2 || throw(ArgumentError("Squared exponential only has two parameters"))
-    se.ℓ2, se.σ2 = exp.(2.0*hyp)
+    se.ℓ2, se.σ2 = exp(2 * hyp[1]), exp(2 * hyp[2])
 end
 
-get_params(se::SEIso) = Float64[log(se.ℓ2)/2.0, log(se.σ2)/2.0]
+get_params(se::SEIso) = Float64[log(se.ℓ2) / 2, log(se.σ2) / 2]
 get_param_names(se::SEIso) = [:ll, :lσ]
 num_params(se::SEIso) = 2
 
