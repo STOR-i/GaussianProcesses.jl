@@ -20,4 +20,4 @@ Create linear kernel with length scale `exp.(ll)`.
 See also [`LinIso`](@ref) and [`LinArd`](@ref).
 """
 Lin(ll::Float64) = LinIso(ll)
-Lin(ll::VecF64) = LinArd(ll)
+Lin(ll::Vector{Float64}) = LinArd(ll)

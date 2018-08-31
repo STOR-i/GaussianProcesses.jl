@@ -11,7 +11,7 @@ with length scale ``ℓ = (ℓ₁, ℓ₂, …)`` and ``L = diag(ℓ₁, ℓ₂,
 """
 mutable struct LinArd <: Kernel
     "Length scale"
-    ℓ::VecF64
+    ℓ::Vector{Float64}
     "Priors for kernel parameters"
     priors::Array
 
@@ -20,24 +20,22 @@ mutable struct LinArd <: Kernel
 
     Create `LinArd` with length scale `exp.(ll)`.
     """
-    LinArd(ll::VecF64) = new(exp.(ll), [])
+    LinArd(ll::Vector{Float64}) = new(exp.(ll), [])
 end
 
-function Statistics.cov(lin::LinArd, x::VecF64, y::VecF64)
-    K = dot(x./lin.ℓ,y./lin.ℓ)
-    return K
-end
+Statistics.cov(lin::LinArd, x::VecF64, y::VecF64) = dot(x./lin.ℓ, y./lin.ℓ)
 
 struct LinArdData <: KernelData
     XtX_d::Array{Float64,3}
 end
 
 function KernelData(k::LinArd, X::MatF64)
-    dim, n = size(X)
-    XtX_d = Array{Float64}(undef, n, n, dim)
-    for d in 1:dim
-        XtX_d[:, :, d] .= view(X,d,:) * view(X,d,:)'
-        LinearAlgebra.copytri!(view(XtX_d,:,:,d), 'U')
+    dim, nobs = size(X)
+    XtX_d = Array{Float64}(undef, nobs, nobs, dim)
+    @inbounds for d in 1:dim
+        Xd = view(X, d, :)
+        XtX_d[:, :, d] .= Xd * Xd'
+        LinearAlgebra.copytri!(view(XtX_d, :, :, d), 'U')
     end
     LinArdData(XtX_d)
 end
@@ -48,7 +46,7 @@ function Statistics.cov(lin::LinArd, X::MatF64)
     return K
 end
 function cov!(cK::MatF64, lin::LinArd, X::MatF64, data::LinArdData)
-    dim, n = size(X)
+    dim = size(X, 1)
     fill!(cK, 0)
     for d in 1:dim
         LinearAlgebra.axpy!(1/lin.ℓ[d]^2, view(data.XtX_d,:,:,d), cK)
@@ -56,10 +54,9 @@ function cov!(cK::MatF64, lin::LinArd, X::MatF64, data::LinArdData)
     return cK
 end
 function Statistics.cov(lin::LinArd, X::MatF64, data::LinArdData)
-    nobsv=size(X,2)
-    K = zeros(Float64,nobsv,nobsv)
-    cov!(K,lin,X,data)
-    return K
+    nobs = size(X,2)
+    K = zeros(Float64, nobs, nobs)
+    cov!(K, lin, X, data)
 end
 
 get_params(lin::LinArd) = log.(lin.ℓ)
@@ -68,10 +65,10 @@ num_params(lin::LinArd) = length(lin.ℓ)
 
 function set_params!(lin::LinArd, hyp::VecF64)
     length(hyp) == num_params(lin) || throw(ArgumentError("Linear ARD kernel has $(num_params(lin)) parameters"))
-    lin.ℓ = exp.(hyp)
+    @. lin.ℓ = exp(hyp)
 end
 
-@inline dk_dll(lin::LinArd, xy::Float64, d::Int) = -2.0*xy/lin.ℓ[d]^2
+@inline dk_dll(lin::LinArd, xy::Float64, d::Int) = -2 * xy / lin.ℓ[d]^2
 @inline function dKij_dθp(lin::LinArd, X::MatF64, i::Int, j::Int, p::Int, dim::Int)
     if p<=dim
         return dk_dll(lin, dotijp(X,i,j,p), p)
@@ -80,7 +77,7 @@ end
     end
 end
 @inline function dKij_dθp(lin::LinArd, X::MatF64, data::LinArdData, i::Int, j::Int, p::Int, dim::Int)
-    if p<=dim
+    if p <= dim
         return dk_dll(lin, data.XtX_d[i,j,p],p)
     else
         return NaN

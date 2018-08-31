@@ -20,7 +20,7 @@ mutable struct LinIso <: Kernel
 
     Create `LinIso` with length scale `exp(ll)`.
     """
-    LinIso(ll::Float64) = new(exp.(2.0*ll), [])
+    LinIso(ll::Float64) = new(exp(2 * ll), [])
 end
 
 struct LinIsoData <: KernelData
@@ -52,16 +52,16 @@ function cov!(cK::MatF64, lin::LinIso, X::MatF64, data::LinIsoData)
     return cK
 end
 
-get_params(lin::LinIso) = Float64[log(lin.ℓ2)/2.0]
-get_param_names(lin::LinIso) = [:ll]
+get_params(lin::LinIso) = Float64[log(lin.ℓ2) / 2]
+get_param_names(::LinIso) = [:ll]
 num_params(lin::LinIso) = 1
 
 function set_params!(lin::LinIso, hyp::VecF64)
     length(hyp) == 1 || throw(ArgumentError("Linear isotropic kernel only has one parameter"))
-    lin.ℓ2 = exp(2.0*hyp[1])
+    lin.ℓ2 = exp(2 * hyp[1])
 end
 
-@inline dk_dll(lin::LinIso, xTy::Float64) = -2.0*_cov(lin,xTy)
+@inline dk_dll(lin::LinIso, xTy::Float64) = -2 * _cov(lin,xTy)
 @inline function dKij_dθp(lin::LinIso, X::MatF64, i::Int, j::Int, p::Int, dim::Int)
     if p==1
         return dk_dll(lin, dotij(X,i,j,dim))
