@@ -12,7 +12,7 @@ observations and ``D`` is the degree of the polynomial.
 """
 mutable struct MeanPoly <: Mean
     "Polynomial coefficients"
-    β::MatF64
+    β::Matrix{Float64}
     "Priors for mean parameters"
     priors::Array
 
@@ -21,7 +21,7 @@ mutable struct MeanPoly <: Mean
 
     Create `MeanPoly` with polynomial coefficients `β`.
     """
-    MeanPoly(β::MatF64) = new(β, [])
+    MeanPoly(β::Matrix{Float64}) = new(β, [])
 end
 
 function Statistics.mean(mPoly::MeanPoly, x::VecF64)
@@ -38,7 +38,7 @@ num_params(mPoly::MeanPoly) = length(mPoly.β)
 
 function set_params!(mPoly::MeanPoly, hyp::VecF64)
     length(hyp) == num_params(mPoly) || throw(ArgumentError("Polynomial mean function has $(num_param) parameters"))
-    mPoly.β = reshape(hyp, size(mPoly.β)...)
+    copyto!(mPoly.β, hyp)
 end
 
 

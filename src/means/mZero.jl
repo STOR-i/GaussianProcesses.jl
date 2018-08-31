@@ -10,14 +10,13 @@ m(x) = 0.
 """
 struct MeanZero <: Mean end
 
-num_params(mZero::MeanZero) = 0
-grad_mean(mZero::MeanZero, x::VecF64) = Float64[]
-Statistics.mean(mZero::MeanZero, x::VecF64) = 0.0
-Statistics.mean(mZero::MeanZero, X::MatF64) =  fill(0.0, size(X,2))
-get_params(mZero::MeanZero) = Float64[]
+num_params(::MeanZero) = 0
+grad_mean(::MeanZero, ::VecF64) = Float64[]
+Statistics.mean(::MeanZero, ::VecF64) = 0.0
+Statistics.mean(mZero::MeanZero, X::MatF64) =  fill(0.0, size(X, 2))
+get_params(::MeanZero) = Float64[]
+get_param_names(::MeanZero) = Symbol[]
 
-function set_params!(mZero::MeanZero, hyp::VecF64)
+function set_params!(::MeanZero, hyp::VecF64)
     length(hyp) == 0 || throw(ArgumentError("Zero mean function has no parameters"))
 end
-
-get_priors(mZero::MeanZero) = []
