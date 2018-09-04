@@ -1,6 +1,10 @@
 # GaussianProcesses.jl
+[![Build Status](https://travis-ci.org/STOR-i/GaussianProcesses.jl.png)](https://travis-ci.org/STOR-i/GaussianProcesses.jl)
+[![Build status](https://ci.appveyor.com/api/projects/status/github/STOR-i/GaussianProcesses.jl?branch=master&svg=true)](https://ci.appveyor.com/project/STOR-i/gaussianprocesses-jl)
+[![Coverage Status](https://coveralls.io/repos/github/STOR-i/GaussianProcesses.jl/badge.svg?branch=master)](https://coveralls.io/github/STOR-i/GaussianProcesses.jl?branch=master)
+[![codecov](https://codecov.io/gh/STOR-i/GaussianProcesses.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/STOR-i/GaussianProcesses.jl)
 
-A Gaussian Processes package for Julia. 
+A Gaussian Processes package for Julia.
 
 This package is still under development. If you have any suggestions to improve the package, or if you've noticed a bug, then please post an [issue](https://github.com/STOR-i/GaussianProcesses.jl/issues/new) for us and we'll get to it as quickly as we can. Pull requests are also welcome.
 
@@ -22,9 +26,9 @@ julia> Pkg.add("GaussianProcesses")
 The package allows the user to fit exact **Gaussian process** models when the observations are Gaussian distributed about the latent function. In the case where the *observations are non-Gaussian*, the posterior distribution of the latent function is intractable. The package allows for Monte Carlo sampling from the posterior.
 
 The main function of the package is `GP`, which fits the Gaussian process
-```
-gp = GP(X',y,mean,kernel)
-gp = GP(X',y,mean,kernel,likelihood)
+```julia
+gp = GP(x, y, mean, kernel)
+gp = GP(x, y, mean, kernel, likelihood)
 ```
 for Gaussian and non-Gaussian data respectively.
 
@@ -32,8 +36,8 @@ The package has a number of *mean*, *kernel* and *likelihood* functions availabl
 
 ### Inference
 
-The parameters of the model can be estimated by maximizing the log-likelihood (where the latent function is integrated out) using the `optimize!` function, or in the case of *non-Gaussian data*, an `mcmc` function is available, utilizing the Hamiltonian Monte Carlo sampler, and can be used to infer the model parameters and latent function values. 
-```
+The parameters of the model can be estimated by maximizing the log-likelihood (where the latent function is integrated out) using the `optimize!` function, or in the case of *non-Gaussian data*, an `mcmc` function is available, utilizing the Hamiltonian Monte Carlo sampler, and can be used to infer the model parameters and latent function values.
+```julia
 optimize!(gp)    # Find parameters which maximize the log-likelihood
 mcmc(gp)         # Sample from the GP posterior
 ```
@@ -43,40 +47,26 @@ See the [notebooks](https://github.com/STOR-i/GaussianProcesses.jl/tree/master/n
 
 Documentation is accessible in the Julia REPL in help mode. Help mode can be started by typing '?' at the prompt.
 
-```julia
-julia> ?
-help?> GP
+```
+julia> ?GP
+search: GP GPE GPMC GPBase gperm log1p getpid getproperty MissingException
 
-[type]
+  GP(x, y, mean::Mean, kernel::Kernel[, logNoise::Float64=-2.0])
 
-GaussianProcesses.GP
+  Fit a Gaussian process that is defined by its mean, its kernel, and the
+  logarithm logNoise of the standard deviation of its observation noise to a
+  set of training points x and y.
 
-                                  Description
-                                 -–––––––––––-
+  See also: GPE
 
-  Fits a Gaussian process to a set of training points. The Gaussian process is
-  defined in terms of its mean and covariance (kernel) functions, which are
-  user defined. As a default it is assumed that the observations are noise
-  free.
+  ────────────────────────────────────────────────────────────────────────────
 
-                                   Arguments:
-                                  -––––––––––-
+  GP(x, y, mean::Mean, kernel::Kernel, lik::Likelihood)
 
-    • `X::Matrix{Float64}`: Training inputs
-    • `y::Vector{Float64}`: Observations
-    • `m::Mean`           : Mean function
-    • `k::kernel`         : Covariance function
-    • `logNoise::Float64` : Log of the observation noise. The default is
-      -1e8, which is equivalent to assuming no observation noise.
+  Fit a Gaussian process that is defined by its mean, its kernel, and its
+  likelihood function lik to a set of training points x and y.
 
-                                    Returns:
-                                   -––––––––-
-
-    • `gp::GP`            : A Gaussian process fitted to the training data
-
- Details:
-
-	source: (16,"/home/jamie/.julia/v0.4/GaussianProcesses/src/GP.jl")
+  See also: GPMC
 ```
 
 ## Notebooks

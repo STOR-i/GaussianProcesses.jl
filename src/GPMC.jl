@@ -73,6 +73,14 @@ GPMC(x::MatF64, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Like
 GPMC(x::VecF64, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood) =
     GPMC(x', y, mean, kernel, lik)
 
+"""
+    GP(x, y, mean::Mean, kernel::Kernel, lik::Likelihood)
+
+Fit a Gaussian process that is defined by its `mean`, its `kernel`, and its likelihood
+function `lik` to a set of training points `x` and `y`.
+
+See also: [`GPMC`](@ref)
+"""
 GP(x::AbstractVecOrMat{Float64}, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel,
    lik::Likelihood) = GPMC(x, y, mean, kernel, lik)
 

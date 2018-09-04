@@ -73,6 +73,15 @@ Construct a [GPE](@ref) object without observations.
 GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0) =
     GPE(Array{Float64}(undef, 0, 0), Array{Float64}(undef, 0), mean, kernel, logNoise)
 
+"""
+    GP(x, y, mean::Mean, kernel::Kernel[, logNoise::Float64=-2.0])
+
+Fit a Gaussian process that is defined by its `mean`, its `kernel`, and the logarithm
+`logNoise` of the standard deviation of its observation noise to a set of training points
+`x` and `y`.
+
+See also: [`GPE`](@ref)
+"""
 GP(x::AbstractVecOrMat{Float64}, y::VecF64, mean::Mean, kernel::Kernel,
    logNoise::Float64 = -2.0) = GPE(x, y, mean, kernel, logNoise)
 
