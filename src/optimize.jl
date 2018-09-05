@@ -1,23 +1,21 @@
-get_params_kwargs(::Type{GPE}; kwargs...) = delete!(Dict(kwargs), :lik)
-get_params_kwargs{T<:Real}(::Type{GPMC{T}}; kwargs...) = delete!(Dict(kwargs), :noise)
+get_params_kwargs(::GPE; kwargs...) = delete!(Dict(kwargs), :lik)
+get_params_kwargs(::GPMC; kwargs...) = delete!(Dict(kwargs), :noise)
 
-@doc """
-    # Description
-    A function for optimising the GP hyperparameters based on type II maximum likelihood estimation. This function performs gradient based optimisation using the Optim pacakge to which the user is referred to for further details.
+"""
+    optimize!(gp::GPBase; kwargs...)
 
-    # Arguments:
-    * `gp::GPBase`: Predefined Gaussian process type
+Optimise the hyperparameters of Gaussian process `gp` based on type II maximum likelihood estimation. This function performs gradient based optimisation using the Optim pacakge to which the user is referred to for further details.
+
+# Keyword arguments:
     * `domean::Bool`: Mean function hyperparameters should be optmized
     * `kern::Bool`: Kernel function hyperparameters should be optmized
     * `noise::Bool`: Observation noise hyperparameter should be optimized (GPE only)
     * `lik::Bool`: Likelihood hyperparameters should be optimized (GPMC only)
     * `kwargs`: Keyword arguments for the optimize function from the Optim package
-
-    # Return:
-    * `::Optim.MultivariateOptimizationResults{Float64,1}`: optimization results object
-    """ 
-function optimize!(gp::GPBase; method=LBFGS(), domean::Bool=true, kern::Bool=true, noise::Bool=true, lik::Bool=true, kwargs...)
-    params_kwargs = get_params_kwargs(typeof(gp); domean=domean, kern=kern, noise=noise, lik=lik)
+"""
+function optimize!(gp::GPBase; method = LBFGS(), domean::Bool = true, kern::Bool = true,
+                   noise::Bool = true, lik::Bool = true, kwargs...)
+    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     # println(params_kwargs)
     func = get_optim_target(gp; params_kwargs...)
     init = get_params(gp; params_kwargs...)  # Initial hyperparameter values
@@ -26,10 +24,9 @@ function optimize!(gp::GPBase; method=LBFGS(), domean::Bool=true, kern::Bool=tru
     update_target!(gp)
     return results
 end
-    
+
 function get_optim_target(gp::GPBase; params_kwargs...)
-    
-    function ltarget(hyp::Vector{Float64})
+    function ltarget(hyp::VecF64)
         prev = get_params(gp; params_kwargs...)
         try
             set_params!(gp, hyp; params_kwargs...)
@@ -38,23 +35,23 @@ function get_optim_target(gp::GPBase; params_kwargs...)
         catch err
             # reset parameters to remove any NaNs
             set_params!(gp, prev; params_kwargs...)
-            
+
             if !all(isfinite.(hyp))
                 println(err)
                 return Inf
             elseif isa(err, ArgumentError)
                 println(err)
                 return Inf
-            elseif isa(err, Base.LinAlg.PosDefException)
+            elseif isa(err, LinearAlgebra.PosDefException)
                 println(err)
                 return Inf
             else
                 throw(err)
             end
-        end        
+        end
     end
 
-    function ltarget_and_dltarget!(grad::Vector{Float64}, hyp::Vector{Float64})
+    function ltarget_and_dltarget!(grad::VecF64, hyp::VecF64)
         prev = get_params(gp; params_kwargs...)
         try
             set_params!(gp, hyp; params_kwargs...)
@@ -70,7 +67,7 @@ function get_optim_target(gp::GPBase; params_kwargs...)
             elseif isa(err, ArgumentError)
                 println(err)
                 return Inf
-            elseif isa(err, Base.LinAlg.PosDefException)
+            elseif isa(err, LinearAlgebra.PosDefException)
                 println(err)
                 return Inf
             else
@@ -78,13 +75,12 @@ function get_optim_target(gp::GPBase; params_kwargs...)
             end
         end
     end
-    
-    function dltarget!(grad::Vector{Float64}, hyp::Vector{Float64})
-        ltarget_and_dltarget!(grad::Vector{Float64}, hyp::Vector{Float64})
+
+    function dltarget!(grad::VecF64, hyp::VecF64)
+        ltarget_and_dltarget!(grad::VecF64, hyp::VecF64)
     end
 
     xinit = get_params(gp; params_kwargs...)
     func = OnceDifferentiable(ltarget, dltarget!, ltarget_and_dltarget!, xinit)
     return func
 end
-

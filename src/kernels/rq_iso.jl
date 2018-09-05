@@ -1,38 +1,51 @@
-# Rational Quadratic Isotropic Covariance Function 
+# Rational Quadratic Isotropic Covariance Function
 
-@doc """
-# Description
-Constructor for the isotropic Rational Quadratic kernel (covariance)
+"""
+    RQIso <: Isotropic{SqEuclidean}
 
-k(x,x') = σ²(1+(x-x')ᵀ(x-x')/2αℓ²)^{-α}
-# Arguments:
-* `ll::Float64`: Log of length scale ℓ
-* `lσ::Float64`: Log of the signal standard deviation σ
-* `lα::Float64`: Log of shape parameter α
-""" ->
-type RQIso <: Isotropic{SqEuclidean}
-    ℓ2::Float64      # Length scale 
-    σ2::Float64      # Signal std
-    α::Float64       # shape parameter
-    priors::Array          # Array of priors for kernel parameters
-    RQIso(ll::Float64, lσ::Float64, lα::Float64) = new(exp(2*ll), exp(2*lσ), exp(lα),[])
+Isotropic Rational Quadratic kernel (covariance)
+```math
+k(x,x') = σ²(1 + (x - x')ᵀ(x - x')/(2αℓ²))^{-α}
+```
+with length scale ``ℓ``, signal standard deviation ``σ``, and shape parameter ``α``.
+"""
+mutable struct RQIso <: Isotropic{SqEuclidean}
+    "Squared length scale"
+    ℓ2::Float64
+    "Signal variance"
+    σ2::Float64
+    "Shape parameter"
+    α::Float64
+    "Priors for kernel parameters"
+    priors::Array
+
+    """
+        RQIso(ll:Float64, lσ::Float64, lα::Float64)
+
+    Create `RQIso` with length scale `exp(ll)`, signal standard deviation `exp(lσ)`, and
+    shape parameter `exp(lα)`.
+    """
+    RQIso(ll::Float64, lσ::Float64, lα::Float64) =
+        new(exp(2 * ll), exp(2 * lσ), exp(lα), [])
 end
 
-function set_params!(rq::RQIso, hyp::Vector{Float64})
+function set_params!(rq::RQIso, hyp::VecF64)
     length(hyp) == 3 || throw(ArgumentError("Rational Quadratic function has three parameters"))
-    rq.ℓ2, rq.σ2, rq.α = exp(2.0*hyp[1]), exp(2.0*hyp[2]), exp(hyp[3])
+    rq.ℓ2, rq.σ2, rq.α = exp(2 * hyp[1]), exp(2 * hyp[2]), exp(hyp[3])
 end
 
-get_params(rq::RQIso) = Float64[log(rq.ℓ2)/2.0, log(rq.σ2)/2.0, log(rq.α)]
+get_params(rq::RQIso) = Float64[log(rq.ℓ2) / 2, log(rq.σ2) / 2, log(rq.α)]
 get_param_names(rq::RQIso) = [:ll, :lσ, :lα]
 num_params(rq::RQIso) = 3
 
-cov(rq::RQIso, r::Float64) = rq.σ2*(1.0+r/(2.0*rq.α*rq.ℓ2))^(-rq.α)
+Statistics.cov(rq::RQIso, r::Float64) = rq.σ2 * (1 + r / (2 * rq.α * rq.ℓ2))^(-rq.α)
 
-@inline dk_dll(rq::RQIso, r::Float64) = rq.σ2*(r/rq.ℓ2)*(1.0+r/(2.0*rq.α*rq.ℓ2))^(-rq.α-1.0) # dK_d(log ℓ)dK_dℓ
+@inline dk_dll(rq::RQIso, r::Float64) =
+    (s = r / rq.ℓ2; rq.σ2 * s * (1 + s / (2 * rq.α))^(-rq.α - 1)) # dK_d(log ℓ)dK_dℓ
 @inline function dk_dlα(rq::RQIso, r::Float64)
-    part = (1.0+r/(2.0*rq.α*rq.ℓ2))
-    return rq.σ2*part^(-rq.α)*((r)/(2.0*rq.ℓ2*part)-rq.α*log(part))  # dK_d(log α)
+    s = r / rq.ℓ2
+    part = 1 + s / (2 * rq.α)
+    rq.σ2 * part^(-rq.α) * (s / (2 * part) - rq.α * log(part))  # dK_d(log α)
 end
 @inline function dk_dθp(rq::RQIso, r::Float64, p::Int)
     if p==1
