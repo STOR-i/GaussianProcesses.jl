@@ -344,10 +344,7 @@ function Random.rand!(gp::GPE, x::MatF64, A::DenseMatrix)
         # Posterior mean and covariance
         μ, Σ = predict_f(gp, x; full_cov=true)
     end
-
-    unwhiten!(Σ, randn(nobs, n_sample))
-    A .= μ .+ Σ
-    A
+    return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end
 
 Random.rand(gp::GPE, x::MatF64, n::Int) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n))

@@ -36,5 +36,12 @@ Random.seed!(1)
         GaussianProcesses.update_target!(gp)
         y_pred, sig = predict_y(gp, X_pred)
     end
+
+    #Check that the rand function works
+    @testset "Random GP sampling" begin
+        X_test = 2π * rand(d, n)
+        samples = rand(gp, X_test)
+    end
+    
 end
 end

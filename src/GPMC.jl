@@ -285,9 +285,8 @@ predict_y(gp::GPMC, x::VecF64; full_cov::Bool=false) = predict_y(gp, x'; full_co
 
 ## compute predictions
 function _predict(gp::GPMC, x::MatF64)
-    n = size(x, 2)
-    cK = cov(gp.kernel, x, gp.x)
-    Lck = whiten(gp.cK, cK')
+    cK = cov(gp.kernel, gp.x, x)
+    Lck = whiten(gp.cK, cK)
     fmu =  mean(gp.mean,x) + Lck'gp.v     # Predictive mean
     Sigma_raw = cov(gp.kernel, x) - Lck'Lck # Predictive covariance
     # Add jitter to get stable covariance
@@ -311,7 +310,6 @@ function Random.rand!(gp::GPMC, x::MatF64, A::DenseMatrix)
         # Posterior mean and covariance
         μ, Σ = predict_f(gp, x; full_cov=true)
     end
-
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end
 
