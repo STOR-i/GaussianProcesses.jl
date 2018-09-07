@@ -313,12 +313,7 @@ function Random.rand!(gp::GPMC, x::MatF64, A::DenseMatrix)
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end
 
-#Samples random function values f
-function Random.rand(gp::GPMC, x::MatF64, n::Int)
-    nobs = size(x, 2)
-    A = Array{Float64}(undef, nobs, n)
-    return rand!(gp, x, A)
-end
+Random.rand(gp::GPMC, x::MatF64, n::Int) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n))
 
 # Sample from 1D GP
 Random.rand(gp::GPMC, x::VecF64, n::Int) = rand(gp, x', n)
