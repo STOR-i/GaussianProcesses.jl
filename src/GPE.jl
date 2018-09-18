@@ -430,21 +430,20 @@ Base.push!(gp::GPE, x::Float64, y::Float64) = push!(gp, [x], [y])
 Base.push!(gp::GPE, x::VecF64, y::Float64) = push!(gp, reshape(x, length(x), 1), [y])
 
 
-
-#—————————————————————————————————————————————————————————————
-#Show function
+# —————————————————————————————————————————————————————————————
+# Show function
 function Base.show(io::IO, gp::GPE)
     println(io, "GP Exact object:")
     println(io, "  Dim = ", gp.dim)
     println(io, "  Number of observations = ", gp.nobs)
     println(io, "  Mean function:")
     show(io, gp.mean, 2)
-    println(io, "  Kernel:")
+    println(io, "\n  Kernel:")
     show(io, gp.kernel, 2)
     if gp.nobs == 0
-        println("  No observation data")
+        println("\n  No observation data")
     else
-        println(io, "  Input observations = ")
+        println(io, "\n  Input observations = ")
         show(io, gp.x)
         print(io, "\n  Output observations = ")
         show(io, gp.y)
