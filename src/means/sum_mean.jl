@@ -1,28 +1,25 @@
-type SumMean <: CompositeMean
-    means::Vector{Mean}
-    SumMean(args::Vararg{Mean}) = new(collect(args))
+struct SumMean{T<:NTuple{N,Mean} where N} <: CompositeMean
+    means::T
 end
 
-submeans(sm::SumMean) = sm.means
+SumMean(means::Mean...) = SumMean(means)
 
-mean(sm::SumMean, x::VecF64) = sum(mean(m, x) for m in submeans(sm))
-mean(summean::SumMean, X::MatF64) = sum(mean(m, X) for m in submeans(summean))
+Statistics.mean(sm::SumMean, x::VecF64) = sum(mean(m, x) for m in components(sm))
 
-get_param_names(summean::SumMean) = composite_param_names(summean.means, :sm)
+get_param_names(sm::SumMean) = composite_param_names(components(sm), :sm)
 
 function grad_mean(sm::SumMean, x::VecF64)
-    np = num_params(sm)
-    dm = Array{Float64}(np)
+    dm = Array{Float64}(undef, num_params(sm))
     v = 1
-    for m in sm.means
-        np_m = num_params(m)
-        dm[v:v+np_m-1] = grad_mean(m, x)
-        v+=np_m
+    for m in components(sm)
+        w = v + num_params(m)
+        dm[v:(w - 1)] = grad_mean(m, x)
+        v = w
     end
     dm
 end
 
-+(m1::SumMean, m2::Mean) = SumMean(m1.means..., m2)
-+(m1::SumMean, m2::SumMean) = SumMean(m1.means..., m2.means...)
-+(m1::Mean, m2::Mean) = SumMean(m1,m2)
-+(m1::Mean, m2::SumMean) = SumMean(m1, m2.means...)
+Base.:+(m1::SumMean, m2::Mean) = SumMean(m1.means..., m2)
+Base.:+(m1::SumMean, m2::SumMean) = SumMean(m1.means..., m2.means...)
+Base.:+(m1::Mean, m2::Mean) = SumMean(m1, m2)
+Base.:+(m1::Mean, m2::SumMean) = SumMean(m1, m2.means...)

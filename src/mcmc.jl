@@ -1,25 +1,17 @@
-@doc """
-# Description
-A function for running a variety of MCMC algorithms for estimating the GP hyperparameters. This function uses the MCMC algorithms provided by the Klara package and the user is referred to this package for further details.
+"""
+    mcmc(gp::GPBase; kwargs...)
 
-    # Arguments:
-    * `gp::GP`: Predefined Gaussian process type
-        * `nIter::Int`: Number of MCMC iterations
-        * `ε::Real`: Stepsize parameter
-        * `L::Int`: Number of leapfrog steps
-        """ ->
+Run MCMC algorithms provided by the Klara package for estimating the hyperparameters of
+Gaussian process `gp`.
+"""
 function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64=0.1,
-        Lmin::Int=5, Lmax::Int=15,
-        lik::Bool=true,
-        noise::Bool=true,
-        domean::Bool=true,
-        kern::Bool=true)
-    
-    Kgrad = Array{Float64}(gp.nobsv, gp.nobsv)
-    L_bar = Array{Float64}(gp.nobsv, gp.nobsv)
-    params_kwargs = get_params_kwargs(typeof(gp); domean=domean, kern=kern, noise=noise, lik=lik) 
+              Lmin::Int=5, Lmax::Int=15, lik::Bool=true, noise::Bool=true,
+              domean::Bool=true, kern::Bool=true)
+    Kgrad = Array{Float64}(undef, gp.nobs, gp.nobs)
+    L_bar = Array{Float64}(undef, gp.nobs, gp.nobs)
+    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     count = 0
-    function calc_target(gp::GPBase, θ::Vector{Float64}) #log-target and its gradient 
+    function calc_target(gp::GPBase, θ::VecF64) #log-target and its gradient
         count += 1
         try
             set_params!(gp, θ; params_kwargs...)
@@ -30,31 +22,31 @@ function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64
                 return false
             elseif isa(err, ArgumentError)
                 return false
-            elseif isa(err, Base.LinAlg.PosDefException)
+            elseif isa(err, LinearAlgebra.PosDefException)
                 return false
             else
                 throw(err)
             end
-        end        
+        end
     end
 
 
     θ_cur = get_params(gp; params_kwargs...)
     D = length(θ_cur)
     leapSteps = 0                   #accumulator to track number of leap-frog steps
-    post = Array{Float64}(nIter,D)     #posterior samples
+    post = Array{Float64}(undef, nIter, D)     #posterior samples
     post[1,:] = θ_cur
-    
+
     @assert calc_target(gp, θ_cur)
     target_cur, grad_cur = gp.target, gp.dtarget
-    
+
     num_acceptances = 0
     for t in 1:nIter
         θ, target, grad = θ_cur, target_cur, grad_cur
-        
-        ν_cur = randn(D)        
+
+        ν_cur = randn(D)
         ν = ν_cur + 0.5 * ε * grad
-        
+
         reject = false
         L = rand(Lmin:Lmax)
         leapSteps +=L
@@ -71,11 +63,11 @@ function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64
 
         if reject
             post[t,:] = θ_cur
-        else        
+        else
             α = target - 0.5 * ν'ν - target_cur + 0.5 * ν_cur'ν_cur
             u = log(rand())
 
-            if u < α 
+            if u < α
                 num_acceptances += 1
                 θ_cur = θ
                 target_cur = target
@@ -91,6 +83,4 @@ function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64
     println("Number of function calls: ", count)
     @printf("Acceptance rate: %f \n", num_acceptances/nIter)
     return post'
-end    
-
-
+end

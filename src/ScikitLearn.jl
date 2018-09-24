@@ -4,9 +4,9 @@ import ScikitLearnBase
 
 ScikitLearnBase.is_classifier(::GPE) = false
 
-ScikitLearnBase.fit!(gp::GPE, X::Matrix{Float64}, y::Vector{Float64}) = fit!(gp, X', y)
+ScikitLearnBase.fit!(gp::GPE, X::MatF64, y::VecF64) = fit!(gp, X', y)
 
-function ScikitLearnBase.predict(gp::GPE, X::Matrix{Float64}; eval_MSE::Bool=false)
+function ScikitLearnBase.predict(gp::GPE, X::MatF64; eval_MSE::Bool=false)
     mu, Sigma = predict_y(gp, X'; full_cov=false)
     if eval_MSE
         return mu, Sigma
@@ -72,7 +72,7 @@ function ScikitLearnBase.set_params!(gp::GPE; params...)
             gp.logNoise = value
         end
     end
-    
+
     ScikitLearnBase.set_params!(gp.m; m_params...)
     ScikitLearnBase.set_params!(gp.k; k_params...)
     gp

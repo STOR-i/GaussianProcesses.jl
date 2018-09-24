@@ -7,9 +7,9 @@
 @recipe function f(gp::GPE; β=0.95, obsv=true, var=false)
     @assert gp.dim ∈ (1,2)
     if gp.dim == 1
-        xlims --> (minimum(gp.X), maximum(gp.X))
+        xlims --> (minimum(gp.x), maximum(gp.x))
         xmin, xmax = d[:xlims]
-        x = linspace(xmin, xmax, 100)
+        x = range(xmin, stop=xmax, length=100)
         μ, Σ = predict_f(gp, x)
         y = μ
         err = invΦ((1+β)/2)*sqrt.(Σ)
@@ -26,18 +26,18 @@
                 seriestype := :scatter
                 markershape := :circle
                 markercolor := :black
-                gp.X', gp.y
+                gp.x', gp.y
             end
         end
     else
-        xlims --> (minimum(gp.X[1,:]), maximum(gp.X[1,:]))
-        ylims --> (minimum(gp.X[2,:]), maximum(gp.X[2,:]))
+        xlims --> (minimum(gp.x[1,:]), maximum(gp.x[1,:]))
+        ylims --> (minimum(gp.x[2,:]), maximum(gp.x[2,:]))
         xmin, xmax = d[:xlims]
         ymin, ymax = d[:ylims]
-        x = linspace(xmin, xmax, 50)
-        y = linspace(ymin, ymax, 50)
-        xgrid = repmat(x', 50, 1)
-        ygrid = repmat(y, 1, 50)
+        x = range(xmin, stop=xmax, length=50)
+        y = range(ymin, stop=ymax, length=50)
+        xgrid = repeat(x', 50, 1)
+        ygrid = repeat(y, 1, 50)
         μ, Σ = predict_f(gp,[vec(xgrid)';vec(ygrid)'])
         if var
             zgrid  = reshape(Σ,50,50)

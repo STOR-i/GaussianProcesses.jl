@@ -5,18 +5,17 @@ end
 leftkern(sumkern::SumKernel) = sumkern.kleft
 rightkern(sumkern::SumKernel) = sumkern.kright
 
-
 subkernels(sumkern::SumKernel) = [sumkern.kleft, sumkern.kright]
 get_param_names(sumkern::SumKernel) = composite_param_names(subkernels(sumkern), :ak)
 
-function cov(sk::SumKernel{K1, K2}, x::V1, y::V2) where {V1<:VecF64, V2<:VecF64, K1, K2}
+function cov(sk::SumKernel, x::VecF64, y::VecF64)
     cov(sk.kleft, x, y) + cov(sk.kright, x, y)
 end
 
-@inline cov_ij(k::K, X::M, i::Int, j::Int, dim::Int) where {K<:SumKernel, M<:MatF64} = cov_ij(k.kleft, X, i, j, dim) + cov_ij(k.kright, X, i, j, dim)
-@inline cov_ij(k::K, X::M, data::PairData, i::Int, j::Int, dim::Int) where {K<:SumKernel, M<:MatF64} = cov_ij(k.kleft, X, data.data1, i, j, dim) + cov_ij(k.kright, X, data.data2, i, j, dim)
+@inline cov_ij(k::K, X::MatF64, i::Int, j::Int, dim::Int) where {K<:SumKernel} = cov_ij(k.kleft, X, i, j, dim) + cov_ij(k.kright, X, i, j, dim)
+@inline cov_ij(k::K, X::MatF64, data::PairData, i::Int, j::Int, dim::Int) where {K<:SumKernel} = cov_ij(k.kleft, X, data.data1, i, j, dim) + cov_ij(k.kright, X, data.data2, i, j, dim)
     
-@inline function dKij_dθp(sumkern::SumKernel{K1, K2}, X::M, i::Int, j::Int, p::Int, dim::Int) where {M<:MatF64, K1, K2}
+@inline function dKij_dθp(sumkern::SumKernel, X::MatF64, i::Int, j::Int, p::Int, dim::Int)
     np = num_params(sumkern.kleft)
     if p<=np
         return dKij_dθp(sumkern.kleft, X, i, j, p, dim)
@@ -24,7 +23,7 @@ end
         return dKij_dθp(sumkern.kright, X, i, j, p-np, dim)
     end
 end
-@inline function dKij_dθp{M<:MatF64}(sumkern::SumKernel, X::M, data::PairData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(sumkern::SumKernel, X::MatF64, data::PairData, i::Int, j::Int, p::Int, dim::Int)
     np = num_params(sumkern.kleft)
     if p<=np
         return dKij_dθp(sumkern.kleft, X, data.data1, i, j, p, dim)
@@ -42,7 +41,7 @@ end
     dKij_dθ!(dK,  sumkern.kleft,  X, data.data1, i, j, dim, npleft)
 end
 
-function grad_slice!{M<:MatF64}(dK::MatF64, sumkern::SumKernel, X::M, data::PairData, p::Int)
+function grad_slice!(dK::MatF64, sumkern::SumKernel, X::MatF64, data::PairData, p::Int)
     np = num_params(sumkern.kleft)
     if p<=np
         return grad_slice!(dK, sumkern.kleft, X, data.data1, p)
@@ -50,6 +49,6 @@ function grad_slice!{M<:MatF64}(dK::MatF64, sumkern::SumKernel, X::M, data::Pair
         return grad_slice!(dK, sumkern.kright, X, data.data2, p-np)
     end
 end
-        
+
 # Addition operators
-+(kleft::Kernel, kright::Kernel) = SumKernel(kleft,kright)
+Base.+(kleft::Kernel, kright::Kernel) = SumKernel(kleft,kright)

@@ -2,8 +2,8 @@
 # cov(k::Stationary, r::Float64) = ::Float64
 # grad_kern!
 
-@compat abstract type Stationary{D} <: Kernel where D <: Distances.SemiMetric end
-@compat abstract type StationaryData <: KernelData end
+abstract type Stationary{D} <: Kernel where D <: Distances.SemiMetric end
+abstract type StationaryData <: KernelData end
 
 function metric(kernel::Stationary{D}) where D <: Distances.SemiMetric
     return D()
@@ -17,7 +17,7 @@ end
 ard_weights(kernel::Stationary{WeightedSqEuclidean}) = kernel.iℓ2
 ard_weights(kernel::Stationary{WeightedEuclidean}) = kernel.iℓ2
 
-cov{V1<:VecF64,V2<:VecF64}(k::Stationary, x::V1, y::V2) = cov(k, distance(k, x, y))
+cov(k::Stationary, x::VecF64, y::VecF64) = cov(k, distance(k, x, y))
 @inline function cov_ij(k::K, X::MatF64, i::Int, j::Int, dim::Int) where {K<:Stationary}
     cov(k, distij(metric(k), X, i, j, dim))
 end
@@ -39,10 +39,10 @@ function cov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Stationary, X1::M1, X2::M2)
     end
     return cK
 end
-function cov(k::Stationary, X1::MatF64, X2::MatF64)
+function Statistics.cov(k::Stationary, X1::MatF64, X2::MatF64)
     nobsv1 = size(X1, 2)
     nobsv2 = size(X2, 2)
-    cK = Array{Float64}(nobsv1, nobsv2)
+    cK = Array{Float64}(undef, nobsv1, nobsv2)
     cov!(cK, k, X1, X2)
     return cK
 end
@@ -63,23 +63,23 @@ end
 function cov!(cK::MatF64, k::Stationary, X::MatF64, data::StationaryData)
     cov!(cK, k, X)
 end
-function cov(k::Stationary, X::MatF64, data::StationaryData)
+function Statistics.cov(k::Stationary, X::MatF64, data::StationaryData)
     nobsv = size(X, 2)
-    cK = Matrix{Float64}(nobsv, nobsv)
+    cK = Matrix{Float64}(undef, nobsv, nobsv)
     cov!(cK, k, X, data)
 end
-function cov(k::Stationary, X::MatF64)
+function Statistics.cov(k::Stationary, X::MatF64)
     nobsv = size(X, 2)
-    cK = Matrix{Float64}(nobsv, nobsv)
+    cK = Matrix{Float64}(undef, nobsv, nobsv)
     cov!(cK, k, X)
 end
-dk_dlσ(k::Stationary, r::Float64) = 2.0*cov(k,r)
+dk_dlσ(k::Stationary, r::Float64) = 2 * cov(k,r)
 
 # Isotropic Kernels
 
-@compat abstract type Isotropic{D} <: Stationary{D} end
+abstract type Isotropic{D} <: Stationary{D} end
 
-type IsotropicData <: StationaryData
+struct IsotropicData <: StationaryData
     R::Matrix{Float64}
 end
 
@@ -115,16 +115,16 @@ end
 
 # StationaryARD Kernels
 
-@compat abstract type StationaryARD{D} <: Stationary{D} end
+abstract type StationaryARD{D} <: Stationary{D} end
 
-type StationaryARDData <: StationaryData
+struct StationaryARDData <: StationaryData
     dist_stack::Array{Float64, 3}
 end
 
 # May need to customized in subtypes
 function KernelData(k::StationaryARD, X::MatF64)
     dim, nobsv = size(X)
-    dist_stack = Array{Float64}( nobsv, nobsv, dim)
+    dist_stack = Array{Float64}(undef, nobsv, nobsv, dim)
     for d in 1:dim
         grad_ls = view(dist_stack, :, :, d)
         pairwise!(grad_ls, SqEuclidean(), view(X, d:d,:))
@@ -132,4 +132,3 @@ function KernelData(k::StationaryARD, X::MatF64)
     StationaryARDData(dist_stack)
 end
 kernel_data_key(k::StationaryARD, X::MatF64) = @sprintf("%s_%s", "StationaryARDData", metric(k))
-

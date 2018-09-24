@@ -8,14 +8,14 @@ rightkern(prodkern::ProdKernel) = prodkern.kright
 subkernels(prodkern::ProdKernel) = [prodkern.kleft, prodkern.kright]
 get_param_names(prodkern::ProdKernel) = composite_param_names(subkernels(prodkern), :ak)
 
-function cov(sk::ProdKernel{K1, K2}, x::V1, y::V2) where {V1<:VecF64, V2<:VecF64, K1, K2}
+function Statistics.cov(sk::ProdKernel, x::VecF64, y::VecF64)
     cov(sk.kleft, x, y) * cov(sk.kright, x, y)
 end
 
-@inline cov_ij(k::K, X::M, i::Int, j::Int, dim::Int) where {K<:ProdKernel, M<:MatF64} = cov_ij(k.kleft, X, i, j, dim) * cov_ij(k.kright, X, i, j, dim)
-@inline cov_ij(k::K, X::M, data::PairData, i::Int, j::Int, dim::Int) where {K<:ProdKernel, M<:MatF64} = cov_ij(k.kleft, X, data.data1, i, j, dim) * cov_ij(k.kright, X, data.data2, i, j, dim)
+@inline cov_ij(k::ProdKernel, X::MatF64, i::Int, j::Int, dim::Int) = cov_ij(k.kleft, X, i, j, dim) * cov_ij(k.kright, X, i, j, dim)
+@inline cov_ij(k::ProdKernel, X::MatF64, data::PairData, i::Int, j::Int, dim::Int) = cov_ij(k.kleft, X, data.data1, i, j, dim) * cov_ij(k.kright, X, data.data2, i, j, dim)
 
-@inline function dKij_dθp(prodkern::ProdKernel{K1, K2}, X::M, i::Int, j::Int, p::Int, dim::Int) where {M<:MatF64, K1, K2}
+@inline function dKij_dθp(prodkern::ProdKernel, X::MatF64, i::Int, j::Int, p::Int, dim::Int)
     np = num_params(prodkern.kleft)
     if p<=np
         cK_other = cov_ij(prodkern.kright, X, i, j, dim)
@@ -25,7 +25,7 @@ end
         return dKij_dθp(prodkern.kright, X, i,j,p-np,dim)*cK_other
     end
 end
-@inline function dKij_dθp{M<:MatF64}(prodkern::ProdKernel, X::M, data::PairData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(prodkern::ProdKernel, X::MatF64, data::PairData, i::Int, j::Int, p::Int, dim::Int)
     np = num_params(prodkern.kleft)
     if p<=np
         cK_other = cov_ij(prodkern.kright, X, i, j, dim)
@@ -54,4 +54,4 @@ end
 end
 
 # Multiplication operators
-*(kleft::Kernel, kright::Kernel) = ProdKernel(kleft,kright)
+Base.*(kleft::Kernel, kright::Kernel) = ProdKernel(kleft,kright)

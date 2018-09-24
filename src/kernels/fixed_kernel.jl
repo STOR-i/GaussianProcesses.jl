@@ -1,73 +1,73 @@
 type FixedKern{K<:Kernel} <: Kernel
-    kern::K
+    kernel::K
     free::Vector{Int} # vector of *free* parameters
 end
 
-
-get_params(fk::FixedKern) = get_params(fk.kern)[fk.free]
-get_param_names(fk::FixedKern) = get_param_names(fk.kern)[fk.free]
-function set_params!(fk::FixedKern, hyp)
-    p = get_params(fk.kern)
-    p[fk.free] = hyp
-    set_params!(fk.kern, p)
+get_params(k::FixedKernel) = get_params(k.kernel)[k.free]
+get_param_names(k::FixedKernel) = get_param_names(k.kernel)[k.free]
+function set_params!(k::FixedKernel, hyp)
+    p = get_params(k.kernel)
+    p[k.free] = hyp
+    set_params!(k.kernel, p)
 end
-num_params(fk::FixedKern) = length(fk.free)
+num_params(k::FixedKernel) = length(k.free)
 
 # convenience functions to fix a parameter
 function fix(k::Kernel, par::Symbol)
     npars = num_params(k)
     free = collect(1:npars)
     names = get_param_names(k)
-    tofix = find(names.==par)[1]
-    deleteat!(free, tofix)
-    return FixedKern(k, free)
+    tofix = findfirst(==(par), names)
+    tofix == nothing || deleteat!(free, tofix)
+    return FixedKernel(k, free)
 end
 
-function fix(k::FixedKern, par::Symbol)
+function fix(k::FixedKernel, par::Symbol)
     free = k.free
     names = get_param_names(k)
-    tofix = find(names.==par)[1]
-    deleteat!(free, tofix)
-    return FixedKern(k.kern, free)
+    tofix = findfirst(==(par), names)
+    tofix == nothing || deleteat!(free, tofix)
+    return FixedKernel(k.kernel, free)
 end
 function fix(k::Kernel)
-    return FixedKern(k, Int[])
+    return FixedKernel(k, Int[])
 end
 
 # convenience functions to free a parameter
-function free(k::Kernel)
-    return k.kern
+function free(k::FixedKernel)
+    return k.kernel
 end
-function free(k::Kernel, par::Symbol)
-    all_names = get_param_names(k.kern)
-    ipar = find(all_names.==par)[1]
-    free = sort(unique([k.free; ipar]))
-    if length(free) == num_params(k.kern)
-        return k.kern
+function free(k::FixedKernel, par::Symbol)
+    all_names = get_param_names(k.kernel)
+    ipar = findfirst(==(par), all_names)
+    if ipar == nothing || ipar ∉ k.free
+        free = k.free
     else
-        return FixedKern(k.kern, free)
+        free = sort(unique([k.free; ipar]))
     end
+
+    return FixedKernel(k.kernel, free)
 end
 
-function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, fk::FixedKern, X::M2, data::KernelData, p::Int)
-    return grad_slice!(dK, fk.kern, X, data, fk.free[p])
+function grad_slice!(dK::MatF64, k::FixedKernel, X::MatF64, data::KernelData, p::Int)
+    return grad_slice!(dK, k.kernel, X, data, k.free[p])
 end
-function grad_slice!{M1<:MatF64,M2<:MatF64}(dK::M1, fk::FixedKern, X::M2, data::EmptyData, p::Int)
-    return grad_slice!(dK, fk.kern, X, data, fk.free[p])
+function grad_slice!(dK::MatF64, k::FixedKernel, X::MatF64, data::EmptyData, p::Int)
+    return grad_slice!(dK, k.kernel, X, data, k.free[p])
 end
-@inline function dKij_dθp(fk::FixedKern{K},X::MatF64,i::Int,j::Int,p::Int,dim::Int) where {K<:Kernel}
-    return dKij_dθp(fk.kern, X, i, j, fk.free[p], dim)
+@inline function dKij_dθp(fk::FixedKern,X::MatF64,i::Int,j::Int,p::Int,dim::Int)
+    return dKij_dθp(fk.kernel, X, i, j, fk.free[p], dim)
 end
-@inline function dKij_dθp(fk::FixedKern{K},X::MatF64,data::KernelData,i::Int,j::Int,p::Int,dim::Int) where {K<:Kernel}
-    return dKij_dθp(fk.kern, X, data, i, j, fk.free[p], dim)
+@inline function dKij_dθp(fk::FixedKern,X::MatF64,data::KernelData,i::Int,j::Int,p::Int,dim::Int)
+    return dKij_dθp(fk.kernel, X, data, i, j, fk.free[p], dim)
 end
 
 # delegate everything else to the wrapped kernel
 # (is there a better way to do this?)
-cov_ij(fk::FixedKern{K}, X::MatF64, i::Int, j::Int, dim::Int) where {K<:Kernel} = cov_ij(fk.kern, X, i, j, dim)
-cov_ij(fk::FixedKern{K}, X::MatF64, data::KernelData, i::Int, j::Int, dim::Int) where {K<:Kernel} = cov_ij(fk.kern, X, data, i, j, dim)
-cov_ij(fk::FixedKern{K}, X::MatF64, data::EmptyData, i::Int, j::Int, dim::Int) where {K<:Kernel} = cov_ij(fk, X, i, j, dim)
-cov(fk::FixedKern{K}, x::VecF64, y::VecF64) where {K} = cov(fk.kern, x, y)
+cov_ij(fk::FixedKern, X::MatF64, i::Int, j::Int, dim::Int) = cov_ij(fk.kern, X, i, j, dim)
+cov_ij(fk::FixedKern, X::MatF64, data::KernelData, i::Int, j::Int, dim::Int) = cov_ij(fk.kern, X, data, i, j, dim)
+cov_ij(fk::FixedKern, X::MatF64, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(fk, X, i, j, dim)
+Statistics.cov(fk::FixedKern, x::VecF64, y::VecF64) = cov(fk.kern, x, y)
 KernelData(fk::FixedKern, args...) = KernelData(fk.kern, args...)
 KernelData(fk::FixedKern, X::MatF64) = KernelData(fk.kern, X)
 kernel_data_key(fk::FixedKern, args...) = kernel_data_key(fk.kern, args...)
@@ -77,24 +77,24 @@ kernel_data_key(fk::FixedKern, X::MatF64) = kernel_data_key(fk.kern, X)
 # Priors #
 ##########
 
-function get_priors(fk::FixedKern)
-    free_priors = get_priors(fk.kern)
+function get_priors(k::FixedKernel)
+    free_priors = get_priors(k.kernel)
     if isempty(free_priors) return []
     else
-        return free_priors[fk.free]
+        return free_priors[k.free]
     end
 end
 
-function set_priors!(fk::FixedKern, priors)
-    p = get_priors(fk.kern)
-    p[fk.free] = priors
-    set_priors!(fk.kern, p)
+function set_priors!(k::FixedKernel, priors)
+    p = get_priors(k.kernel)
+    p[k.free] = priors
+    set_priors!(k.kernel, p)
 end
 
-function prior_logpdf(k::FixedKern)
+function prior_logpdf(k::FixedKernel)
     return 0.0
 end
 
-function prior_gradlogpdf(k::FixedKern)
+function prior_gradlogpdf(k::FixedKernel)
     return zeros(num_params(k))
 end
