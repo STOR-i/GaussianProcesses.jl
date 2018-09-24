@@ -5,8 +5,7 @@ end
 leftkern(prodkern::ProdKernel) = prodkern.kleft
 rightkern(prodkern::ProdKernel) = prodkern.kright
 
-subkernels(prodkern::ProdKernel) = [prodkern.kleft, prodkern.kright]
-get_param_names(prodkern::ProdKernel) = composite_param_names(subkernels(prodkern), :ak)
+get_param_names(prodkern::ProdKernel) = composite_param_names(components(prodkern), :pk)
 
 function Statistics.cov(sk::ProdKernel, x::VecF64, y::VecF64)
     cov(sk.kleft, x, y) * cov(sk.kright, x, y)

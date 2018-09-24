@@ -2,7 +2,7 @@ abstract type PairKernel{K1<:Kernel,K2<:Kernel} <: CompositeKernel end
 
 leftkern(k::PairKernel) = throw(MethodError(leftkern, (k,)))
 rightkern(k::PairKernel) = throw(MethodError(rightkern, (k,)))
-subkernels(k::PairKernel) = [leftkern(k), rightkern(k)]
+components(k::PairKernel) = [leftkern(k), rightkern(k)]
 
 function Base.show(io::IO, pairkern::PairKernel, depth::Int = 0)
     pad = repeat(" ", 2 * depth)
