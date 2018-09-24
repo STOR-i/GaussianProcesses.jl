@@ -1,5 +1,8 @@
 # News
 
+## Version 0.7.0 (to be published soon)
+* Updated Julia requirement to v0.7
+
 ## Version 0.6.0 (2018-03-02)
 * Updated optimization code to be compatible with new Optim.jl API
 * Removed Klara dependency
