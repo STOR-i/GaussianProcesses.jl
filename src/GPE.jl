@@ -182,8 +182,8 @@ function dmll_kern!(dmll::VecF64, k::Kernel, X::MatF64, data::KernelData, ααin
     dim, nobs = size(X)
     nparams = num_params(k)
     @assert nparams == length(dmll)
-    dK_buffer = Vector{Float64}(nparams)
-    dmll[:] = 0.0
+    dK_buffer = Vector{Float64}(undef, nparams)
+    dmll[:] .= 0.0
     @inbounds for j in 1:nobs
         # off-diagonal
         for i in 1:j-1
@@ -235,7 +235,7 @@ function update_dmll!(gp::GPE, ααinvcKI::MatF64;
     end
     if kern
         dmll_k = @view(gp.dmll[i:end])
-        dmll_kern!(dmll_k, gp.k, gp.X, gp.data, ααinvcKI)
+        dmll_kern!(dmll_k, gp.kernel, gp.x, gp.data, ααinvcKI)
     end
 end
 
@@ -284,7 +284,7 @@ function update_target!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool
     gp
 end
 
-function update_dtarget!(gp::GPE, L_bar::MatF64; kwargs...)
+function update_dtarget!(gp::GPE, Kgrad::MatF64, L_bar::MatF64; kwargs...)
     update_dmll!(gp, L_bar; kwargs...)
     gp.dtarget = gp.dmll + prior_gradlogpdf(gp; kwargs...)
     gp

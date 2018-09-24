@@ -1,4 +1,4 @@
-type ProdKernel{K1<:Kernel, K2<:Kernel} <: PairKernel{K1,K2}
+struct ProdKernel{K1<:Kernel, K2<:Kernel} <: PairKernel{K1,K2}
     kleft::K1
     kright::K2
 end
@@ -54,4 +54,4 @@ end
 end
 
 # Multiplication operators
-Base.*(kleft::Kernel, kright::Kernel) = ProdKernel(kleft,kright)
+Base.:*(kleft::Kernel, kright::Kernel) = ProdKernel(kleft,kright)

@@ -17,14 +17,14 @@ end
 ard_weights(kernel::Stationary{WeightedSqEuclidean}) = kernel.iℓ2
 ard_weights(kernel::Stationary{WeightedEuclidean}) = kernel.iℓ2
 
-cov(k::Stationary, x::VecF64, y::VecF64) = cov(k, distance(k, x, y))
-@inline function cov_ij(k::K, X::MatF64, i::Int, j::Int, dim::Int) where {K<:Stationary}
+Statistics.cov(k::Stationary, x::VecF64, y::VecF64) = cov(k, distance(k, x, y))
+@inline function cov_ij(k::Stationary, X::MatF64, i::Int, j::Int, dim::Int)
     cov(k, distij(metric(k), X, i, j, dim))
 end
 @inline function cov_ij(k::Stationary, X::MatF64, data::KernelData, i::Int, j::Int, dim::Int)
     cov(k, distij(metric(k), X, i, j, dim))
 end
-function cov!{M1<:MatF64,M2<:MatF64}(cK::MatF64, k::Stationary, X1::M1, X2::M2)
+function cov!(cK::MatF64, k::Stationary, X1::MatF64, X2::MatF64)
     dim1, nobsv1 = size(X1)
     dim2, nobsv2 = size(X2)
     dim1==dim2 || throw(ArgumentError("X1 and X2 must have same dimension"))

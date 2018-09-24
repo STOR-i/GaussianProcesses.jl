@@ -11,7 +11,7 @@ end
 subkernels(addkern::AddKernel) = [addkern.k1, addkern.k2]
 get_param_names(addkern::AddKernel) = composite_param_names(subkernels(addkern), :ak)
 
-function cov(sk::AddKernel{K1, K2}, x::V1, y::V2) where {V1<:VecF64, V2<:VecF64, K1, K2}
+function Statistics.cov(sk::AddKernel{K1, K2}, x::V1, y::V2) where {V1<:VecF64, V2<:VecF64, K1, K2}
     cov(sk.k1, x, y) + cov(sk.k2, x, y)
 end
 
@@ -24,7 +24,7 @@ function cov!{M<:MatF64}(s::MatF64, addkern::AddKernel, X::M, data::PairData)
     cov!(s, addkern.k1, X, data.data1)
     addcov!(s, addkern.k2, X, data.data2)
 end
-function cov{M<:MatF64}(addkern::AddKernel, X::M, data::PairData)
+function Statistics.cov{M<:MatF64}(addkern::AddKernel, X::M, data::PairData)
     d, nobsv = size(X)
     s = zeros(nobsv, nobsv)
     cov!(s, addkern, X, data)

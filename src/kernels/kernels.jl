@@ -49,8 +49,7 @@ end
 Create covariance function from kernel `k`, matrix of observations `X`, where each column is
 an observation, and kernel data `data` constructed from input observations.
 """
-<<<<<<< HEAD
-cov(k::Kernel, X::MatF64, data::EmptyData) = cov(k, X)
+Statistics.cov(k::Kernel, X::MatF64, data::EmptyData) = cov(k, X)
 cov!(k::Kernel, X::MatF64, data::EmptyData) = cov!(cK, k, X)
 
 function cov!(cK::MatF64, k::Kernel, X::MatF64)
@@ -66,7 +65,7 @@ function cov!(cK::MatF64, k::Kernel, X::MatF64)
 end
 function Statistics.cov(k::Kernel, X::MatF64)
     dim, nobsv = size(X)
-    cK = Array{Float64}(nobsv, nobsv)
+    cK = Array{Float64}(undef, nobsv, nobsv)
     cov!(cK, k, X)
 end
 function cov!(cK::MatF64, k::Kernel, X::MatF64, data::KernelData)
@@ -82,7 +81,7 @@ function cov!(cK::MatF64, k::Kernel, X::MatF64, data::KernelData)
 end
 function Statistics.cov(k::Kernel, X::MatF64, data::KernelData)
     dim, nobsv = size(X)
-    cK = Array{Float64}(nobsv, nobsv)
+    cK = Array{Float64}(undef, nobsv, nobsv)
     cov!(cK, k, X, data)
 end
 

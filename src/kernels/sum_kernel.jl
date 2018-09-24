@@ -1,4 +1,4 @@
-type SumKernel{K1<:Kernel, K2<:Kernel} <: PairKernel{K1, K2}
+struct SumKernel{K1<:Kernel, K2<:Kernel} <: PairKernel{K1, K2}
     kleft::K1
     kright::K2
 end
@@ -8,7 +8,7 @@ rightkern(sumkern::SumKernel) = sumkern.kright
 subkernels(sumkern::SumKernel) = [sumkern.kleft, sumkern.kright]
 get_param_names(sumkern::SumKernel) = composite_param_names(subkernels(sumkern), :ak)
 
-function cov(sk::SumKernel, x::VecF64, y::VecF64)
+function Statistics.cov(sk::SumKernel, x::VecF64, y::VecF64)
     cov(sk.kleft, x, y) + cov(sk.kright, x, y)
 end
 
@@ -51,4 +51,4 @@ function grad_slice!(dK::MatF64, sumkern::SumKernel, X::MatF64, data::PairData, 
 end
 
 # Addition operators
-Base.+(kleft::Kernel, kright::Kernel) = SumKernel(kleft,kright)
+Base.:+(kleft::Kernel, kright::Kernel) = SumKernel(kleft,kright)

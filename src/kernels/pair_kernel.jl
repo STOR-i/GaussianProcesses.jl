@@ -1,10 +1,10 @@
-@compat abstract type PairKernel{K1<:Kernel,K2<:Kernel} <: CompositeKernel end
+abstract type PairKernel{K1<:Kernel,K2<:Kernel} <: CompositeKernel end
 
 leftkern(k::PairKernel) = throw(MethodError(leftkern, (k,)))
 rightkern(k::PairKernel) = throw(MethodError(rightkern, (k,)))
 subkernels(k::PairKernel) = [leftkern(k), rightkern(k)]
 
-function show(io::IO, pairkern::PairKernel, depth::Int = 0)
+function Base.show(io::IO, pairkern::PairKernel, depth::Int = 0)
     pad = repeat(" ", 2 * depth)
     println(io, "$(pad)Type: $(typeof(pairkern))")
     show(io, leftkern(pairkern), depth+1)
@@ -41,11 +41,11 @@ get_priors(pairkern::PairKernel) = vcat(get_priors(leftkern(pairkern)), get_prio
 # PairData      #
 #################
 
-type PairData{KD1 <: KernelData, KD2 <: KernelData} <: KernelData
+struct PairData{KD1 <: KernelData, KD2 <: KernelData} <: KernelData
     data1::KD1
     data2::KD2
 end
-function KernelData(pairkern::PairKernel, X::M) where {M<:MatF64}
+function KernelData(pairkern::PairKernel, X::MatF64)
     kl = leftkern(pairkern)
     kr = rightkern(pairkern)
     # this is a bit broken:
@@ -60,7 +60,7 @@ function KernelData(pairkern::PairKernel, X::M) where {M<:MatF64}
     end
 end
 
-function kernel_data_key{M<:MatF64}(pairkern::PairKernel, X::M)
+function kernel_data_key(pairkern::PairKernel, X::MatF64)
     kl = leftkern(pairkern)
     kr = rightkern(pairkern)
     @sprintf("PairData:%s+%s", kernel_data_key(kl, X), kernel_data_key(kr, X))

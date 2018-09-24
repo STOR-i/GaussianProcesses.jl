@@ -1,4 +1,4 @@
-type FixedKern{K<:Kernel} <: Kernel
+struct FixedKernel{K<:Kernel} <: Kernel
     kernel::K
     free::Vector{Int} # vector of *free* parameters
 end
@@ -55,23 +55,23 @@ end
 function grad_slice!(dK::MatF64, k::FixedKernel, X::MatF64, data::EmptyData, p::Int)
     return grad_slice!(dK, k.kernel, X, data, k.free[p])
 end
-@inline function dKij_dθp(fk::FixedKern,X::MatF64,i::Int,j::Int,p::Int,dim::Int)
+@inline function dKij_dθp(fk::FixedKernel,X::MatF64,i::Int,j::Int,p::Int,dim::Int)
     return dKij_dθp(fk.kernel, X, i, j, fk.free[p], dim)
 end
-@inline function dKij_dθp(fk::FixedKern,X::MatF64,data::KernelData,i::Int,j::Int,p::Int,dim::Int)
+@inline function dKij_dθp(fk::FixedKernel,X::MatF64,data::KernelData,i::Int,j::Int,p::Int,dim::Int)
     return dKij_dθp(fk.kernel, X, data, i, j, fk.free[p], dim)
 end
 
 # delegate everything else to the wrapped kernel
 # (is there a better way to do this?)
-cov_ij(fk::FixedKern, X::MatF64, i::Int, j::Int, dim::Int) = cov_ij(fk.kern, X, i, j, dim)
-cov_ij(fk::FixedKern, X::MatF64, data::KernelData, i::Int, j::Int, dim::Int) = cov_ij(fk.kern, X, data, i, j, dim)
-cov_ij(fk::FixedKern, X::MatF64, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(fk, X, i, j, dim)
-Statistics.cov(fk::FixedKern, x::VecF64, y::VecF64) = cov(fk.kern, x, y)
-KernelData(fk::FixedKern, args...) = KernelData(fk.kern, args...)
-KernelData(fk::FixedKern, X::MatF64) = KernelData(fk.kern, X)
-kernel_data_key(fk::FixedKern, args...) = kernel_data_key(fk.kern, args...)
-kernel_data_key(fk::FixedKern, X::MatF64) = kernel_data_key(fk.kern, X)
+cov_ij(fk::FixedKernel, X::MatF64, i::Int, j::Int, dim::Int) = cov_ij(fk.kernel, X, i, j, dim)
+cov_ij(fk::FixedKernel, X::MatF64, data::KernelData, i::Int, j::Int, dim::Int) = cov_ij(fk.kernel, X, data, i, j, dim)
+cov_ij(fk::FixedKernel, X::MatF64, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(fk, X, i, j, dim)
+Statistics.cov(fk::FixedKernel, x::VecF64, y::VecF64) = cov(fk.kernel, x, y)
+KernelData(fk::FixedKernel, args...) = KernelData(fk.kernel, args...)
+KernelData(fk::FixedKernel, X::MatF64) = KernelData(fk.kernel, X)
+kernel_data_key(fk::FixedKernel, args...) = kernel_data_key(fk.kernel, args...)
+kernel_data_key(fk::FixedKernel, X::MatF64) = kernel_data_key(fk.kernel, X)
 
 ##########
 # Priors #
