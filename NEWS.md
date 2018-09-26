@@ -1,7 +1,8 @@
 # News
 
-## Version 0.7.0 (to be published soon)
+## Version 0.7.0 (2018-09-26)
 * Updated Julia requirement to v0.7
+* Performance improvements to Kernels
 
 ## Version 0.6.0 (2018-03-02)
 * Updated optimization code to be compatible with new Optim.jl API
