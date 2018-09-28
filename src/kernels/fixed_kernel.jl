@@ -3,6 +3,8 @@ struct FixedKernel{K<:Kernel} <: Kernel
     free::Vector{Int} # vector of *free* parameters
 end
 
+@deprecate FixedKern FixedKernel
+
 get_params(k::FixedKernel) = get_params(k.kernel)[k.free]
 get_param_names(k::FixedKernel) = get_param_names(k.kernel)[k.free]
 function set_params!(k::FixedKernel, hyp)
