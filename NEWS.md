@@ -1,7 +1,18 @@
 # News
 
-## Version 0.7.0 (to be published soon)
+## Version 0.7.0 (2018-09-28)
 * Updated Julia requirement to v0.7
+* Performance improvements to Kernels
+* Added dependencies on `StatsFuns` and `SpecialFunctions`
+* Removed dependency on `Compat`
+* Renamed `FixedKern` to `FixedKernel`
+* Added type parameters to `GPE`, `GPMC`, `ProdKernel`, and `SumKernel`, `ProdMean` and `SumMean`
+* Renamed fields of `GPE` and `GPE` (`x` instead of `X`, `mean` instead of `m`, `kernel` instead of `k`, and `nobs` instead of `nobsv`)
+* Renamed fields of `FixedKernel` and `Masked` (kernel instead of kern)
+* Renamed fields of `ProdKernel` and `SumKernel` (kernels instead of kerns)
+* Renamed keyword arguments of the `GPE` constructor to kernel and mean
+* Renamed function `subkernels` and `submeans` to `components`
+
 
 ## Version 0.6.0 (2018-03-02)
 * Updated optimization code to be compatible with new Optim.jl API

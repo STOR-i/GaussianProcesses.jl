@@ -2,6 +2,8 @@ abstract type CompositeKernel <: Kernel end
 
 components(k::CompositeKernel) = k.kernels
 
+@deprecate subkernels components
+
 #################
 # CompositeData #
 #################
