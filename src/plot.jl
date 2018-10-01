@@ -8,7 +8,7 @@
     @assert gp.dim ∈ (1,2)
     if gp.dim == 1
         xlims --> (minimum(gp.x), maximum(gp.x))
-        xmin, xmax = d[:xlims]
+        xmin, xmax = plotattributes[:xlims]
         x = range(xmin, stop=xmax, length=100)
         μ, Σ = predict_f(gp, x)
         y = μ
@@ -32,8 +32,8 @@
     else
         xlims --> (minimum(gp.x[1,:]), maximum(gp.x[1,:]))
         ylims --> (minimum(gp.x[2,:]), maximum(gp.x[2,:]))
-        xmin, xmax = d[:xlims]
-        ymin, ymax = d[:ylims]
+        xmin, xmax = plotattributes[:xlims]
+        ymin, ymax = plotattributes[:ylims]
         x = range(xmin, stop=xmax, length=50)
         y = range(ymin, stop=ymax, length=50)
         xgrid = repeat(x', 50, 1)
