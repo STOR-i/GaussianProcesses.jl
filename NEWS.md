@@ -1,5 +1,11 @@
 # News
 
+## Version 0.8.0 (2018-10-02)
+* Updated Julia requirement to v1.0
+* Updated requirement of `RecipesBase.jl` to v0.6
+
+Note: Could not create release compatible with both Julia v0.7 and Julia v1.0 due to `RecipesBase.jl` dependency
+
 ## Version 0.7.0 (2018-09-28)
 * Updated Julia requirement to v0.7
 * Performance improvements to Kernels
