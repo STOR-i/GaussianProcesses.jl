@@ -4,7 +4,7 @@ end
 
 SumMean(means::Mean...) = SumMean(means)
 
-Statistics.mean(sm::SumMean, x::VecF64) = sum(mean(m, x) for m in components(sm))
+mean(sm::SumMean, x::VecF64) = sum(mean(m, x) for m in components(sm))
 
 get_param_names(sm::SumMean) = composite_param_names(components(sm), :sm)
 

@@ -23,8 +23,8 @@ mutable struct MeanLin <: Mean
     MeanLin(β::Vector{Float64}) = new(β, [])
 end
 
-Statistics.mean(mLin::MeanLin, x::VecF64) = dot(mLin.β, x)
-Statistics.mean(mLin::MeanLin, X::MatF64) = X'mLin.β
+mean(mLin::MeanLin, x::VecF64) = dot(mLin.β, x)
+mean(mLin::MeanLin, X::MatF64) = X'mLin.β
 
 get_params(mLin::MeanLin) = mLin.β
 get_param_names(::MeanLin) = [:β]
