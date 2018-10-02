@@ -24,7 +24,7 @@ mutable struct MeanPoly <: Mean
     MeanPoly(β::Matrix{Float64}) = new(β, [])
 end
 
-function Statistics.mean(mPoly::MeanPoly, x::VecF64)
+function mean(mPoly::MeanPoly, x::VecF64)
     dim = length(x)
     deg = size(mPoly.β, 2)
     dim == size(mPoly.β, 1) || throw(ArgumentError("Observations and mean function have inconsistent dimensions"))

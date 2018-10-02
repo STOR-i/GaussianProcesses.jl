@@ -23,8 +23,8 @@ mutable struct MeanConst <: Mean
     MeanConst(β::Float64) = new(β, [])
 end
 
-Statistics.mean(mConst::MeanConst, x::VecF64) = mConst.β
-Statistics.mean(mConst::MeanConst, X::MatF64) = fill(mConst.β, size(X,2))
+mean(mConst::MeanConst, x::VecF64) = mConst.β
+mean(mConst::MeanConst, X::MatF64) = fill(mConst.β, size(X,2))
 
 get_params(mConst::MeanConst) = Float64[mConst.β]
 get_param_names(::MeanConst) = [:β]

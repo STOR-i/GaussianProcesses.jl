@@ -4,7 +4,7 @@ end
 
 ProdMean(means::Mean...) = ProdMean(means)
 
-Statistics.mean(pm::ProdMean, x::VecF64) = prod(mean(m, x) for m in components(pm))
+mean(pm::ProdMean, x::VecF64) = prod(mean(m, x) for m in components(pm))
 
 get_param_names(pm::ProdMean) = composite_param_names(components(pm), :pm)
 
