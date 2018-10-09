@@ -117,10 +117,10 @@ function append!(gp::GPE{X,Y,M,K,P,D}, x::AbstractArray{Float64, 2}, y::Abstract
     append!(gp.x, x)
     append!(gp.cK, newcov)
     gp.nobs += length(y)
-    μ = mean(gp.mean, x)
-    append!(gp.y, y - μ)
-    gp.alpha = gp.cK \ gp.y
-    gp.mll = -(dot(gp.y, gp.alpha) + logdet(gp.cK) + log2π * gp.nobs) / 2
+    append!(gp.y, y)
+    yy = gp.y - mean(gp.mean, gp.x) # would not need to be recomputed every time
+    gp.alpha = gp.cK \ yy
+    gp.mll = -(dot(yy, gp.alpha) + logdet(gp.cK) + log2π * gp.nobs) / 2
     gp.target = gp.mll   + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel)
     gp
 end
@@ -175,7 +175,11 @@ Update the covariance matrix and its Cholesky decomposition of Gaussian process 
 """
 function update_cK!(gp::GPE{X,Y,M,K,P,D}) where {X,Y,M,K,P,D}
     old_cK = gp.cK
-    Σbuffer = old_cK.mat
+    if P <: ElasticPDMat
+        Σbuffer = view(old_cK.mat)
+    else
+        Σbuffer = old_cK.mat
+    end
     cov!(Σbuffer, gp.kernel, gp.x, gp.data)
     noise = (exp(2*gp.logNoise) + 1e-5)
     for i in 1:gp.nobs
