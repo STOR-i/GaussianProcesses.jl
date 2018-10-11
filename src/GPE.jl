@@ -110,21 +110,6 @@ end
 
 fit!(gp::GPE, x::VecF64, y::VecF64) = fit!(gp, x', y)
 
-import Base.append!
-append!(gp, x::AbstractArray{Float64, 1}, y::Float64) = append!(gp, reshape(x, :, 1), [y])
-function append!(gp::GPE{X,Y,M,K,P,D}, x::AbstractArray{Float64, 2}, y::AbstractArray{Float64, 1}) where {X,Y,M,K,P <: ElasticPDMat, D}
-    newcov = [cov(gp.kernel, gp.x, x); cov(gp.kernel, x, x) + (exp(2*gp.logNoise) + 1e-5)*I]
-    append!(gp.x, x)
-    append!(gp.cK, newcov)
-    gp.nobs += length(y)
-    append!(gp.y, y)
-    yy = gp.y - mean(gp.mean, gp.x) # would not need to be recomputed every time
-    gp.alpha = gp.cK \ yy
-    gp.mll = -(dot(yy, gp.alpha) + logdet(gp.cK) + log2π * gp.nobs) / 2
-    gp.target = gp.mll   + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel)
-    gp
-end
-
 #———————————————————————————————————————————————————————————
 #Fast memory allocation function
 
@@ -160,45 +145,38 @@ Initialise the marginal log-likelihood of Gaussian process `gp`.
 function initialise_mll!(gp::GPE{X,Y,M,K,P,D}) where {X,Y,M,K,P,D}
     μ = mean(gp.mean,gp.x)
     Σ = cov(gp.kernel, gp.x, gp.data)
-    gp.cK = P.name.wrapper(Σ + (exp(2*gp.logNoise) + 1e-5)*I)
+    gp.cK = init_cK(P, Σ + (exp(2*gp.logNoise) + 1e-5)*I)
     y = gp.y - μ
     gp.alpha = gp.cK \ y
     # Marginal log-likelihood
     gp.mll = -(dot(y, gp.alpha) + logdet(gp.cK) + log2π * gp.nobs) / 2
     gp
 end
+init_cK(::Type{<:PDMat}, m) = PDMat(m)
 
 """
     update_cK!(gp::GPE)
 
 Update the covariance matrix and its Cholesky decomposition of Gaussian process `gp`.
 """
-function update_cK!(gp::GPE{X,Y,M,K,P,D}) where {X,Y,M,K,P,D}
+function update_cK!(gp::GPE)
     old_cK = gp.cK
-    if P <: ElasticPDMat
-        Σbuffer = view(old_cK.mat)
-    else
-        Σbuffer = old_cK.mat
-    end
+    Σbuffer = mat(old_cK)
     cov!(Σbuffer, gp.kernel, gp.x, gp.data)
     noise = (exp(2*gp.logNoise) + 1e-5)
     for i in 1:gp.nobs
         Σbuffer[i,i] += noise
     end
-    if P <: ElasticPDMat
-        chol_buffer = view(old_cK.chol).factors
-    else
-        chol_buffer = old_cK.chol.factors
-    end
+    chol_buffer = cholfactors(old_cK)
     copyto!(chol_buffer, Σbuffer)
     chol = cholesky!(Symmetric(chol_buffer))
-    if !(P <: ElasticPDMat)
-        gp.cK = P.name.wrapper(Σbuffer, chol)
-    end
+    gp.cK = wrap_cK(gp.cK, Σbuffer, chol)
     gp.cK
 end
 
-is_data_updated(gp::GPE{X,Y,M,K,P,D}) where {X,Y,M,K,P <: ElasticPDMat,D} = false
+wrap_cK(cK::PDMat, Σbuffer, chol) = PDMat(Σbuffer, chol)
+mat(cK::PDMat) = cK.mat
+cholfactors(cK::PDMat) = cK.chol.factors
 
 # modification of initialise_target! that reuses existing matrices to avoid
 # unnecessary memory allocations, which speeds things up significantly

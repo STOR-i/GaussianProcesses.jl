@@ -17,7 +17,7 @@ function optimize!(gp::GPBase; method = LBFGS(), domean::Bool = true, kern::Bool
                    noise::Bool = true, lik::Bool = true, kwargs...)
     params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     # println(params_kwargs)
-    if !is_data_updated(gp) 
+    if !is_kerneldata_updated(gp) 
         gp.data = KernelData(gp.kernel, gp.x) 
     end
     func = get_optim_target(gp; params_kwargs...)
@@ -28,7 +28,7 @@ function optimize!(gp::GPBase; method = LBFGS(), domean::Bool = true, kern::Bool
     return results
 end
 
-is_data_updated(gp) = true
+is_kerneldata_updated(gp) = true
 
 function get_optim_target(gp::GPBase; params_kwargs...)
     function ltarget(hyp::VecF64)
