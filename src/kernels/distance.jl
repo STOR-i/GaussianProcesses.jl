@@ -1,15 +1,35 @@
-distance(k::Stationary, X::MatF64, Y::MatF64) = pairwise(metric(k), X, Y)
+# distance(k::Stationary, X::MatF64, Y::MatF64) = pairwise(metric(k), X, Y)
 distance(k::Stationary, x::VecF64, y::VecF64) = evaluate(metric(k), x, y)
 
 distance(k::Isotropic, X::MatF64, data::IsotropicData) = data.R
 function distance(k::Stationary, X::MatF64)
+    nobsv = size(X, 2)
+    return distance!(Matrix{Float64}(undef, nobsv, nobsv), metric(k), X)
+end
+distance!(dist::MatF64, k::Stationary, X::MatF64) = distance!(dist, metric(k), X)
+function distance!(dist::MatF64, m::PreMetric, X::MatF64)
     dim, nobsv = size(X)
-    m = metric(k)
-    dist = Matrix{Float64}(undef, nobsv, nobsv)
     for i in 1:nobsv
         dist[i,i] = 0.0
         for j in 1:i-1
             dist[i,j] = dist[j,i] = distij(m, X, i, j, dim)
+        end
+    end
+    return dist
+end
+function distance(k::Stationary, X::MatF64, Y::MatF64)
+    nobsx = size(X, 2)
+    nobsy = size(Y, 2)
+    return distance!(Matrix{Float64}(undef, nobsx, nobsy), metric(k), X, Y)
+end
+distance!(dist::MatF64, k::Stationary, X::MatF64, Y::MatF64) = distance!(dist, metric(k), X, Y)
+function distance!(dist::MatF64, m::PreMetric, X::MatF64, Y::MatF64)
+    dimx, nobsx = size(X)
+    dimy, nobsy = size(Y)
+    dimx == dimy || error("size(X, 1) != size(Y, 1)")
+    for i in 1:nobsx
+        for j in 1:nobsy
+            dist[i,j] = distij(m, X, Y, i, j, dimx)
         end
     end
     return dist

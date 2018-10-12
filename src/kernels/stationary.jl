@@ -127,7 +127,7 @@ function KernelData(k::StationaryARD, X::MatF64)
     dist_stack = Array{Float64}(undef, nobsv, nobsv, dim)
     for d in 1:dim
         grad_ls = view(dist_stack, :, :, d)
-        pairwise!(grad_ls, SqEuclidean(), view(X, d:d,:))
+        distance!(grad_ls, SqEuclidean(), view(X, d:d,:))
     end
     StationaryARDData(dist_stack)
 end
