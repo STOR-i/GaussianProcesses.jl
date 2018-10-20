@@ -25,17 +25,19 @@ end
 
 Statistics.cov(lin::LinArd, x::VecF64, y::VecF64) = dot(x./lin.ℓ, y./lin.ℓ)
 
-struct LinArdData <: KernelData
-    XtX_d::Array{Float64,3}
+struct LinArdData{D} <: KernelData
+    XtX_d::D
 end
 
 function KernelData(k::LinArd, X::MatF64)
     dim, nobs = size(X)
     XtX_d = Array{Float64}(undef, nobs, nobs, dim)
-    @inbounds for d in 1:dim
-        Xd = view(X, d, :)
-        XtX_d[:, :, d] .= Xd * Xd'
-        LinearAlgebra.copytri!(view(XtX_d, :, :, d), 'U')
+    @inbounds @simd for d in 1:dim
+        for i in 1:nobs
+            for j in 1:i
+                XtX_d[i, j, d] = XtX_d[j, i, d] = X[d, i] * X[d, j]
+            end
+        end
     end
     LinArdData(XtX_d)
 end
@@ -46,10 +48,10 @@ function Statistics.cov(lin::LinArd, X::MatF64)
     return K
 end
 function cov!(cK::MatF64, lin::LinArd, X::MatF64, data::LinArdData)
-    dim = size(X, 1)
+    dim, nobs = size(X)
     fill!(cK, 0)
     for d in 1:dim
-        LinearAlgebra.axpy!(1/lin.ℓ[d]^2, view(data.XtX_d,:,:,d), cK)
+        LinearAlgebra.axpy!(1/lin.ℓ[d]^2, view(data.XtX_d,1:nobs, 1:nobs ,d), cK)
     end
     return cK
 end

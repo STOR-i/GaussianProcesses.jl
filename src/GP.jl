@@ -29,6 +29,24 @@ end
 # 1D Case for prediction
 predict_f(gp::GPBase, x::VecF64; full_cov::Bool=false) = predict_f(gp, x'; full_cov=full_cov)
 
+function make_posdef!(m::MatF64)
+    n = size(m, 1)
+    size(m, 2) == n || throw(ArgumentError("Covariance matrix must be square"))
+    for _ in 1:10 # 10 chances
+        if isposdef(m)
+            return m
+        else
+            # that wasn't (numerically) positive definite,
+            # so let's add some weight to the diagonal
+            ϵ = 1e-6 * tr(m) / n
+            @inbounds for i in 1:n
+                m[i, i] += ϵ
+            end
+        end
+    end
+    m
+end
+
 """
     tolerant_PDMat(Σ::Matrix{Float64})
 
@@ -40,22 +58,6 @@ to the diagonal (and hereby all eigenvalues are raised by that amount mathematic
 until all eigenvalues are positive numerically.
 """
 function tolerant_PDMat(Sigma_raw::MatF64)
-    n = size(Sigma_raw, 1)
-    size(Sigma_raw, 2) == n || throw(ArgumentError("Covariance matrix must be square"))
-    for _ in 1:10 # 10 chances
-        try
-            Sigma = PDMat(Sigma_raw)
-            return Sigma
-        catch
-            # that wasn't (numerically) positive definite,
-            # so let's add some weight to the diagonal
-            ϵ = 1e-6 * tr(Sigma_raw) / n
-            @inbounds for i in 1:n
-                Sigma_raw[i, i] += ϵ
-            end
-        end
-    end
-    # last chance
-    Sigma = PDMat(Sigma_raw)
-    return Sigma
+    make_posdef!(Sigma_raw)
+    PDMat(Sigma_raw)
 end

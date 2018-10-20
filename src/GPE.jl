@@ -35,11 +35,10 @@ mutable struct GPE{X<:MatF64,Y<:VecF64,M<:Mean,K<:Kernel,P<:AbstractPDMat,D<:Ker
     "Gradient of log-target (gradient of marginal log-likelihood + gradient of log priors)"
     dtarget::Vector{Float64}
 
-    function GPE{X,Y,M,K,P}(x::X, y::Y, mean::M, kernel::K, logNoise::Float64) where {X,Y,M,K,P}
+    function GPE{X,Y,M,K,P,D}(x::X, y::Y, mean::M, kernel::K, data::D, cK::P, logNoise::Float64) where {X,Y,M,K,P,D}
         dim, nobs = size(x)
         length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        data = KernelData(kernel, x)
-        gp = new{X,Y,M,K,P,typeof(data)}(x, y, mean, kernel, logNoise, dim, nobs, data)
+        gp = new{X,Y,M,K,P,D}(x, y, mean, kernel, logNoise, dim, nobs, data, cK)
         initialise_target!(gp)
     end
 end
@@ -59,26 +58,28 @@ assumed that the observations are noise free.
 - `logNoise::Float64`: Natural logarithm of the standard deviation for the observation
   noise. The default is -2.0, which is equivalent to assuming no observation noise.
 """
-function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0, elastic::Bool = false) 
-    if elastic
-        x = ElasticArray(x)
-        y = ElasticArray(y)
-    end
-    GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel),(elastic ? ElasticPDMat : PDMat){Float64,Matrix{Float64}}}(x, y, mean, kernel, logNoise)
+function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, data::KernelData, cK::AbstractPDMat, logNoise::Float64) 
+    GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(cK),typeof(data)}(x, y, mean, kernel, data, cK, logNoise)
 end
-
-GPE(x::VecF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0, elastic::Bool = false) =
-    GPE(x', y, mean, kernel, logNoise, elastic)
+function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0)
+    nobs = length(y)
+    kerneldata = KernelData(kernel, x)
+    GPE(x, y, mean, kernel, kerneldata, 
+        PDMat(Σ_default(x, kernel, kerneldata, logNoise)), 
+        logNoise)
+end
+GPE(x::VecF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0) =
+    GPE(x', y, mean, kernel, logNoise)
 
 """
     GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0)
 
 Construct a [GPE](@ref) object without observations.
 """
-function GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0, elastic = false) 
+function GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0) 
     x = Array{Float64}(undef, 1, 0) # ElasticArrays don't like length(x) = 0.
     y = Array{Float64}(undef, 0)
-    GPE(x, y, mean, kernel, logNoise, elastic)
+    GPE(x, y, mean, kernel, logNoise)
 end
 
 """
@@ -104,6 +105,7 @@ function fit!(gp::GPE{X,Y}, x::X, y::Y) where {X,Y}
     gp.x = x
     gp.y = y
     gp.data = KernelData(gp.kernel, x)
+    gp.cK = PDMat(Σ_default(gp))
     gp.dim, gp.nobs = size(x)
     initialise_target!(gp)
 end
@@ -142,17 +144,21 @@ end
 
 Initialise the marginal log-likelihood of Gaussian process `gp`.
 """
-function initialise_mll!(gp::GPE{X,Y,M,K,P,D}) where {X,Y,M,K,P,D}
-    μ = mean(gp.mean,gp.x)
-    Σ = cov(gp.kernel, gp.x, gp.data)
-    gp.cK = init_cK(P, Σ + (exp(2*gp.logNoise) + 1e-5)*I)
-    y = gp.y - μ
-    gp.alpha = gp.cK \ y
-    # Marginal log-likelihood
-    gp.mll = -(dot(y, gp.alpha) + logdet(gp.cK) + log2π * gp.nobs) / 2
-    gp
+# function initialise_mll!(gp::GPE{X,Y,M,K,P,D}) where {X,Y,M,K,P,D}
+#     μ = mean(gp.mean,gp.x)
+#     Σ = cov(gp.kernel, gp.x, gp.data)
+#     gp.cK = init_cK(P, Σ + (exp(2*gp.logNoise) + 1e-5)*I)
+#     y = gp.y - μ
+#     gp.alpha = gp.cK \ y
+#     # Marginal log-likelihood
+#     gp.mll = -(dot(y, gp.alpha) + logdet(gp.cK) + log2π * gp.nobs) / 2
+#     gp
+# end
+function initialise_mll!(gp)
+    update_mll!(gp)
 end
-init_cK(::Type{<:PDMat}, m) = PDMat(m)
+Σ_default(gp) = Σ_default(gp.x, gp.kernel, gp.data, gp.logNoise)
+Σ_default(x, kernel, data, logNoise) = make_posdef!(cov(kernel, x, data) + exp(2*logNoise)*I)
 
 """
     update_cK!(gp::GPE)
