@@ -39,7 +39,7 @@ function prepareappend!(kd, Xnew)
     nobs = kd.dims[1]
     if nobs + nobs_new > kd.capacity[1] 
         kd.capacity = kd.capacity .+ kd.stepsize
-        resize!(kd)
+        ElasticPDMats.resize!(kd)
     end
     kd, dim, nobs, nobs_new
 end
