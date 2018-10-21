@@ -1,5 +1,5 @@
 # Subtypes of Stationary must define the following functions:
-# cov(k::Stationary, r::Float64) = ::Float64
+# cov(k::Stationary, r::Number) = ::Float64
 # grad_kern!
 
 abstract type Stationary{D} <: Kernel where D <: Distances.SemiMetric end
@@ -39,10 +39,10 @@ function cov!(cK::MatF64, k::Stationary, X1::MatF64, X2::MatF64)
     end
     return cK
 end
-function Statistics.cov(k::Stationary, X1::MatF64, X2::MatF64)
+function Statistics.cov(k::Stationary, X1::MatF64, X2::AbstractArray{T, 2}) where T
     nobsv1 = size(X1, 2)
     nobsv2 = size(X2, 2)
-    cK = Array{Float64}(undef, nobsv1, nobsv2)
+    cK = Array{T}(undef, nobsv1, nobsv2)
     cov!(cK, k, X1, X2)
     return cK
 end
@@ -54,8 +54,7 @@ function cov!(cK::MatF64, k::Stationary, X::MatF64)
     met = metric(k)
     @inbounds for i in 1:nobsv
         for j in 1:i
-            cK[i,j] = cov(k, distij(met, X, i, j, dim))
-            cK[j,i] = cK[i,j]
+            cK[i, j] = cK[j, i] = cov(k, distij(met, X, i, j, dim))
         end
     end
     return cK
@@ -68,9 +67,9 @@ function Statistics.cov(k::Stationary, X::MatF64, data::StationaryData)
     cK = Matrix{Float64}(undef, nobsv, nobsv)
     cov!(cK, k, X, data)
 end
-function Statistics.cov(k::Stationary, X::MatF64)
+function Statistics.cov(k::Stationary, X::AbstractArray{T, 2}) where T
     nobsv = size(X, 2)
-    cK = Matrix{Float64}(undef, nobsv, nobsv)
+    cK = Matrix{T}(undef, nobsv, nobsv)
     cov!(cK, k, X)
 end
 dk_dlσ(k::Stationary, r::Float64) = 2 * cov(k,r)

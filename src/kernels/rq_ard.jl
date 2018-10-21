@@ -41,7 +41,7 @@ get_params(rq::RQArd) = [-log.(rq.iℓ2) / 2; log(rq.σ2) / 2; log(rq.α)]
 get_param_names(rq::RQArd) = [get_param_names(rq.iℓ2, :ll); :lσ; :lα]
 num_params(rq::RQArd) = length(rq.iℓ2) + 2
 
-Statistics.cov(rq::RQArd,r::Float64) = rq.σ2*(1+0.5*r/rq.α)^(-rq.α)
+Statistics.cov(rq::RQArd,r::Number) = rq.σ2*(1+0.5*r/rq.α)^(-rq.α)
 
 @inline dk_dll(rq::RQArd, r::Float64, wdiffp::Float64) =
     rq.σ2 * wdiffp * (1 + r / (2 * rq.α))^(-rq.α - 1)

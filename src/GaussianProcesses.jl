@@ -16,8 +16,8 @@ export GPBase, GP, GPE, GPMC, predict_f, predict_y, Kernel, Likelihood, Composit
     set_priors!,set_params!, update_target!
 
 
-const MatF64 = AbstractMatrix{Float64}
-const VecF64 = AbstractVector{Float64}
+const MatF64 = AbstractMatrix
+const VecF64 = AbstractVector
 
 const φ = normpdf
 const Φ = normcdf

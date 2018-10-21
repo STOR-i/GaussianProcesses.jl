@@ -34,6 +34,6 @@ get_params(mat::Mat12Iso) = Float64[log(mat.ℓ), log(mat.σ2) / 2]
 get_param_names(mat::Mat12Iso) = [:ll, :lσ]
 num_params(mat::Mat12Iso) = 2
 
-Statistics.cov(mat::Mat12Iso, r::Float64) = mat.σ2 * exp(-r / mat.ℓ)
+Statistics.cov(mat::Mat12Iso, r::Number) = mat.σ2 * exp(-r / mat.ℓ)
 
 @inline dk_dll(mat::Mat12Iso, r::Float64) = r / mat.ℓ * cov(mat, r)

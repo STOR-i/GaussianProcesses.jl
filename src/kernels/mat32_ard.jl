@@ -36,7 +36,7 @@ get_params(mat::Mat32Ard) = [-log.(mat.iℓ2) / 2; log(mat.σ2) / 2]
 get_param_names(mat::Mat32Ard) = [get_param_names(mat.iℓ2, :ll); :lσ]
 num_params(mat::Mat32Ard) = length(mat.iℓ2) + 1
 
-Statistics.cov(mat::Mat32Ard, r::Float64) =
+Statistics.cov(mat::Mat32Ard, r::Number) =
     (s = √3 * r; mat.σ2 * (1 + s) * exp(-s))
 
 dk_dll(mat::Mat32Ard, r::Float64, wdiffp::Float64) = 3 * mat.σ2 * wdiffp * exp(-√3 * r)

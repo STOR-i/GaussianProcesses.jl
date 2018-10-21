@@ -36,7 +36,7 @@ get_params(se::SEArd) = [-log.(se.iℓ2) / 2 ; log(se.σ2) / 2]
 get_param_names(k::SEArd) = [get_param_names(k.iℓ2, :ll); :lσ]
 num_params(se::SEArd) = length(se.iℓ2) + 1
 
-Statistics.cov(se::SEArd, r::Float64) = se.σ2*exp(-r / 2)
+Statistics.cov(se::SEArd, r::Number) = se.σ2*exp(-r / 2)
 
 @inline dk_dll(se::SEArd, r::Float64, wdiffp::Float64) = wdiffp*cov(se,r)
 @inline function dKij_dθp(se::SEArd, X::MatF64, i::Int, j::Int, p::Int, dim::Int)

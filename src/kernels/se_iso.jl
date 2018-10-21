@@ -32,7 +32,7 @@ get_params(se::SEIso) = Float64[log(se.ℓ2) / 2, log(se.σ2) / 2]
 get_param_names(se::SEIso) = [:ll, :lσ]
 num_params(se::SEIso) = 2
 
-Statistics.cov(se::SEIso, r::Float64) = se.σ2*exp(-0.5*r/se.ℓ2)
+Statistics.cov(se::SEIso, r::Number) = se.σ2*exp(-0.5*r/se.ℓ2)
 
 @inline dk_dll(se::SEIso, r::Float64) = r/se.ℓ2*cov(se,r)
 @inline function dk_dθp(se::SEIso, r::Float64, p::Int)

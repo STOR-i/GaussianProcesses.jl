@@ -9,13 +9,13 @@ Return posterior mean and variance of the Gaussian Process `gp` at specfic point
 given as columns of matrix `X`. If `full_cov` is `true`, the full covariance matrix is
 returned instead of only variances.
 """
-function predict_f(gp::GPBase, x::MatF64; full_cov::Bool=false)
+function predict_f(gp::GPBase, x::AbstractArray{T, 2}; full_cov::Bool=false) where T
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
     if full_cov
         return _predict(gp, x)
     else
         ## Calculate prediction for each point independently
-            μ = Array{Float64}(undef, size(x,2))
+            μ = Array{T}(undef, size(x,2))
             σ2 = similar(μ)
         for k in 1:size(x,2)
             m, sig = _predict(gp, x[:,k:k])
