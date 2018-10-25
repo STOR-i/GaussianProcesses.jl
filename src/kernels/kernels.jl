@@ -63,9 +63,9 @@ function cov!(cK::MatF64, k::Kernel, X::MatF64)
     end
     return cK
 end
-function Statistics.cov(k::Kernel, X::MatF64)
+function Statistics.cov(k::Kernel, X::AbstractArray{T, 2}) where T
     dim, nobsv = size(X)
-    cK = Array{Float64}(undef, nobsv, nobsv)
+    cK = Array{T}(undef, nobsv, nobsv)
     cov!(cK, k, X)
 end
 function cov!(cK::MatF64, k::Kernel, X::MatF64, data::KernelData)
