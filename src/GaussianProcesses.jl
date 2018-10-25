@@ -5,6 +5,7 @@ using StaticArrays
 using StatsFuns, SpecialFunctions
 
 using LinearAlgebra, Printf, Random, Statistics
+import Statistics: mean
 
 # Functions that should be available to package
 # users should be explicitly exported here

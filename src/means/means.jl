@@ -3,7 +3,7 @@
 abstract type Mean end
 
 # Calculate mean for matrix of observations
-function Statistics.mean(m::Mean, X::MatF64)
+function mean(m::Mean, X::MatF64)
     nobs = size(X, 2)
     μ = Array{Float64}(undef, nobs)
     @inbounds for i in 1:nobs
