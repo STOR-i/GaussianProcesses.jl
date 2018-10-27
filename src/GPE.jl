@@ -139,24 +139,6 @@ end
 #———————————————————————————————————————————————————————————————-
 #Functions for calculating the log-target
 
-"""
-    initialise_mll!(gp::GPE)
-
-Initialise the marginal log-likelihood of Gaussian process `gp`.
-"""
-# function initialise_mll!(gp::GPE{X,Y,M,K,P,D}) where {X,Y,M,K,P,D}
-#     μ = mean(gp.mean,gp.x)
-#     Σ = cov(gp.kernel, gp.x, gp.data)
-#     gp.cK = init_cK(P, Σ + (exp(2*gp.logNoise) + 1e-5)*I)
-#     y = gp.y - μ
-#     gp.alpha = gp.cK \ y
-#     # Marginal log-likelihood
-#     gp.mll = -(dot(y, gp.alpha) + logdet(gp.cK) + log2π * gp.nobs) / 2
-#     gp
-# end
-function initialise_mll!(gp)
-    update_mll!(gp)
-end
 Σ_default(gp) = Σ_default(gp.x, gp.kernel, gp.data, gp.logNoise)
 Σ_default(x, kernel, data, logNoise) = make_posdef!(cov(kernel, x, data) + exp(2*logNoise)*I)
 
@@ -282,7 +264,7 @@ Initialise the log-posterior
 of a Gaussian process `gp`.
 """
 function initialise_target!(gp::GPE)
-    initialise_mll!(gp)
+    update_mll!(gp)
         #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
     gp.target = gp.mll   + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel)
     gp
