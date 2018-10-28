@@ -394,8 +394,42 @@ function num_params(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tru
     n = 0
     noise && (n += 1)
     domean && (n += num_params(gp.mean))
-    kern && (n += num_params(gp.kernelern))
+    kern && (n += num_params(gp.kernel))
     n
+end
+
+function bounds(gp::GPE, noisebounds, meanbounds, kernbounds; 
+                noise::Bool=true, domean::Bool=true, kern::Bool=true)
+    lb = Float64[]
+    ub = Float64[]
+    if noise
+        if noisebounds == nothing
+            append!(lb, -Inf)
+            append!(ub, Inf)
+        else
+            append!(lb, noisebounds[1])
+            append!(ub, noisebounds[2])
+        end
+    end
+    if domean
+        if meanbounds == nothing && (n = num_params(gp.mean)) > 0
+            append!(lb, fill(-Inf, n))
+            append!(ub, fill(Inf, n))
+        else
+            append!(lb, meanbounds[1])
+            append!(ub, meanbounds[2])
+        end
+    end
+    if kern
+        if kernbounds == nothing && (n = num_params(gp.kernel)) > 0
+            append!(lb, fill(-Inf, n))
+            append!(ub, fill(Inf, n))
+        else
+            append!(lb, kernbounds[1])
+            append!(ub, kernbounds[2])
+        end
+    end
+    lb, ub
 end
 
 function set_params!(gp::GPE, hyp::VecF64;
