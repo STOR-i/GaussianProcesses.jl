@@ -8,7 +8,7 @@ function append!(gp::GPE{X,Y,M,K,P,D}, x::MatF64, y::VecF64) where {X,Y,M,K,P <:
     append!(gp.cK, newcov)
     gp.nobs += length(y)
     append!(gp.y, y)
-    update_mll!(gp, kern = false, noise = false)
+    update_target!(gp, kern = false, noise = false)
 end
 
 wrap_cK(cK::ElasticPDMat, Σbuffer, chol) = cK
@@ -27,7 +27,7 @@ function ElasticGPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel,
     data = ElasticKernelData(kernel, x, capacity = capacity, stepsize = stepsize)
     N = length(y)
     gp = GPE(ElasticArray(x), ElasticArray(y), mean, kernel, data, 
-             ElasticPDMat(view(x, 1:N, 1:N), 
+             ElasticPDMat(Σ_default(x, kernel, data, logNoise), 
                           capacity = capacity, stepsize = stepsize), 
              logNoise)
     initialise_target!(gp)
