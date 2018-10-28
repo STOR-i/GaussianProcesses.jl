@@ -33,9 +33,9 @@ function make_posdef!(m::MatF64)
     n = size(m, 1)
     size(m, 2) == n || throw(ArgumentError("Covariance matrix must be square"))
     for _ in 1:10 # 10 chances
-        if isposdef(m)
-            return m
-        else
+        try 
+            return m, cholesky(m)
+        catch
             # that wasn't (numerically) positive definite,
             # so let's add some weight to the diagonal
             ϵ = 1e-6 * tr(m) / n
@@ -44,7 +44,7 @@ function make_posdef!(m::MatF64)
             end
         end
     end
-    m
+    m, cholesky(m)
 end
 
 """
@@ -58,6 +58,6 @@ to the diagonal (and hereby all eigenvalues are raised by that amount mathematic
 until all eigenvalues are positive numerically.
 """
 function tolerant_PDMat(Sigma_raw::MatF64)
-    make_posdef!(Sigma_raw)
-    PDMat(Sigma_raw)
+    Sigma_raw, chol = make_posdef!(Sigma_raw)
+    PDMat(Sigma_raw, chol)
 end

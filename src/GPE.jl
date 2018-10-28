@@ -140,7 +140,7 @@ end
 #Functions for calculating the log-target
 
 Σ_default(gp) = Σ_default(gp.x, gp.kernel, gp.data, gp.logNoise)
-Σ_default(x, kernel, data, logNoise) = make_posdef!(cov(kernel, x, data) + exp(2*logNoise)*I)
+function Σ_default(x, kernel, data, logNoise) = make_posdef!(cov(kernel, x, data) + exp(2*logNoise)*I)[1]
 
 """
     update_cK!(gp::GPE)
