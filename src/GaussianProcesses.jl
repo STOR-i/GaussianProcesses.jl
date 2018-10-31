@@ -1,6 +1,6 @@
 module GaussianProcesses
 
-using Optim, PDMats, Distances, FastGaussQuadrature, RecipesBase, Distributions
+using Optim, PDMats, ElasticPDMats, ElasticArrays, Distances, FastGaussQuadrature, RecipesBase, Distributions
 using StaticArrays
 using StatsFuns, SpecialFunctions
 
@@ -32,6 +32,7 @@ include("utils.jl")
 include("chol_utils.jl")
 include("GP.jl")
 include("GPE.jl")
+include("GPEelastic.jl")
 include("GPMC.jl")
 include("mcmc.jl")
 include("optimize.jl")

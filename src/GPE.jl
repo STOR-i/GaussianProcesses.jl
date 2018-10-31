@@ -1,6 +1,6 @@
 # Main GaussianProcess type
 
-mutable struct GPE{X<:MatF64,Y<:VecF64,M<:Mean,K<:Kernel,D<:KernelData} <: GPBase
+mutable struct GPE{X<:MatF64,Y<:VecF64,M<:Mean,K<:Kernel,P<:AbstractPDMat,D<:KernelData} <: GPBase
     # Observation data
     "Input observations"
     x::X
@@ -23,7 +23,7 @@ mutable struct GPE{X<:MatF64,Y<:VecF64,M<:Mean,K<:Kernel,D<:KernelData} <: GPBas
     "Auxiliary observation data (to speed up calculations)"
     data::D
     "`(k + exp(2*obsNoise))`"
-    cK::PDMat{Float64,Matrix{Float64}}
+    cK::P
     "`(k + exp(2*obsNoise))⁻¹y`"
     alpha::Vector{Float64}
     "Marginal log-likelihood"
@@ -35,11 +35,10 @@ mutable struct GPE{X<:MatF64,Y<:VecF64,M<:Mean,K<:Kernel,D<:KernelData} <: GPBas
     "Gradient of log-target (gradient of marginal log-likelihood + gradient of log priors)"
     dtarget::Vector{Float64}
 
-    function GPE{X,Y,M,K}(x::X, y::Y, mean::M, kernel::K, logNoise::Float64) where {X,Y,M,K}
+    function GPE{X,Y,M,K,P,D}(x::X, y::Y, mean::M, kernel::K, data::D, cK::P, logNoise::Float64) where {X,Y,M,K,P,D}
         dim, nobs = size(x)
         length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        data = KernelData(kernel, x)
-        gp = new{X,Y,M,K,typeof(data)}(x, y, mean, kernel, logNoise, dim, nobs, data)
+        gp = new{X,Y,M,K,P,D}(x, y, mean, kernel, logNoise, dim, nobs, data, cK)
         initialise_target!(gp)
     end
 end
@@ -59,9 +58,16 @@ assumed that the observations are noise free.
 - `logNoise::Float64`: Natural logarithm of the standard deviation for the observation
   noise. The default is -2.0, which is equivalent to assuming no observation noise.
 """
-GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0) =
-    GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel)}(x, y, mean, kernel, logNoise)
-
+function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, data::KernelData, cK::AbstractPDMat, logNoise::Float64) 
+    GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(cK),typeof(data)}(x, y, mean, kernel, data, cK, logNoise)
+end
+function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0)
+    nobs = length(y)
+    kerneldata = KernelData(kernel, x)
+    GPE(x, y, mean, kernel, kerneldata, 
+        PDMat(Σ_default(x, kernel, kerneldata, logNoise)), 
+        logNoise)
+end
 GPE(x::VecF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0) =
     GPE(x', y, mean, kernel, logNoise)
 
@@ -70,8 +76,11 @@ GPE(x::VecF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0) 
 
 Construct a [GPE](@ref) object without observations.
 """
-GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0) =
-    GPE(Array{Float64}(undef, 0, 0), Array{Float64}(undef, 0), mean, kernel, logNoise)
+function GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0) 
+    x = Array{Float64}(undef, 1, 0) # ElasticArrays don't like length(x) = 0.
+    y = Array{Float64}(undef, 0)
+    GPE(x, y, mean, kernel, logNoise)
+end
 
 """
     GP(x, y, mean::Mean, kernel::Kernel[, logNoise::Float64=-2.0])
@@ -96,6 +105,7 @@ function fit!(gp::GPE{X,Y}, x::X, y::Y) where {X,Y}
     gp.x = x
     gp.y = y
     gp.data = KernelData(gp.kernel, x)
+    gp.cK = PDMat(Σ_default(gp))
     gp.dim, gp.nobs = size(x)
     initialise_target!(gp)
 end
@@ -129,21 +139,9 @@ end
 #———————————————————————————————————————————————————————————————-
 #Functions for calculating the log-target
 
-"""
-    initialise_mll!(gp::GPE)
+Σ_default(gp) = Σ_default(gp.x, gp.kernel, gp.data, gp.logNoise)
 
-Initialise the marginal log-likelihood of Gaussian process `gp`.
-"""
-function initialise_mll!(gp::GPE)
-    μ = mean(gp.mean,gp.x)
-    Σ = cov(gp.kernel, gp.x, gp.data)
-    gp.cK = PDMat(Σ + (exp(2*gp.logNoise) + 1e-5)*I)
-    y = gp.y - μ
-    gp.alpha = gp.cK \ y
-    # Marginal log-likelihood
-    gp.mll = -(dot(y, gp.alpha) + logdet(gp.cK) + log2π * gp.nobs) / 2
-    gp
-end
+Σ_default(x, kernel, data, logNoise) = make_posdef!(cov(kernel, x, data) + exp(2*logNoise)*I)[1]
 
 """
     update_cK!(gp::GPE)
@@ -152,17 +150,22 @@ Update the covariance matrix and its Cholesky decomposition of Gaussian process 
 """
 function update_cK!(gp::GPE)
     old_cK = gp.cK
-    Σbuffer = old_cK.mat
+    Σbuffer = mat(old_cK)
     cov!(Σbuffer, gp.kernel, gp.x, gp.data)
     noise = (exp(2*gp.logNoise) + 1e-5)
     for i in 1:gp.nobs
         Σbuffer[i,i] += noise
     end
-    chol_buffer = old_cK.chol.factors
+    chol_buffer = cholfactors(old_cK)
     copyto!(chol_buffer, Σbuffer)
     chol = cholesky!(Symmetric(chol_buffer))
-    gp.cK = PDMats.PDMat(Σbuffer, chol)
+    gp.cK = wrap_cK(gp.cK, Σbuffer, chol)
+    gp.cK
 end
+
+wrap_cK(cK::PDMat, Σbuffer, chol) = PDMat(Σbuffer, chol)
+mat(cK::PDMat) = cK.mat
+cholfactors(cK::PDMat) = cK.chol.factors
 
 # modification of initialise_target! that reuses existing matrices to avoid
 # unnecessary memory allocations, which speeds things up significantly
@@ -262,7 +265,7 @@ Initialise the log-posterior
 of a Gaussian process `gp`.
 """
 function initialise_target!(gp::GPE)
-    initialise_mll!(gp)
+    update_mll!(gp)
         #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
     gp.target = gp.mll   + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel)
     gp
