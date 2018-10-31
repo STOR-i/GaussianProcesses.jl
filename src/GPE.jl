@@ -118,9 +118,9 @@ fit!(gp::GPE, x::VecF64, y::VecF64) = fit!(gp, x', y)
 """
     get_ααinvcKI!(ααinvcKI::Matrix{Float64}, cK::AbstractPDMat, α::Vector)
 
-Write `ααᵀ - cK * eye(nobs)` to `ααinvcKI` avoiding any memory allocation, where `cK` and
+Write `ααᵀ - cK⁻¹` to `ααinvcKI` avoiding any memory allocation, where `cK` and
 `α` are the covariance matrix and the alpha vector of a Gaussian process, respectively.
-Hereby `α` is defined as `cK \\ (Y - μ)`.
+Hereby `α` is defined as `cK⁻¹ (Y - μ)`.
 """
 function get_ααinvcKI!(ααinvcKI::MatF64, cK::AbstractPDMat, α::Vector)
     nobs = length(α)
@@ -132,6 +132,7 @@ function get_ααinvcKI!(ααinvcKI::MatF64, cK::AbstractPDMat, α::Vector)
     @inbounds for i in 1:nobs
         ααinvcKI[i,i] = -1.0
     end
+    # `ldiv!(A, B)`: Compute A \ B in-place and overwriting B to store the result.
     ldiv!(cK.chol, ααinvcKI)
     BLAS.ger!(1.0, α, α, ααinvcKI)
 end
