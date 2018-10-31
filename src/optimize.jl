@@ -19,16 +19,16 @@ Optimise the hyperparameters of Gaussian process `gp` based on type II maximum l
 function optimize!(gp::GPBase; method = LBFGS(), domean::Bool = true, kern::Bool = true,
                    noise::Bool = true, lik::Bool = true, 
                    meanbounds = nothing, kernbounds = nothing, 
-                   noisebounds = nothing, kwargs...)
+                   noisebounds = nothing, likbounds = nothing, kwargs...)
     params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     # println(params_kwargs)
     func = get_optim_target(gp; params_kwargs...)
     init = get_params(gp; params_kwargs...)  # Initial hyperparameter values
-    if meanbounds == kernbounds == noisebounds == nothing
+    if meanbounds == kernbounds == noisebounds == likbounds == nothing 
         results = optimize(func, init; method=method, kwargs...)     # Run optimizer
     else
-        lb, ub = bounds(gp, noisebounds, meanbounds, kernbounds;
-                        domean = domean, kern = kern, noise = noise)
+        lb, ub = bounds(gp, noisebounds, meanbounds, kernbounds, likbounds;
+                        domean = domean, kern = kern, noise = noise, lik = lik)
         results = optimize(func.f, func.df, lb, ub, init, Fminbox(method))
     end
     set_params!(gp, Optim.minimizer(results); params_kwargs...)

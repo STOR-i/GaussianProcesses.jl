@@ -322,6 +322,7 @@ Random.rand(gp::GPMC, x::VecF64, n::Int) = rand(gp, x', n)
 Random.rand(gp::GPMC, x::MatF64) = vec(rand(gp,x,1))
 Random.rand(gp::GPMC, x::VecF64) = vec(rand(gp,x',1))
 
+appendlikbounds!(lb, ub, gp::GPMC, bounds) = appendbounds!(lb, ub, num_params(gp.lik), bounds)
 
 function get_params(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     params = Float64[]

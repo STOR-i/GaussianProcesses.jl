@@ -398,37 +398,28 @@ function num_params(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tru
     n
 end
 
-function bounds(gp::GPE, noisebounds, meanbounds, kernbounds; 
-                noise::Bool=true, domean::Bool=true, kern::Bool=true)
+function appendbounds!(lb, ub, n, bounds)
+    n == 0 && return
+    if bounds == nothing
+        append!(lb, fill(-Inf, n))
+        append!(ub, fill(Inf, n))
+    else
+        append!(lb, bounds[1])
+        append!(ub, bounds[2])
+    end
+    return
+end
+appendnoisebounds!(lb, ub, gp::GPE, bounds) = appendbounds!(lb, ub, 1, bounds)
+appendnoisebounds!(lb, ub, gp, bounds) = Nothing
+appendlikbounds!(lb, ub, gp, bounds) = Nothing
+function bounds(gp::GPBase, noisebounds, meanbounds, kernbounds, likbounds; 
+                noise::Bool=true, domean::Bool=true, kern::Bool=true, lik::Bool=true)
     lb = Float64[]
     ub = Float64[]
-    if noise
-        if noisebounds == nothing
-            append!(lb, -Inf)
-            append!(ub, Inf)
-        else
-            append!(lb, noisebounds[1])
-            append!(ub, noisebounds[2])
-        end
-    end
-    if domean
-        if meanbounds == nothing && (n = num_params(gp.mean)) > 0
-            append!(lb, fill(-Inf, n))
-            append!(ub, fill(Inf, n))
-        else
-            append!(lb, meanbounds[1])
-            append!(ub, meanbounds[2])
-        end
-    end
-    if kern
-        if kernbounds == nothing && (n = num_params(gp.kernel)) > 0
-            append!(lb, fill(-Inf, n))
-            append!(ub, fill(Inf, n))
-        else
-            append!(lb, kernbounds[1])
-            append!(ub, kernbounds[2])
-        end
-    end
+    noise && appendnoisebounds!(lb, ub, gp, noisebounds)
+    lik && appendlikbounds!(lb, ub, gp, likbounds)
+    domean && appendbounds!(lb, ub, num_params(gp.mean), meanbounds)
+    kern && appendbounds!(lb, ub, num_params(gp.kernel), kernbounds)
     lb, ub
 end
 
