@@ -2,7 +2,7 @@ module TestElastic
 using Test, GaussianProcesses
 
 @testset "elastic" begin
-    N = 10; nobs = 20;
+    N = 2; nobs = 20;
     for m in [MeanLin(rand(N)), MeanZero(), MeanConst(rand())]
         for k in [Mat52Iso(rand(), rand()), SEIso(rand(), rand()), 
                   Mat32Ard(rand(N), rand()), RQArd(rand(N), rand(), rand()), 
@@ -20,12 +20,17 @@ using Test, GaussianProcesses
             mu2, sig2 = predict_y(gp2, xtest)
             @test mu1 ≈ mu2
             @test sig1 ≈ sig2
+            @test gp1.mll ≈ gp2.mll
+            @test isapprox(gp1.alpha, gp2.alpha, atol = 1e-4)
             optimize!(gp1)
             optimize!(gp2)
             @test gp1.mll ≈ gp2.mll
             @test isapprox(gp1.alpha, gp2.alpha, atol = 1e-4)
         end
     end
+    gp = ElasticGPE(N, kernel = SEIso(0., 0.), capacity = 50)
+    @test gp.cK.chol.capacity == 50
+    @test gp.cK.mat.m.capacity == gp.data.R.capacity == (50, 50)
 end
 
 end
