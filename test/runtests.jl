@@ -6,4 +6,5 @@ module TestGaussianProcesses
 @time include("optim.jl")
 @time include("mcmc.jl")
 @time include("gpmc.jl")
+@time include("elastic.jl")
 end

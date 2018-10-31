@@ -23,8 +23,8 @@ mutable struct LinIso <: Kernel
     LinIso(ll::Float64) = new(exp(2 * ll), [])
 end
 
-struct LinIsoData <: KernelData
-    XtX::Matrix{Float64}
+struct LinIsoData{D} <: KernelData
+    XtX::D
 end
 
 function KernelData(k::LinIso, X::MatF64)

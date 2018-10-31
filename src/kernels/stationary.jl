@@ -79,8 +79,8 @@ dk_dlσ(k::Stationary, r::Float64) = 2 * cov(k,r)
 
 abstract type Isotropic{D} <: Stationary{D} end
 
-struct IsotropicData <: StationaryData
-    R::Matrix{Float64}
+struct IsotropicData{D} <: StationaryData
+    R::D
 end
 
 function KernelData(k::Isotropic, X::MatF64)
@@ -117,8 +117,8 @@ end
 
 abstract type StationaryARD{D} <: Stationary{D} end
 
-struct StationaryARDData <: StationaryData
-    dist_stack::Array{Float64, 3}
+struct StationaryARDData{D} <: StationaryData
+    dist_stack::D
 end
 
 # May need to customized in subtypes
@@ -127,7 +127,7 @@ function KernelData(k::StationaryARD, X::MatF64)
     dist_stack = Array{Float64}(undef, nobsv, nobsv, dim)
     for d in 1:dim
         grad_ls = view(dist_stack, :, :, d)
-        pairwise!(grad_ls, SqEuclidean(), view(X, d:d,:))
+        distance!(grad_ls, SqEuclidean(), view(X, d:d,:))
     end
     StationaryARDData(dist_stack)
 end
