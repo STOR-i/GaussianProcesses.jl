@@ -64,9 +64,12 @@ end
 function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0)
     nobs = length(y)
     kerneldata = KernelData(kernel, x)
-    GPE(x, y, mean, kernel, kerneldata, 
-        PDMat(Σ_default(x, kernel, kerneldata, logNoise)), 
-        logNoise)
+    Σ = Σ_default(x, kernel, kerneldata, logNoise)
+    # create placeholder PDMat
+    m = Matrix{Float64}(undef, nobs, nobs)
+    chol = Matrix{Float64}(undef, nobs, nobs)
+    cK = PDMats.PDMat(m, Cholesky(chol, 'U', 0))
+    GPE(x, y, mean, kernel, kerneldata, cK, logNoise)
 end
 GPE(x::VecF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0) =
     GPE(x', y, mean, kernel, logNoise)
@@ -141,8 +144,7 @@ end
 #Functions for calculating the log-target
 
 Σ_default(gp) = Σ_default(gp.x, gp.kernel, gp.data, gp.logNoise)
-
-Σ_default(x, kernel, data, logNoise) = make_posdef!(cov(kernel, x, data) + exp(2*logNoise)*I)[1]
+Σ_default(x, kernel, data, logNoise) = cov(kernel, x, data) + exp(2*logNoise)*I
 
 """
     update_cK!(gp::GPE)
@@ -158,15 +160,13 @@ function update_cK!(gp::GPE)
         Σbuffer[i,i] += noise
     end
     chol_buffer = cholfactors(old_cK)
-    copyto!(chol_buffer, Σbuffer)
-    chol = cholesky!(Symmetric(chol_buffer))
+    Σbuffer, chol = tolerant_PDMat!(chol_buffer, Σbuffer)
     gp.cK = wrap_cK(gp.cK, Σbuffer, chol)
-    gp.cK
+    # copyto!(chol_buffer, Σbuffer)
+    # chol = cholesky!(Symmetric(chol_buffer))
+    # gp.cK = wrap_cK(gp.cK, Σbuffer, chol)
+    # gp.cK = new_cK
 end
-
-wrap_cK(cK::PDMat, Σbuffer, chol) = PDMat(Σbuffer, chol)
-mat(cK::PDMat) = cK.mat
-cholfactors(cK::PDMat) = cK.chol.factors
 
 # modification of initialise_target! that reuses existing matrices to avoid
 # unnecessary memory allocations, which speeds things up significantly
@@ -348,8 +348,8 @@ function _predict(gp::GPE, x::MatF64)
     mu = mean(gp.mean, x) + cK'*gp.alpha        # Predictive mean
     Sigma_raw = cov(gp.kernel, x) - Lck'Lck # Predictive covariance
     # Add jitter to get stable covariance
-    Sigma = tolerant_PDMat(Sigma_raw)
-    return mu, Sigma
+    m, chol = tolerant_PDMat!(Sigma_raw)
+    return mu, PDMat(m, chol)
 end
 
 #———————————————————————————————————————————————————————————
@@ -362,7 +362,8 @@ function Random.rand!(gp::GPE, x::MatF64, A::DenseMatrix)
         # Prior mean and covariance
         μ = mean(gp.mean, x);
         Σraw = cov(gp.kernel, x);
-        Σ = tolerant_PDMat(Σraw)
+        Σraw, chol = tolerant_PDMat!(Σraw)
+        Σ = PDMat(Σraw, chol)
     else
         # Posterior mean and covariance
         μ, Σ = predict_f(gp, x; full_cov=true)
