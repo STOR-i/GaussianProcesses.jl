@@ -144,7 +144,7 @@ end
 #Functions for calculating the log-target
 
 Σ_default(gp) = Σ_default(gp.x, gp.kernel, gp.data, gp.logNoise)
-Σ_default(x, kernel, data, logNoise) = cov(kernel, x, data) + exp(2*logNoise)*I
+Σ_default(x, kernel, data, logNoise) = cov(kernel, x, data) + (exp(2*logNoise)+eps())*I
 
 """
     update_cK!(gp::GPE)
@@ -155,12 +155,11 @@ function update_cK!(gp::GPE)
     old_cK = gp.cK
     Σbuffer = mat(old_cK)
     cov!(Σbuffer, gp.kernel, gp.x, gp.data)
-    noise = (exp(2*gp.logNoise) + 1e-5)
+    noise = exp(2*gp.logNoise)+eps()
     for i in 1:gp.nobs
         Σbuffer[i,i] += noise
     end
-    chol_buffer = cholfactors(old_cK)
-    Σbuffer, chol = tolerant_PDMat!(chol_buffer, Σbuffer)
+    Σbuffer, chol = make_posdef!(Σbuffer, cholfactors(old_cK))
     gp.cK = wrap_cK(gp.cK, Σbuffer, chol)
     # copyto!(chol_buffer, Σbuffer)
     # chol = cholesky!(Symmetric(chol_buffer))
@@ -348,7 +347,7 @@ function _predict(gp::GPE, x::MatF64)
     mu = mean(gp.mean, x) + cK'*gp.alpha        # Predictive mean
     Sigma_raw = cov(gp.kernel, x) - Lck'Lck # Predictive covariance
     # Add jitter to get stable covariance
-    m, chol = tolerant_PDMat!(Sigma_raw)
+    m, chol = make_posdef!(Sigma_raw)
     return mu, PDMat(m, chol)
 end
 
@@ -362,7 +361,7 @@ function Random.rand!(gp::GPE, x::MatF64, A::DenseMatrix)
         # Prior mean and covariance
         μ = mean(gp.mean, x);
         Σraw = cov(gp.kernel, x);
-        Σraw, chol = tolerant_PDMat!(Σraw)
+        Σraw, chol = make_posdef!(Σraw)
         Σ = PDMat(Σraw, chol)
     else
         # Posterior mean and covariance

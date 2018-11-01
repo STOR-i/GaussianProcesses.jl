@@ -29,29 +29,29 @@ end
 # 1D Case for prediction
 predict_f(gp::GPBase, x::VecF64; full_cov::Bool=false) = predict_f(gp, x'; full_cov=full_cov)
 
-wrap_cK(cK::PDMat, Σbuffer, chol) = PDMat(Σbuffer, chol)
+wrap_cK(cK::PDMat, Σbuffer, chol::Cholesky) = PDMat(Σbuffer, chol)
 mat(cK::PDMat) = cK.mat
 cholfactors(cK::PDMat) = cK.chol.factors
 """
-    tolerant_PDMat(old_cK::AbstractPDMat, Σ::Matrix{Float64})
+    make_posdef!(m::Matrix{Float64}, chol_factors::Matrix{Float64})
 
-Try to encode covariance matrix `Σ` as positive definite matrix of type `PDMat`.
-The allocated matrices in `old_cK` are recycled to reduce the number of memory allocations.
+Try to encode covariance matrix `m` as a positive definite matrix.
+The `chol_factors` matrix is recycled to store the cholesky decomposition,
+so as to reduce the number of memory allocations.
 
 Sometimes covariance matrices of Gaussian processes are positive definite mathematically
 but have negative eigenvalues numerically. To resolve this issue, small weights are added
 to the diagonal (and hereby all eigenvalues are raised by that amount mathematically)
 until all eigenvalues are positive numerically.
 """
-function tolerant_PDMat!(chol_buffer::MatF64, m::MatF64)
+function make_posdef!(m::MatF64, chol_factors::MatF64)
     n = size(m, 1)
     size(m, 2) == n || throw(ArgumentError("Covariance matrix must be square"))
-    local err
     for _ in 1:10 # 10 chances
         try 
             # return m, cholesky(m)
-            copyto!(chol_buffer, m)
-            chol = cholesky!(Symmetric(chol_buffer))
+            copyto!(chol_factors, m)
+            chol = cholesky!(Symmetric(chol_factors, :U))
             return m, chol
         catch err
             if typeof(err)!=LinearAlgebra.PosDefException
@@ -65,10 +65,12 @@ function tolerant_PDMat!(chol_buffer::MatF64, m::MatF64)
             end
         end
     end
-    throw(err)
+    copyto!(chol_factors, m)
+    chol = cholesky!(Symmetric(chol_factors, :U))
+    return m, chol
 end
-function tolerant_PDMat!(m::MatF64)
+function make_posdef!(m::MatF64)
     chol_buffer = similar(m)
-    return tolerant_PDMat!(chol_buffer, m)
+    return make_posdef!(m, chol_buffer)
 end
 

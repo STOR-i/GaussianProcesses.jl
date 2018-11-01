@@ -290,8 +290,8 @@ function _predict(gp::GPMC, x::MatF64)
     fmu =  mean(gp.mean,x) + Lck'gp.v     # Predictive mean
     Sigma_raw = cov(gp.kernel, x) - Lck'Lck # Predictive covariance
     # Add jitter to get stable covariance
-    fSigma = tolerant_PDMat(Sigma_raw)
-    return fmu, fSigma
+    Σ, chol = make_posdef!(Sigma_raw)
+    return fmu, Σ
 end
 
 
@@ -305,7 +305,7 @@ function Random.rand!(gp::GPMC, x::MatF64, A::DenseMatrix)
         μ = mean(gp.mean, x);
         Σraw = cov(gp.kernel, x);
         # Add jitter to get stable covariance
-        Σ = tolerant_PDMat(Σraw)
+        Σ, chol = make_posdef!(Σraw)
     else
         # Posterior mean and covariance
         μ, Σ = predict_f(gp, x; full_cov=true)
