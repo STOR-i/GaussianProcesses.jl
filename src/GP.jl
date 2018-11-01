@@ -29,12 +29,13 @@ end
 # 1D Case for prediction
 predict_f(gp::GPBase, x::VecF64; full_cov::Bool=false) = predict_f(gp, x'; full_cov=full_cov)
 
-function make_posdef!(m::MatF64)
+make_posdef!(m::MatF64) = make_posdef!(m, LinearAlgebra.cholcopy(m))
+function make_posdef!(m::MatF64, chol)
     n = size(m, 1)
     size(m, 2) == n || throw(ArgumentError("Covariance matrix must be square"))
     for _ in 1:10 # 10 chances
         try 
-            return m, cholesky(m)
+            return m, cholesky!(chol)
         catch
             # that wasn't (numerically) positive definite,
             # so let's add some weight to the diagonal
@@ -44,7 +45,7 @@ function make_posdef!(m::MatF64)
             end
         end
     end
-    m, cholesky(m)
+    m, cholesky!(chol)
 end
 
 """

@@ -141,7 +141,18 @@ end
 
 Σ_default(gp) = Σ_default(gp.x, gp.kernel, gp.data, gp.logNoise)
 
-Σ_default(x, kernel, data, logNoise) = make_posdef!(cov(kernel, x, data) + exp(2*logNoise)*I)[1]
+@inline function addnoise!(Σ::MatF64, logNoise)
+    noise = exp(2*logNoise)
+    @inbounds for i in 1:size(Σ, 1)
+        Σ[i, i] += noise
+    end
+end
+
+function Σ_default(x, kernel, data, logNoise)
+    Σ = cov(kernel, x, data)
+    addnoise!(Σ, logNoise)
+    make_posdef!(Σ)[1]
+end
 
 """
     update_cK!(gp::GPE)
@@ -152,13 +163,10 @@ function update_cK!(gp::GPE)
     old_cK = gp.cK
     Σbuffer = mat(old_cK)
     cov!(Σbuffer, gp.kernel, gp.x, gp.data)
-    noise = (exp(2*gp.logNoise) + 1e-5)
-    for i in 1:gp.nobs
-        Σbuffer[i,i] += noise
-    end
+    addnoise!(Σbuffer, gp.logNoise)
     chol_buffer = cholfactors(old_cK)
     copyto!(chol_buffer, Σbuffer)
-    chol = cholesky!(Symmetric(chol_buffer))
+    Σbuffer, chol = make_posdef!(Σbuffer, chol_buffer)
     gp.cK = wrap_cK(gp.cK, Σbuffer, chol)
     gp.cK
 end
@@ -265,7 +273,7 @@ Initialise the log-posterior
 of a Gaussian process `gp`.
 """
 function initialise_target!(gp::GPE)
-    update_mll!(gp)
+    update_mll!(gp, noise = false, kern = false, domean = false)
         #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
     gp.target = gp.mll   + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel)
     gp
