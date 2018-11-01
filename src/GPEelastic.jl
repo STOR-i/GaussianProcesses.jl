@@ -25,14 +25,14 @@ function ElasticGPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel,
                     logNoise::Float64 = -2.0;
                     capacity = 10^3, stepsize = 10^3)
     data = ElasticKernelData(kernel, x, capacity = capacity, stepsize = stepsize)
-    N = length(y)
-    gp = GPE(ElasticArray(x), ElasticArray(y), mean, kernel, data, 
-             ElasticPDMat(Σ_default(x, kernel, data, logNoise), 
-                          capacity = capacity, stepsize = stepsize), 
-             logNoise)
+    nobs = length(y)
+    # create placeholder PDMat
+    m    = Matrix{Float64}(undef, nobs, nobs)
+    chol = Matrix{Float64}(undef, nobs, nobs)
+    cK = ElasticPDMat(m, Cholesky(chol, 'U', 0), capacity=capacity, stepsize=stepsize)
+    gp = GPE(ElasticArray(x), ElasticArray(y), mean, kernel, data, cK, logNoise)
     initialise_target!(gp)
 end
-export ElasticGPE
 
 function prepareappend!(kd, Xnew)
     dim, nobs_new = size(Xnew)
