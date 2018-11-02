@@ -27,7 +27,7 @@ function predict_f(gp::GPBase, x::AbstractArray{T, 2}; full_cov::Bool=false) whe
 end
 
 # 1D Case for prediction
-predict_f(gp::GPBase, x::VecF64; full_cov::Bool=false) = predict_f(gp, x'; full_cov=full_cov)
+predict_f(gp::GPBase, x::AbstractVector; full_cov::Bool=false) = predict_f(gp, x'; full_cov=full_cov)
 
 wrap_cK(cK::PDMat, Σbuffer, chol::Cholesky) = PDMat(Σbuffer, chol)
 mat(cK::PDMat) = cK.mat
@@ -44,7 +44,7 @@ but have negative eigenvalues numerically. To resolve this issue, small weights 
 to the diagonal (and hereby all eigenvalues are raised by that amount mathematically)
 until all eigenvalues are positive numerically.
 """
-function make_posdef!(m::MatF64, chol_factors::MatF64)
+function make_posdef!(m::AbstractMatrix, chol_factors::AbstractMatrix)
     n = size(m, 1)
     size(m, 2) == n || throw(ArgumentError("Covariance matrix must be square"))
     for _ in 1:10 # 10 chances
@@ -69,7 +69,7 @@ function make_posdef!(m::MatF64, chol_factors::MatF64)
     chol = cholesky!(Symmetric(chol_factors, :U))
     return m, chol
 end
-function make_posdef!(m::MatF64)
+function make_posdef!(m::AbstractMatrix)
     chol_buffer = similar(m)
     return make_posdef!(m, chol_buffer)
 end

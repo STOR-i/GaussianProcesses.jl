@@ -5,7 +5,7 @@
 Create a matrix by applying function `f` to each pair of columns of input matrices
 `X` and `Y`.
 """
-function map_column_pairs(f, X::MatF64, Y::AbstractArray{T, 2}) where T
+function map_column_pairs(f, X::AbstractMatrix, Y::AbstractArray{T, 2}) where T
     nobs1 = size(X,2)
     nobs2 = size(Y,2)
     D = Array{T}(undef, nobs1, nobs2)
@@ -30,7 +30,7 @@ end
 
 Like [`map_column_pairs`](@ref), but stores the result in `D` rather than a new matrix.
 """
-function map_column_pairs!(D::MatF64, f, X::MatF64, Y::MatF64)
+function map_column_pairs!(D::AbstractMatrix, f, X::AbstractMatrix, Y::AbstractMatrix)
     dim, nobs1 = size(X)
     nobs2 = size(Y,2)
     dim == size(Y,1) || throw(ArgumentError("Input observation matrices must have consistent dimensions"))
@@ -44,7 +44,7 @@ function map_column_pairs!(D::MatF64, f, X::MatF64, Y::MatF64)
     return D
 end
 
-function map_column_pairs!(D::MatF64, f, X::MatF64)
+function map_column_pairs!(D::AbstractMatrix, f, X::AbstractMatrix)
     dim, nobsv = size(X)
     size(D,1) == nobsv || throw(ArgumentError(@sprintf("D has %d rows, while X has %d columns (should be same)",
                                                        size(D,1), nobsv)))

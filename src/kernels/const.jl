@@ -21,7 +21,7 @@ mutable struct Const <: Kernel
     Const(lσ::Float64) = new(exp(2 * lσ), [])
 end
 
-function set_params!(cons::Const, hyp::VecF64)
+function set_params!(cons::Const, hyp::AbstractVector)
     length(hyp) == 1 || throw(ArgumentError("Constant kernel only has one parameters"))
     cons.σ2 = exp(2.0*hyp[1])
 end
@@ -31,19 +31,19 @@ get_param_names(cons::Const) = [:lσ]
 num_params(cons::Const) = 1
 
 Statistics.cov(cons::Const) = cons.σ2
-function Statistics.cov(cons::Const, x::VecF64, y::VecF64)
+function Statistics.cov(cons::Const, x::AbstractVector, y::AbstractVector)
     return cov(cons)
 end
 
 @inline dk_dlσ(cons::Const) = 2.0*cov(cons)
-@inline function dKij_dθp(cons::Const, X::MatF64, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(cons::Const, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
     if p == 1
         return dk_dlσ(cons)
     else
         return NaN
     end
 end
-@inline function dKij_dθp(cons::Const, X::MatF64, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(cons::Const, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
     if p == 1
         return dKij_dθp(cons, X, i, j, p, dim)
     else

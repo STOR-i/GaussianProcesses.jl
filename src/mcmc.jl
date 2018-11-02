@@ -11,7 +11,7 @@ function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64
     L_bar = Array{Float64}(undef, gp.nobs, gp.nobs)
     params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     count = 0
-    function calc_target(gp::GPBase, θ::VecF64) #log-target and its gradient
+    function calc_target(gp::GPBase, θ::AbstractVector) #log-target and its gradient
         count += 1
         try
             set_params!(gp, θ; params_kwargs...)

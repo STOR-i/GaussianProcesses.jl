@@ -17,14 +17,14 @@ end
 ard_weights(kernel::Stationary{WeightedSqEuclidean}) = kernel.iℓ2
 ard_weights(kernel::Stationary{WeightedEuclidean}) = kernel.iℓ2
 
-Statistics.cov(k::Stationary, x::VecF64, y::VecF64) = cov(k, distance(k, x, y))
-@inline function cov_ij(k::Stationary, X::MatF64, i::Int, j::Int, dim::Int)
+Statistics.cov(k::Stationary, x::AbstractVector, y::AbstractVector) = cov(k, distance(k, x, y))
+@inline function cov_ij(k::Stationary, X::AbstractMatrix, i::Int, j::Int, dim::Int)
     cov(k, distij(metric(k), X, i, j, dim))
 end
-@inline function cov_ij(k::Stationary, X::MatF64, data::KernelData, i::Int, j::Int, dim::Int)
+@inline function cov_ij(k::Stationary, X::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int)
     cov(k, distij(metric(k), X, i, j, dim))
 end
-function cov!(cK::MatF64, k::Stationary, X1::MatF64, X2::MatF64)
+function cov!(cK::AbstractMatrix, k::Stationary, X1::AbstractMatrix, X2::AbstractMatrix)
     dim1, nobsv1 = size(X1)
     dim2, nobsv2 = size(X2)
     dim1==dim2 || throw(ArgumentError("X1 and X2 must have same dimension"))
@@ -39,7 +39,7 @@ function cov!(cK::MatF64, k::Stationary, X1::MatF64, X2::MatF64)
     end
     return cK
 end
-function Statistics.cov(k::Stationary, X1::MatF64, X2::AbstractArray{T, 2}) where T
+function Statistics.cov(k::Stationary, X1::AbstractMatrix, X2::AbstractArray{T, 2}) where T
     nobsv1 = size(X1, 2)
     nobsv2 = size(X2, 2)
     cK = Array{T}(undef, nobsv1, nobsv2)
@@ -47,7 +47,7 @@ function Statistics.cov(k::Stationary, X1::MatF64, X2::AbstractArray{T, 2}) wher
     return cK
 end
 
-function cov!(cK::MatF64, k::Stationary, X::MatF64)
+function cov!(cK::AbstractMatrix, k::Stationary, X::AbstractMatrix)
     dim, nobsv = size(X)
     nobsv==size(cK,1) || throw(ArgumentError("X and cK incompatible nobsv"))
     nobsv==size(cK,2) || throw(ArgumentError("X and cK incompatible nobsv"))
@@ -59,10 +59,10 @@ function cov!(cK::MatF64, k::Stationary, X::MatF64)
     end
     return cK
 end
-function cov!(cK::MatF64, k::Stationary, X::MatF64, data::StationaryData)
+function cov!(cK::AbstractMatrix, k::Stationary, X::AbstractMatrix, data::StationaryData)
     cov!(cK, k, X)
 end
-function Statistics.cov(k::Stationary, X::MatF64, data::StationaryData)
+function Statistics.cov(k::Stationary, X::AbstractMatrix, data::StationaryData)
     nobsv = size(X, 2)
     cK = Matrix{Float64}(undef, nobsv, nobsv)
     cov!(cK, k, X, data)
@@ -82,29 +82,29 @@ struct IsotropicData{D} <: StationaryData
     R::D
 end
 
-function KernelData(k::Isotropic, X::MatF64)
+function KernelData(k::Isotropic, X::AbstractMatrix)
      IsotropicData(distance(k, X))
 end
-function kernel_data_key(k::Isotropic, X::MatF64)
+function kernel_data_key(k::Isotropic, X::AbstractMatrix)
     return @sprintf("%s_%s", "IsotropicData", metric(k))
 end
 
-@inline @inbounds function cov_ij(kern::Isotropic, X::MatF64, data::IsotropicData, i::Int, j::Int, dim::Int)
+@inline @inbounds function cov_ij(kern::Isotropic, X::AbstractMatrix, data::IsotropicData, i::Int, j::Int, dim::Int)
     return cov(kern, data.R[i,j])
 end
-@inline function dKij_dθp(kern::Isotropic,X::MatF64,i::Int,j::Int,p::Int,dim::Int)
+@inline function dKij_dθp(kern::Isotropic,X::AbstractMatrix,i::Int,j::Int,p::Int,dim::Int)
     return dk_dθp(kern, distij(metric(kern),X,i,j,dim), p)
 end
-@inline @inbounds function dKij_dθp(kern::Isotropic,X::MatF64,data::IsotropicData,i::Int,j::Int,p::Int,dim::Int)
+@inline @inbounds function dKij_dθp(kern::Isotropic,X::AbstractMatrix,data::IsotropicData,i::Int,j::Int,p::Int,dim::Int)
     return dk_dθp(kern, data.R[i,j], p)
 end
-@inline @inbounds function dKij_dθ!(dK::VecF64, kern::Isotropic, X::MatF64, i::Int, j::Int, dim::Int, npars::Int)
+@inline @inbounds function dKij_dθ!(dK::AbstractVector, kern::Isotropic, X::AbstractMatrix, i::Int, j::Int, dim::Int, npars::Int)
     r = distij(metric(kern),X,i,j,dim)
     for p in 1:npars
         dK[p] = dk_dθp(kern, r, p)
     end
 end
-@inline @inbounds function dKij_dθ!(dK::VecF64, kern::Isotropic, X::MatF64, data::IsotropicData, 
+@inline @inbounds function dKij_dθ!(dK::AbstractVector, kern::Isotropic, X::AbstractMatrix, data::IsotropicData, 
                                     i::Int, j::Int, dim::Int, npars::Int)
     r = data.R[i,j]
     for iparam in 1:npars
@@ -121,7 +121,7 @@ struct StationaryARDData{D} <: StationaryData
 end
 
 # May need to customized in subtypes
-function KernelData(k::StationaryARD, X::MatF64)
+function KernelData(k::StationaryARD, X::AbstractMatrix)
     dim, nobsv = size(X)
     dist_stack = Array{Float64}(undef, nobsv, nobsv, dim)
     for d in 1:dim
@@ -130,4 +130,4 @@ function KernelData(k::StationaryARD, X::MatF64)
     end
     StationaryARDData(dist_stack)
 end
-kernel_data_key(k::StationaryARD, X::MatF64) = @sprintf("%s_%s", "StationaryARDData", metric(k))
+kernel_data_key(k::StationaryARD, X::AbstractMatrix) = @sprintf("%s_%s", "StationaryARDData", metric(k))

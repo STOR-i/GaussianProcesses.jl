@@ -26,7 +26,7 @@ mutable struct SEArd <: StationaryARD{WeightedSqEuclidean}
     SEArd(ll::Vector{Float64}, lσ::Float64) = new(exp.(-2 .* ll), exp(2 * lσ), [])
 end
 
-function set_params!(se::SEArd, hyp::VecF64)
+function set_params!(se::SEArd, hyp::AbstractVector)
     length(hyp) == num_params(se) || throw(ArgumentError("SEArd only has $(num_params(se)) parameters"))
     @views @. se.iℓ2 = exp(-2 * hyp[1:(end-1)])
     se.σ2 = exp(2 * hyp[end])
@@ -39,7 +39,7 @@ num_params(se::SEArd) = length(se.iℓ2) + 1
 Statistics.cov(se::SEArd, r::Number) = se.σ2*exp(-r / 2)
 
 @inline dk_dll(se::SEArd, r::Float64, wdiffp::Float64) = wdiffp*cov(se,r)
-@inline function dKij_dθp(se::SEArd, X::MatF64, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(se::SEArd, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
     if p <= dim
         return dk_dll(se, distij(metric(se),X,i,j,dim), distijk(metric(se),X,i,j,p))
     elseif p==dim+1
@@ -48,6 +48,6 @@ Statistics.cov(se::SEArd, r::Number) = se.σ2*exp(-r / 2)
         return NaN
     end
 end
-@inline function dKij_dθp(se::SEArd, X::MatF64, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(se::SEArd, X::AbstractMatrix, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
     return dKij_dθp(se,X,i,j,p,dim)
 end

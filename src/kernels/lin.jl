@@ -1,7 +1,7 @@
 # Linear covariance function
 
-@inline dotijp(X::MatF64, i::Int, j::Int, p::Int) = X[p,i]*X[p,j]
-@inline function dotij(X::MatF64, i::Int, j::Int, dim::Int)
+@inline dotijp(X::AbstractMatrix, i::Int, j::Int, p::Int) = X[p,i]*X[p,j]
+@inline function dotij(X::AbstractMatrix, i::Int, j::Int, dim::Int)
 	s=zero(eltype(X))
 	@inbounds @simd for p in 1:dim
 		s+=dotijp(X,i,j,p)

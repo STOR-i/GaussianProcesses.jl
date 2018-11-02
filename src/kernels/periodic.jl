@@ -33,7 +33,7 @@ get_params(pe::Periodic) = Float64[log(pe.ℓ2) / 2, log(pe.σ2) / 2, log(pe.p)]
 get_param_names(pe::Periodic) = [:ll, :lσ, :lp]
 num_params(pe::Periodic) = 3
 
-function set_params!(pe::Periodic, hyp::VecF64)
+function set_params!(pe::Periodic, hyp::AbstractVector)
     length(hyp) == 3 || throw(ArgumentError("Periodic function has only three parameters"))
     pe.ℓ2, pe.σ2 = exp(2 * hyp[1]), exp(2 * hyp[2])
     pe.p = exp(hyp[3])

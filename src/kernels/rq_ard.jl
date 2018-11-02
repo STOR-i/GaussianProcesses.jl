@@ -30,7 +30,7 @@ mutable struct RQArd <: StationaryARD{WeightedSqEuclidean}
         new(exp.(-2 .* ll), exp(2 * lσ), exp(lα), [])
 end
 
-function set_params!(rq::RQArd, hyp::VecF64)
+function set_params!(rq::RQArd, hyp::AbstractVector)
     length(hyp) == num_params(rq) || throw(ArgumentError("RQArd kernel has $(num_params(rq_ard)) parameters"))
     @views @. rq.iℓ2 = exp(-2 * hyp[1:(end-2)])
     rq.σ2 = exp(2 * hyp[end-1])
@@ -49,7 +49,7 @@ Statistics.cov(rq::RQArd,r::Number) = rq.σ2*(1+0.5*r/rq.α)^(-rq.α)
     part = (1 + r / (2 * rq.α))
     return rq.σ2 * part^(-rq.α) * (r / (2 * part) - rq.α * log(part))
 end
-@inline function dKij_dθp(rq::RQArd, X::MatF64, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(rq::RQArd, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
     if p <= dim
         return dk_dll(rq, distij(metric(rq),X,i,j,dim), distijk(metric(rq),X,i,j,p))
     elseif p==dim+1
@@ -58,6 +58,6 @@ end
         return dk_dlα(rq, distij(metric(rq),X,i,j,dim))
     end
 end
-@inline function dKij_dθp(rq::RQArd, X::MatF64, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(rq::RQArd, X::AbstractMatrix, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
     return dKij_dθp(rq,X,i,j,p,dim)
 end

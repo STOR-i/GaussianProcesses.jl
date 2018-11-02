@@ -45,7 +45,7 @@ struct PairData{KD1 <: KernelData, KD2 <: KernelData} <: KernelData
     data1::KD1
     data2::KD2
 end
-function KernelData(pairkern::PairKernel, X::MatF64)
+function KernelData(pairkern::PairKernel, X::AbstractMatrix)
     kl = leftkern(pairkern)
     kr = rightkern(pairkern)
     # this is a bit broken:
@@ -60,7 +60,7 @@ function KernelData(pairkern::PairKernel, X::MatF64)
     end
 end
 
-function kernel_data_key(pairkern::PairKernel, X::MatF64)
+function kernel_data_key(pairkern::PairKernel, X::AbstractMatrix)
     kl = leftkern(pairkern)
     kr = rightkern(pairkern)
     @sprintf("PairData:%s+%s", kernel_data_key(kl, X), kernel_data_key(kr, X))

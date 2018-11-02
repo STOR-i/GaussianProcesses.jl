@@ -29,7 +29,7 @@ mutable struct RQIso <: Isotropic{SqEuclidean}
         new(exp(2 * ll), exp(2 * lσ), exp(lα), [])
 end
 
-function set_params!(rq::RQIso, hyp::VecF64)
+function set_params!(rq::RQIso, hyp::AbstractVector)
     length(hyp) == 3 || throw(ArgumentError("Rational Quadratic function has three parameters"))
     rq.ℓ2, rq.σ2, rq.α = exp(2 * hyp[1]), exp(2 * hyp[2]), exp(hyp[3])
 end

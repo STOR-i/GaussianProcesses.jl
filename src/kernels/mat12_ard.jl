@@ -26,7 +26,7 @@ mutable struct Mat12Ard <: MaternARD
     Mat12Ard(ll::Vector{Float64}, lσ::Float64) = new(exp.(-2 .* ll), exp(2 * lσ), [])
 end
 
-function set_params!(mat::Mat12Ard, hyp::VecF64)
+function set_params!(mat::Mat12Ard, hyp::AbstractVector)
     length(hyp) == num_params(mat) || throw(ArgumentError("Mat12 kernel only has $(num_params(mat)) parameters"))
     @views @. mat.iℓ2  = exp(-2 * hyp[1:(end-1)])
     mat.σ2 = exp(2 * hyp[end])

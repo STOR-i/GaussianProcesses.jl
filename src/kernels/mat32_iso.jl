@@ -25,7 +25,7 @@ mutable struct Mat32Iso <: MaternIso
     Mat32Iso(ll::Float64, lσ::Float64) = new(exp(ll), exp(2 * lσ), [])
 end
 
-function set_params!(mat::Mat32Iso, hyp::VecF64)
+function set_params!(mat::Mat32Iso, hyp::AbstractVector)
     length(hyp) == 2 || throw(ArgumentError("Matern 3/2 only has two parameters"))
     mat.ℓ, mat.σ2 = exp(hyp[1]), exp(2 * hyp[2])
 end

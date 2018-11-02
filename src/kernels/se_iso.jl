@@ -23,7 +23,7 @@ mutable struct SEIso <: Isotropic{SqEuclidean}
     SEIso(ll::Float64, lσ::Float64) = new(exp(2 * ll), exp(2 * lσ), [])
 end
 
-function set_params!(se::SEIso, hyp::VecF64)
+function set_params!(se::SEIso, hyp::AbstractVector)
     length(hyp) == 2 || throw(ArgumentError("Squared exponential only has two parameters"))
     se.ℓ2, se.σ2 = exp(2 * hyp[1]), exp(2 * hyp[2])
 end
