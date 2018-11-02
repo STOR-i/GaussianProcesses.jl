@@ -64,7 +64,6 @@ end
 function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0)
     nobs = length(y)
     kerneldata = KernelData(kernel, x)
-    Σ = Σ_default(x, kernel, kerneldata, logNoise)
     # create placeholder PDMat
     m = Matrix{Float64}(undef, nobs, nobs)
     chol = Matrix{Float64}(undef, nobs, nobs)
