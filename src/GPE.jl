@@ -35,7 +35,7 @@ mutable struct GPE{X<:MatF64,Y<:VecF64,M<:Mean,K<:Kernel,P<:AbstractPDMat,D<:Ker
     "Gradient of log-target (gradient of marginal log-likelihood + gradient of log priors)"
     dtarget::Vector{Float64}
 
-    function GPE{X,Y,M,K,P,D}(x::X, y::Y, mean::M, kernel::K, data::D, cK::P, logNoise::Float64) where {X,Y,M,K,P,D}
+    function GPE{X,Y,M,K,P,D}(x::X, y::Y, mean::M, kernel::K, logNoise::Float64, data::D, cK::P) where {X,Y,M,K,P,D}
         dim, nobs = size(x)
         length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
         gp = new{X,Y,M,K,P,D}(x, y, mean, kernel, logNoise, dim, nobs, data, cK)
@@ -58,23 +58,24 @@ assumed that the observations are noise free.
 - `logNoise::Float64`: Natural logarithm of the standard deviation for the observation
   noise. The default is -2.0, which is equivalent to assuming no observation noise.
 """
-function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, data::KernelData, cK::AbstractPDMat, logNoise::Float64) 
-    GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(cK),typeof(data)}(x, y, mean, kernel, data, cK, logNoise)
+function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData, cK::AbstractPDMat) 
+    GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(cK),typeof(kerneldata)}(x, y, mean, kernel, logNoise, kerneldata, cK)
 end
-function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0)
-    nobs = length(y)
-    kerneldata = KernelData(kernel, x)
+function alloc_cK(nobs)
     # create placeholder PDMat
     m = Matrix{Float64}(undef, nobs, nobs)
     chol = Matrix{Float64}(undef, nobs, nobs)
     cK = PDMats.PDMat(m, Cholesky(chol, 'U', 0))
-    GPE(x, y, mean, kernel, kerneldata, cK, logNoise)
+    return cK
 end
 function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData)
     nobs = length(y)
-    GPE(x, y, mean, kernel, kerneldata, 
-        PDMat(Σ_default(x, kernel, kerneldata, logNoise)), 
-        logNoise)
+    cK = alloc_cK(nobs)
+    GPE(x, y, mean, kernel, logNoise, kerneldata, cK)
+end
+function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0)
+    kerneldata = KernelData(kernel, x)
+    GPE(x, y, mean, kernel, logNoise, kerneldata)
 end
 GPE(x::VecF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0) =
     GPE(x', y, mean, kernel, logNoise)
@@ -113,7 +114,7 @@ function fit!(gp::GPE{X,Y}, x::X, y::Y) where {X,Y}
     gp.x = x
     gp.y = y
     gp.data = KernelData(gp.kernel, x)
-    gp.cK = PDMat(Σ_default(gp))
+    gp.cK = alloc_cK(length(y))
     gp.dim, gp.nobs = size(x)
     initialise_target!(gp)
 end
@@ -147,9 +148,6 @@ end
 
 #———————————————————————————————————————————————————————————————-
 #Functions for calculating the log-target
-
-Σ_default(gp) = Σ_default(gp.x, gp.kernel, gp.data, gp.logNoise)
-Σ_default(x, kernel, data, logNoise) = cov(kernel, x, data) + (exp(2*logNoise)+eps())*I
 
 """
     update_cK!(gp::GPE)

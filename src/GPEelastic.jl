@@ -30,7 +30,7 @@ function ElasticGPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel,
     m    = Matrix{Float64}(undef, nobs, nobs)
     chol = Matrix{Float64}(undef, nobs, nobs)
     cK = ElasticPDMat(m, Cholesky(chol, :U, 0), capacity=capacity, stepsize=stepsize)
-    gp = GPE(ElasticArray(x), ElasticArray(y), mean, kernel, data, cK, logNoise)
+    gp = GPE(ElasticArray(x), ElasticArray(y), mean, kernel, logNoise, data, cK)
     initialise_target!(gp)
 end
 
