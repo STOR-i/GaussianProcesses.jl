@@ -7,7 +7,7 @@ rightkern(prodkern::ProdKernel) = prodkern.kright
 
 get_param_names(prodkern::ProdKernel) = composite_param_names(components(prodkern), :pk)
 
-function Statistics.cov(sk::ProdKernel, x::AbstractVector, y::AbstractVector)
+function cov(sk::ProdKernel, x::AbstractVector, y::AbstractVector)
     cov(sk.kleft, x, y) * cov(sk.kright, x, y)
 end
 

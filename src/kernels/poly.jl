@@ -36,7 +36,7 @@ end
 kernel_data_key(k::Poly, X::AbstractMatrix) = "LinIsoData"
 
 _cov(poly::Poly, xTy) = poly.σ2*(poly.c.+xTy).^poly.deg
-function Statistics.cov(poly::Poly, x::AbstractVector, y::AbstractVector)
+function cov(poly::Poly, x::AbstractVector, y::AbstractVector)
     K = _cov(poly, dot(x,y))
 end
 function cov!(cK::AbstractMatrix, poly::Poly, X::AbstractMatrix, data::LinIsoData)
@@ -45,7 +45,7 @@ end
 @inline @inbounds function cov_ij(poly::Poly, X::AbstractMatrix, data::LinIsoData, i::Int, j::Int, dim::Int)
     return _cov(poly, data.XtX[i, j])
 end
-Statistics.cov(poly::Poly, X::AbstractMatrix, data::LinIsoData) = _cov(poly, data.XtX)
+cov(poly::Poly, X::AbstractMatrix, data::LinIsoData) = _cov(poly, data.XtX)
 
 get_params(poly::Poly) = Float64[log(poly.c), log(poly.σ2) / 2]
 get_param_names(poly::Poly) = [:lc, :lσ]

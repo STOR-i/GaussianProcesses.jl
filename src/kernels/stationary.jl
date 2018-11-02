@@ -17,7 +17,7 @@ end
 ard_weights(kernel::Stationary{WeightedSqEuclidean}) = kernel.iℓ2
 ard_weights(kernel::Stationary{WeightedEuclidean}) = kernel.iℓ2
 
-Statistics.cov(k::Stationary, x::AbstractVector, y::AbstractVector) = cov(k, distance(k, x, y))
+cov(k::Stationary, x::AbstractVector, y::AbstractVector) = cov(k, distance(k, x, y))
 @inline function cov_ij(k::Stationary, X::AbstractMatrix, i::Int, j::Int, dim::Int)
     cov(k, distij(metric(k), X, i, j, dim))
 end
@@ -40,7 +40,7 @@ function cov!(cK::AbstractMatrix, k::Stationary, X1::AbstractMatrix, X2::Abstrac
     end
     return cK
 end
-function Statistics.cov(k::Stationary, X1::AbstractMatrix, X2::AbstractMatrix)
+function cov(k::Stationary, X1::AbstractMatrix, X2::AbstractMatrix)
     nobsv1 = size(X1, 2)
     nobsv2 = size(X2, 2)
     cK = Array{eltype(X2)}(undef, nobsv1, nobsv2)
@@ -63,12 +63,12 @@ end
 function cov!(cK::AbstractMatrix, k::Stationary, X::AbstractMatrix, data::StationaryData)
     cov!(cK, k, X)
 end
-function Statistics.cov(k::Stationary, X::AbstractMatrix, data::StationaryData)
+function cov(k::Stationary, X::AbstractMatrix, data::StationaryData)
     nobsv = size(X, 2)
     cK = Matrix{eltype(X)}(undef, nobsv, nobsv)
     cov!(cK, k, X, data)
 end
-function Statistics.cov(k::Stationary, X::AbstractMatrix)
+function cov(k::Stationary, X::AbstractMatrix)
     nobsv = size(X, 2)
     cK = Matrix{eltype(X)}(undef, nobsv, nobsv)
     cov!(cK, k, X)

@@ -28,7 +28,7 @@ kernel_data_key(k::Kernel, X::AbstractMatrix) = "EmptyData"
 Create covariance matrix from kernel `k` and matrices of observations `X₁` and `X₂`, where
 each column is an observation.
 """
-function Statistics.cov(k::Kernel, X₁::AbstractMatrix, X₂::AbstractMatrix)
+function cov(k::Kernel, X₁::AbstractMatrix, X₂::AbstractMatrix)
     d(x1,x2) = cov(k, x1, x2)
     return map_column_pairs(d, X₁, X₂)
 end
@@ -49,7 +49,7 @@ end
 Create covariance function from kernel `k`, matrix of observations `X`, where each column is
 an observation, and kernel data `data` constructed from input observations.
 """
-Statistics.cov(k::Kernel, X::AbstractMatrix, data::EmptyData) = cov(k, X)
+cov(k::Kernel, X::AbstractMatrix, data::EmptyData) = cov(k, X)
 cov!(k::Kernel, X::AbstractMatrix, data::EmptyData) = cov!(cK, k, X)
 
 function cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix)
@@ -63,7 +63,7 @@ function cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix)
     end
     return cK
 end
-function Statistics.cov(k::Kernel, X::AbstractMatrix)
+function cov(k::Kernel, X::AbstractMatrix)
     dim, nobsv = size(X)
     cK = Array{eltype(X)}(undef, nobsv, nobsv)
     cov!(cK, k, X)
@@ -79,7 +79,7 @@ function cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData
     end
     return cK
 end
-function Statistics.cov(k::Kernel, X::AbstractMatrix, data::KernelData)
+function cov(k::Kernel, X::AbstractMatrix, data::KernelData)
     dim, nobsv = size(X)
     cK = Array{Float64}(undef, nobsv, nobsv)
     cov!(cK, k, X, data)

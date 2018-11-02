@@ -35,7 +35,7 @@ end
 kernel_data_key(k::LinIso, X::AbstractMatrix) = "LinIsoData"
 
 _cov(lin::LinIso, xTy) = xTy ./ lin.ℓ2
-function Statistics.cov(lin::LinIso, x::AbstractVector, y::AbstractVector)
+function cov(lin::LinIso, x::AbstractVector, y::AbstractVector)
     K = _cov(lin, dot(x,y))
     return K
 end
@@ -43,7 +43,7 @@ end
 @inline @inbounds function cov_ij(lin::LinIso, X::AbstractMatrix, data::LinIsoData, i::Int, j::Int, dim::Int)
     return _cov(lin, data.XtX[i, j])
 end
-function Statistics.cov(lin::LinIso, X::AbstractMatrix, data::LinIsoData)
+function cov(lin::LinIso, X::AbstractMatrix, data::LinIsoData)
     K = _cov(lin, data.XtX)
     return K
 end

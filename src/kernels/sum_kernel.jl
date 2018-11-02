@@ -7,7 +7,7 @@ rightkern(sumkern::SumKernel) = sumkern.kright
 
 get_param_names(sumkern::SumKernel) = composite_param_names(components(sumkern), :sk)
 
-function Statistics.cov(sk::SumKernel, x::AbstractVector, y::AbstractVector)
+function cov(sk::SumKernel, x::AbstractVector, y::AbstractVector)
     cov(sk.kleft, x, y) + cov(sk.kright, x, y)
 end
 
