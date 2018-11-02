@@ -16,11 +16,11 @@ using GaussianProcesses: EmptyData
         # there should be 1 allocation of an n×x matrix for the covariance
         # one for its Cholesky decomposition, and one for KernelData
         matrix_bytes = (nobs^2)*64/8
-        @test mem/matrix_bytes < 3.5
+        @test mem/matrix_bytes < 3.1
         buf = Array{Float64}(undef, nobs, nobs)
         GaussianProcesses.update_mll_and_dmll!(gp, buf)
         mem = @allocated GaussianProcesses.update_mll_and_dmll!(gp, buf)
-        @test mem/matrix_bytes < 0.5
+        @test mem/matrix_bytes < 0.1
     end
 
     @testset "sum kernel" begin
@@ -34,11 +34,11 @@ using GaussianProcesses: EmptyData
         gp = GP(X, y, m, k, logNoise)
         mem = @allocated GP(X, y, m, k, logNoise)
         matrix_bytes = (nobs^2)*64/8
-        @test mem/matrix_bytes < 3.5
+        @test mem/matrix_bytes < 3.1
         buf = Array{Float64}(undef, nobs, nobs)
         GaussianProcesses.update_mll_and_dmll!(gp, buf)
         mem = @allocated GaussianProcesses.update_mll_and_dmll!(gp, buf)
-        @test mem/matrix_bytes < 0.5
+        @test mem/matrix_bytes < 0.1
     end
 
     @testset "prod kernel" begin
@@ -52,11 +52,11 @@ using GaussianProcesses: EmptyData
         gp = GP(X, y, m, k, logNoise)
         mem = @allocated GP(X, y, m, k, logNoise)
         matrix_bytes = (nobs^2)*64/8
-        @test mem/matrix_bytes < 3.5
+        @test mem/matrix_bytes < 4.1
         buf = Array{Float64}(undef, nobs, nobs)
         GaussianProcesses.update_mll_and_dmll!(gp, buf)
         mem = @allocated GaussianProcesses.update_mll_and_dmll!(gp, buf)
-        @test mem/matrix_bytes < 0.5
+        @test mem/matrix_bytes < 0.1
     end
 
     @testset "EmptyData" begin
@@ -70,11 +70,11 @@ using GaussianProcesses: EmptyData
         gp = GPE(X, y, m, k, logNoise, EmptyData())
         mem = @allocated GPE(X, y, m, k, logNoise, EmptyData())
         matrix_bytes = (nobs^2)*64/8
-        @test mem/matrix_bytes < 2.5
+        @test mem/matrix_bytes < 2.1
         buf = Array{Float64}(undef, nobs, nobs)
         GaussianProcesses.update_mll_and_dmll!(gp, buf)
         mem = @allocated GaussianProcesses.update_mll_and_dmll!(gp, buf)
-        @test mem/matrix_bytes < 0.5
+        @test mem/matrix_bytes < 0.1
     end
 
     @testset "EmptyData prod kernel" begin
@@ -88,11 +88,11 @@ using GaussianProcesses: EmptyData
         gp = GPE(X, y, m, k, logNoise, EmptyData())
         mem = @allocated GPE(X, y, m, k, logNoise, EmptyData())
         matrix_bytes = (nobs^2)*64/8
-        @test mem/matrix_bytes < 2.5
+        @test mem/matrix_bytes < 2.1
         buf = Array{Float64}(undef, nobs, nobs)
         GaussianProcesses.update_mll_and_dmll!(gp, buf)
         mem = @allocated GaussianProcesses.update_mll_and_dmll!(gp, buf)
-        @test mem/matrix_bytes < 0.5
+        @test mem/matrix_bytes < 0.1
     end
 end
 end
