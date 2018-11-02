@@ -24,6 +24,7 @@ end
 @inline function cov_ij(k::Stationary, X::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int)
     cov(k, distij(metric(k), X, i, j, dim))
 end
+@inline cov_ij(k::Stationary, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(k, X, i, j, dim)
 function cov!(cK::AbstractMatrix, k::Stationary, X1::AbstractMatrix, X2::AbstractMatrix)
     dim1, nobsv1 = size(X1)
     dim2, nobsv2 = size(X2)

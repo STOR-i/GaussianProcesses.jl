@@ -45,19 +45,27 @@ struct PairData{KD1 <: KernelData, KD2 <: KernelData} <: KernelData
     data1::KD1
     data2::KD2
 end
-function KernelData(pairkern::PairKernel, X::AbstractMatrix)
-    kl = leftkern(pairkern)
-    kr = rightkern(pairkern)
+const KernelDict = Dict{String,KernelData}
+KernelData(k::Kernel, X::AbstractMatrix, cache::KernelDict) = KernelData(k, X)
+function KernelData(pairkern::PairKernel, X::AbstractMatrix, cache::KernelDict=KernelDict())
+    leftk  = leftkern(pairkern)
+    rightk = rightkern(pairkern)
     # this is a bit broken:
-    if kernel_data_key(kl, X) == kernel_data_key(kr, X)
-        kdata = KernelData(kl, X)
-        return PairData(kdata, kdata)
+    leftkey = kernel_data_key(leftk, X)
+    rightkey = kernel_data_key(rightk, X)
+    if leftkey ∉ keys(cache)
+        leftdata = KernelData(leftk, X, cache)
+        cache[leftkey] = leftdata
     else
-        return PairData(
-                KernelData(kl, X),
-                KernelData(kr, X)
-               )
+        leftdata = cache[leftkey]
     end
+    if rightkey ∉ keys(cache)
+        rightdata = KernelData(rightk, X, cache)
+        cache[rightkey] = rightdata
+    else
+        rightdata = cache[rightkey]
+    end
+    return PairData(leftdata, rightdata)
 end
 
 function kernel_data_key(pairkern::PairKernel, X::AbstractMatrix)

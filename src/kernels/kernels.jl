@@ -145,6 +145,8 @@ function grad_stack(k::Kernel, X::AbstractMatrix, data::KernelData)
     grad_stack!(stack, k, X, data)
 end
 
+@inline dKij_dθp(k::Kernel, X::MatF64, data::EmptyData, i::Int, j::Int, p::Int, dim::Int) = dKij_dθp(k, X, i, j, p, dim)
+
 include("stationary.jl")
 include("distance.jl")
 include("lin.jl")               # Linear covariance function

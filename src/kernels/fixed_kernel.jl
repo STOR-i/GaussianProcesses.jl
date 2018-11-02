@@ -60,6 +60,9 @@ end
 @inline function dKij_dθp(fk::FixedKernel,X::AbstractMatrix,i::Int,j::Int,p::Int,dim::Int)
     return dKij_dθp(fk.kernel, X, i, j, fk.free[p], dim)
 end
+@inline function dKij_dθp(fk::FixedKernel,X::AbstractMatrix,data::EmptyData,i::Int,j::Int,p::Int,dim::Int)
+    return dKij_dθp(fk, X, i, j, p, dim)
+end
 @inline function dKij_dθp(fk::FixedKernel,X::AbstractMatrix,data::KernelData,i::Int,j::Int,p::Int,dim::Int)
     return dKij_dθp(fk.kernel, X, data, i, j, fk.free[p], dim)
 end
