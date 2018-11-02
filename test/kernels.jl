@@ -1,6 +1,7 @@
 module TestKernels
 using GaussianProcesses, Calculus
 using Test, LinearAlgebra, Statistics, Random
+using GaussianProcesses: EmptyData, update_target_and_dtarget!
 
 Random.seed!(1)
 
@@ -73,7 +74,7 @@ Random.seed!(1)
                 @test typeof(key) == String
                 # check we've overwritten the default if necessary
                 kdata = GaussianProcesses.KernelData(kern, X)
-                if typeof(kdata) != GaussianProcesses.EmptyData
+                if typeof(kdata) != EmptyData
                     @test key != "EmptyData"
                 end
             end
@@ -93,8 +94,8 @@ Random.seed!(1)
                 GaussianProcesses.grad_stack!(stack1, kern, X, data)
                 invoke(GaussianProcesses.grad_stack!,
                        Tuple{AbstractArray, Kernel, Matrix{Float64},
-                             GaussianProcesses.EmptyData},
-                       stack2, kern, X, GaussianProcesses.EmptyData())
+                             EmptyData},
+                       stack2, kern, X, EmptyData())
                 @test stack1 ≈ stack2
 
                 theor_grad = vec(sum(stack1; dims=[1,2]))
@@ -108,7 +109,7 @@ Random.seed!(1)
             @testset "dtarget" begin
                 gp = GPE(X, y, MeanConst(0.0), kern, -3.0)
                 init_params = GaussianProcesses.get_params(gp)
-                GaussianProcesses.update_target_and_dtarget!(gp)
+                update_target_and_dtarget!(gp)
                 theor_grad = copy(gp.dtarget)
                 numer_grad = Calculus.gradient(init_params) do params
                     set_params!(gp, params)
@@ -117,7 +118,15 @@ Random.seed!(1)
                 end
                 @test theor_grad ≈ numer_grad rtol=1e-3 atol=1e-3
             end
+
+            @testset "EmptyData" begin
+                gp = GPE(X, y, MeanConst(0.0), kern, -3.0)
+                gp_empty = GPE(X, y, MeanConst(0.0), kern, -3.0, EmptyData())
+                update_target_and_dtarget!(gp_empty)
+                update_target_and_dtarget!(gp)
+                @test gp.dmll ≈ gp_empty.dmll rtol=1e-6 atol=1e-6
+            end
         end
     end
-end
-end
+end # testset
+end # module
