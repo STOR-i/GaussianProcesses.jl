@@ -23,17 +23,17 @@ mutable struct MeanConst <: Mean
     MeanConst(β::Float64) = new(β, [])
 end
 
-mean(mConst::MeanConst, x::VecF64) = mConst.β
-mean(mConst::MeanConst, X::MatF64) = fill(mConst.β, size(X,2))
+mean(mConst::MeanConst, x::AbstractVector) = mConst.β
+mean(mConst::MeanConst, X::AbstractMatrix) = fill(mConst.β, size(X,2))
 
 get_params(mConst::MeanConst) = Float64[mConst.β]
 get_param_names(::MeanConst) = [:β]
 num_params(mConst::MeanConst) = 1
-function set_params!(mConst::MeanConst, hyp::VecF64)
+function set_params!(mConst::MeanConst, hyp::AbstractVector)
     length(hyp) == 1 || throw(ArgumentError("Constant mean function only has 1 parameter"))
     mConst.β = hyp[1]
 end
-function grad_mean(mConst::MeanConst, x::VecF64)
+function grad_mean(mConst::MeanConst, x::AbstractVector)
     dM_theta = ones(1)
     return dM_theta
 end

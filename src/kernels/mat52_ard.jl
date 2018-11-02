@@ -26,7 +26,7 @@ mutable struct Mat52Ard <: MaternARD
     Mat52Ard(ll::Vector{Float64}, lσ::Float64) = new(exp.(-2 .* ll), exp(2 * lσ), [])
 end
 
-function set_params!(mat::Mat52Ard, hyp::VecF64)
+function set_params!(mat::Mat52Ard, hyp::AbstractVector)
     length(hyp) == num_params(mat) || throw(ArgumentError("Mat52 kernel only has $(num_params(mat)) parameters"))
     @views @. mat.iℓ2 = exp(-2 * hyp[1:(end-1)])
     mat.σ2 = exp(2 * hyp[end])
@@ -36,7 +36,7 @@ get_params(mat::Mat52Ard) = [-log.(mat.iℓ2) / 2; log(mat.σ2) / 2]
 get_param_names(mat::Mat52Ard) = [get_param_names(mat.iℓ2, :ll); :lσ]
 num_params(mat::Mat52Ard) = length(mat.iℓ2) + 1
 
-Statistics.cov(mat::Mat52Ard, r::Float64) =
+Statistics.cov(mat::Mat52Ard, r::Number) =
     (s = √5 * r; mat.σ2 * (1 + s + s^2 / 3) * exp(-s))
 
 dk_dll(mat::Mat52Ard, r::Float64, wdiffp::Float64) =

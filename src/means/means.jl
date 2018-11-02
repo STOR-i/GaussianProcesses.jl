@@ -3,7 +3,7 @@
 abstract type Mean end
 
 # Calculate mean for matrix of observations
-function mean(m::Mean, X::MatF64)
+function mean(m::Mean, X::AbstractMatrix)
     nobs = size(X, 2)
     μ = Array{Float64}(undef, nobs)
     @inbounds for i in 1:nobs
@@ -13,7 +13,7 @@ function mean(m::Mean, X::MatF64)
 end
 
 # Calculates the stack [dm / dθᵢ] of mean matrix gradients
-function grad_stack(m::Mean, X::MatF64)
+function grad_stack(m::Mean, X::AbstractMatrix)
     nobs = size(X, 2)
     mat = Array{Float64}(undef, nobs, num_params(m))
     @inbounds for i in 1:nobs

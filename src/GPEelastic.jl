@@ -1,6 +1,6 @@
 import Base.append!
-append!(gp, x::VecF64, y::Float64) = append!(gp, reshape(x, :, 1), [y])
-function append!(gp::GPE{X,Y,M,K,P,D}, x::MatF64, y::VecF64) where {X,Y,M,K,P <: ElasticPDMat, D}
+append!(gp, x::AbstractVector, y::Float64) = append!(gp, reshape(x, :, 1), [y])
+function append!(gp::GPE{X,Y,M,K,P,D}, x::AbstractMatrix, y::AbstractVector) where {X,Y,M,K,P <: ElasticPDMat, D}
     size(x, 2) == length(y) || error("$(size(x, 2)) observations, but $(length(y)) targets.")
     newcov = [cov(gp.kernel, gp.x, x); cov(gp.kernel, x, x) + (exp(2*gp.logNoise) + eps())*I]
     append!(gp.data, gp.kernel, gp.x, x)
@@ -21,7 +21,7 @@ function ElasticGPE(dim; mean::Mean = MeanZero(), kernel = SE(0.0, 0.0),
     y = ElasticArray(Array{Float64}(undef, 0))
     ElasticGPE(x, y, mean, kernel, logNoise; kwargs...)
 end
-function ElasticGPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, 
+function ElasticGPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, 
                     logNoise::Float64 = -2.0;
                     capacity = 10^3, stepsize = 10^3)
     data = ElasticKernelData(kernel, x, capacity = capacity, stepsize = stepsize)
@@ -44,14 +44,14 @@ function prepareappend!(kd, Xnew)
     kd, dim, nobs, nobs_new
 end
 
-function ElasticKernelData(k::Isotropic, X::MatF64; capacity = 10^3, stepsize = 10^3)
+function ElasticKernelData(k::Isotropic, X::AbstractMatrix; capacity = 10^3, stepsize = 10^3)
     kerneldata = IsotropicData(AllElasticArray(2; capacity = (capacity, capacity), stepsize = (stepsize, stepsize)))
     nobs = size(X, 2)
     distance!(view(kerneldata.R, 1:nobs, 1:nobs), k, X)
     setdimension!(kerneldata.R, nobs, 1:2)
     kerneldata
 end
-function append!(kerneldata::IsotropicData{<:AllElasticArray}, k::Isotropic, X::MatF64, Xnew::MatF64)
+function append!(kerneldata::IsotropicData{<:AllElasticArray}, k::Isotropic, X::AbstractMatrix, Xnew::AbstractMatrix)
     kd, dim, nobs, nobs_new = prepareappend!(kerneldata.R, Xnew)
     distance!(view(kd, 1:nobs, nobs + 1:nobs + nobs_new), k, X, Xnew)
     copyto!(view(kd, nobs + 1:nobs + nobs_new, 1:nobs), transpose(view(kd, 1:nobs, nobs + 1:nobs + nobs_new))) 
@@ -59,9 +59,9 @@ function append!(kerneldata::IsotropicData{<:AllElasticArray}, k::Isotropic, X::
     setdimension!(kd, nobs + nobs_new, 1:2)
     kerneldata
 end
-append!(kerneldata, k, X, Xnew::VecF64) = append!(kerneldata, k, X, reshape(Xnew, :, 1))
+append!(kerneldata, k, X, Xnew::AbstractVector) = append!(kerneldata, k, X, reshape(Xnew, :, 1))
 
-function ElasticKernelData(k::StationaryARD, X::MatF64; capacity = 10^3, stepsize = 10^3)
+function ElasticKernelData(k::StationaryARD, X::AbstractMatrix; capacity = 10^3, stepsize = 10^3)
     dim, nobs = size(X)
     dist_stack = AllElasticArray(3; capacity = (capacity, capacity, size(X, 1)),
                                     stepsize = (stepsize, stepsize, 0))
@@ -73,7 +73,7 @@ function ElasticKernelData(k::StationaryARD, X::MatF64; capacity = 10^3, stepsiz
     setdimension!(dist_stack, dim, 3)
     StationaryARDData(dist_stack)
 end
-function append!(kerneldata::StationaryARDData, kernel::StationaryARD, X::MatF64, Xnew::MatF64)
+function append!(kerneldata::StationaryARDData, kernel::StationaryARD, X::AbstractMatrix, Xnew::AbstractMatrix)
     kd, dim, nobs, nobs_new = prepareappend!(kerneldata.dist_stack, Xnew)
     for d in 1:dim
         grad_ls = view(kd, 1:nobs, nobs + 1:nobs + nobs_new, d)
@@ -87,7 +87,7 @@ function append!(kerneldata::StationaryARDData, kernel::StationaryARD, X::MatF64
     kerneldata
 end
 
-function ElasticKernelData(k::LinArd, X::MatF64; capacity = 10^3, stepsize = 10^3)
+function ElasticKernelData(k::LinArd, X::AbstractMatrix; capacity = 10^3, stepsize = 10^3)
     dim, nobs = size(X)
     XtX_d = AllElasticArray(3; capacity = (capacity, capacity, size(X, 1)),
                                     stepsize = (stepsize, stepsize, 0))
@@ -102,7 +102,7 @@ function ElasticKernelData(k::LinArd, X::MatF64; capacity = 10^3, stepsize = 10^
     setdimension!(XtX_d, dim, 3)
     LinArdData(XtX_d)
 end
-function append!(kerneldata::LinArdData, kernel::LinArd, X::MatF64, Xnew::MatF64)
+function append!(kerneldata::LinArdData, kernel::LinArd, X::AbstractMatrix, Xnew::AbstractMatrix)
     kd, dim, nobs, nobs_new = prepareappend!(kerneldata.XtX_d, Xnew)
     @inbounds @simd for d in 1:dim
         for i in 1:nobs
@@ -120,7 +120,7 @@ function append!(kerneldata::LinArdData, kernel::LinArd, X::MatF64, Xnew::MatF64
     kerneldata
 end
 
-function ElasticKernelData(k::LinIso, X::MatF64; capacity = 10^3, stepsize = 10^3)
+function ElasticKernelData(k::LinIso, X::AbstractMatrix; capacity = 10^3, stepsize = 10^3)
     dim, nobs = size(X)
     XtX = AllElasticArray(2, capacity = (capacity, capacity), stepsize = (stepsize, stepsize))
     @inbounds @simd for d in 1:dim
@@ -133,7 +133,7 @@ function ElasticKernelData(k::LinIso, X::MatF64; capacity = 10^3, stepsize = 10^
     setdimension!(XtX, nobs, 1:2)
     LinIsoData(XtX)
 end
-function append!(kerneldata::LinIsoData, kernel::LinIso, X::MatF64, Xnew::MatF64)
+function append!(kerneldata::LinIsoData, kernel::LinIso, X::AbstractMatrix, Xnew::AbstractMatrix)
     kd, dim, nobs, nobs_new = prepareappend!(kerneldata.XtX, Xnew)
     @inbounds @simd for d in 1:dim
         for i in 1:nobs

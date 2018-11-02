@@ -13,7 +13,7 @@ struct CompositeData <: KernelData
     keys::Vector{String}
 end
 
-function KernelData(compkern::CompositeKernel, X::MatF64)
+function KernelData(compkern::CompositeKernel, X::AbstractMatrix)
     datadict = Dict{String, KernelData}()
     datakeys = String[]
     for k in components(compkern)
@@ -26,6 +26,6 @@ function KernelData(compkern::CompositeKernel, X::MatF64)
     CompositeData(datadict, datakeys)
 end
 
-function kernel_data_key(compkern::CompositeKernel, X::MatF64)
+function kernel_data_key(compkern::CompositeKernel, X::AbstractMatrix)
     join(["CompositeData" ; sort(unique(kernel_data_key(k, X) for k in components(compkern)))])
 end

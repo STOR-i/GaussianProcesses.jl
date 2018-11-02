@@ -46,8 +46,8 @@ struct PairData{KD1 <: KernelData, KD2 <: KernelData} <: KernelData
     data2::KD2
 end
 const KernelDict = Dict{String,KernelData}
-KernelData(k::Kernel, X::MatF64, cache::KernelDict) = KernelData(k, X)
-function KernelData(pairkern::PairKernel, X::MatF64, cache::KernelDict=KernelDict())
+KernelData(k::Kernel, X::AbstractMatrix, cache::KernelDict) = KernelData(k, X)
+function KernelData(pairkern::PairKernel, X::AbstractMatrix, cache::KernelDict=KernelDict())
     leftk  = leftkern(pairkern)
     rightk = rightkern(pairkern)
     # this is a bit broken:
@@ -68,7 +68,7 @@ function KernelData(pairkern::PairKernel, X::MatF64, cache::KernelDict=KernelDic
     return PairData(leftdata, rightdata)
 end
 
-function kernel_data_key(pairkern::PairKernel, X::MatF64)
+function kernel_data_key(pairkern::PairKernel, X::AbstractMatrix)
     kl = leftkern(pairkern)
     kr = rightkern(pairkern)
     @sprintf("PairData:%s+%s", kernel_data_key(kl, X), kernel_data_key(kr, X))
