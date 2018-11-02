@@ -24,7 +24,25 @@ using GaussianProcesses: EmptyData
     end
 
     @testset "sum kernel" begin
-        k = SEIso(0.0, 0.0) + RQIso(1.0, 1.0, 1.0)
+        k = SEIso(0.0, 0.0) + RQIso(1.0, 1.0, 1.0) + SEIso(1.0, 1.0)
+        dim = 5
+        nobs = 1000
+        X = randn(dim, nobs)
+        y = randn(nobs)
+        logNoise = 0.1
+        m = MeanZero()
+        gp = GP(X, y, m, k, logNoise)
+        mem = @allocated GP(X, y, m, k, logNoise)
+        matrix_bytes = (nobs^2)*64/8
+        @test mem/matrix_bytes < 3.5
+        buf = Array{Float64}(undef, nobs, nobs)
+        GaussianProcesses.update_mll_and_dmll!(gp, buf)
+        mem = @allocated GaussianProcesses.update_mll_and_dmll!(gp, buf)
+        @test mem/matrix_bytes < 0.5
+    end
+
+    @testset "prod kernel" begin
+        k = Mat12Iso(0.0, 0.0) * SEIso(0.0, 0.0) + RQIso(1.0, 1.0, 1.0) * Mat32Iso(1.0, 1.0)
         dim = 5
         nobs = 1000
         X = randn(dim, nobs)
