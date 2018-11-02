@@ -5,17 +5,17 @@
 Create a matrix by applying function `f` to each pair of columns of input matrices
 `X` and `Y`.
 """
-function map_column_pairs(f, X::AbstractMatrix, Y::AbstractArray{T, 2}) where T
+function map_column_pairs(f, X::AbstractMatrix, Y::AbstractMatrix)
     nobs1 = size(X,2)
     nobs2 = size(Y,2)
-    D = Array{T}(undef, nobs1, nobs2)
+    D = Array{eltype(Y)}(undef, nobs1, nobs2)
     map_column_pairs!(D, f, X, Y)
     return D
 end
 
-function map_column_pairs(f, X::AbstractArray{T, 2}) where T
+function map_column_pairs(f, X::AbstractMatrix)
     dim, nobsv = size(X)
-    D = Array{T}(undef, nobsv, nobsv)
+    D = Array{eltype(X)}(undef, nobsv, nobsv)
     for i in 1:nobsv
         for j in 1:i
             @inbounds D[i,j] = f(X[:,i], X[:,j])

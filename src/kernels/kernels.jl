@@ -63,9 +63,9 @@ function cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix)
     end
     return cK
 end
-function Statistics.cov(k::Kernel, X::AbstractArray{T, 2}) where T
+function Statistics.cov(k::Kernel, X::AbstractMatrix)
     dim, nobsv = size(X)
-    cK = Array{T}(undef, nobsv, nobsv)
+    cK = Array{eltype(X)}(undef, nobsv, nobsv)
     cov!(cK, k, X)
 end
 function cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData)

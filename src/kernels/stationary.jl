@@ -39,10 +39,10 @@ function cov!(cK::AbstractMatrix, k::Stationary, X1::AbstractMatrix, X2::Abstrac
     end
     return cK
 end
-function Statistics.cov(k::Stationary, X1::AbstractMatrix, X2::AbstractArray{T, 2}) where T
+function Statistics.cov(k::Stationary, X1::AbstractMatrix, X2::AbstractMatrix)
     nobsv1 = size(X1, 2)
     nobsv2 = size(X2, 2)
-    cK = Array{T}(undef, nobsv1, nobsv2)
+    cK = Array{eltype(X2)}(undef, nobsv1, nobsv2)
     cov!(cK, k, X1, X2)
     return cK
 end
@@ -64,12 +64,12 @@ function cov!(cK::AbstractMatrix, k::Stationary, X::AbstractMatrix, data::Statio
 end
 function Statistics.cov(k::Stationary, X::AbstractMatrix, data::StationaryData)
     nobsv = size(X, 2)
-    cK = Matrix{Float64}(undef, nobsv, nobsv)
+    cK = Matrix{eltype(X)}(undef, nobsv, nobsv)
     cov!(cK, k, X, data)
 end
-function Statistics.cov(k::Stationary, X::AbstractArray{T, 2}) where T
+function Statistics.cov(k::Stationary, X::AbstractMatrix)
     nobsv = size(X, 2)
-    cK = Matrix{T}(undef, nobsv, nobsv)
+    cK = Matrix{eltype(X)}(undef, nobsv, nobsv)
     cov!(cK, k, X)
 end
 dk_dlσ(k::Stationary, r::Float64) = 2 * cov(k,r)
