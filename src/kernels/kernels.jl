@@ -174,3 +174,6 @@ include("composite_kernel.jl")
 include("pair_kernel.jl")
 include("sum_kernel.jl")
 include("prod_kernel.jl")
+
+# Autodifferentiation
+include("autodiff.jl")
