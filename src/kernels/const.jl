@@ -30,8 +30,8 @@ get_params(cons::Const) = Float64[log(cons.σ2)/2.0]
 get_param_names(cons::Const) = [:lσ]
 num_params(cons::Const) = 1
 
-Statistics.cov(cons::Const) = cons.σ2
-function Statistics.cov(cons::Const, x::AbstractVector, y::AbstractVector)
+cov(cons::Const) = cons.σ2
+function cov(cons::Const, x::AbstractVector, y::AbstractVector)
     return cov(cons)
 end
 

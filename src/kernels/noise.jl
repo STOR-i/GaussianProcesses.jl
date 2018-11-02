@@ -23,8 +23,8 @@ mutable struct Noise <: Kernel
     Noise(lσ::Float64) = new(exp(2 * lσ), [])
 end
 
-Statistics.cov(noise::Noise, sameloc::Bool) = sameloc ? noise.σ2 : 0.0
-Statistics.cov(noise::Noise, x::AbstractVector, y::AbstractVector) = cov(noise, euclidean(x, y) < eps())
+cov(noise::Noise, sameloc::Bool) = sameloc ? noise.σ2 : 0.0
+cov(noise::Noise, x::AbstractVector, y::AbstractVector) = cov(noise, euclidean(x, y) < eps())
 
 get_params(noise::Noise) = Float64[log(noise.σ2) / 2]
 get_param_names(noise::Noise) = [:lσ]

@@ -39,7 +39,7 @@ function set_params!(pe::Periodic, hyp::AbstractVector)
     pe.p = exp(hyp[3])
 end
 
-Statistics.cov(pe::Periodic, r::Number) = pe.σ2 * exp(-2 / pe.ℓ2 * sin(π * r / pe.p)^2)
+cov(pe::Periodic, r::Number) = pe.σ2 * exp(-2 / pe.ℓ2 * sin(π * r / pe.p)^2)
 
 
 @inline dk_dll(pe::Periodic, r::Float64) =

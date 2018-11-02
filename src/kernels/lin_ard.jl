@@ -23,7 +23,7 @@ mutable struct LinArd <: Kernel
     LinArd(ll::Vector{Float64}) = new(exp.(ll), [])
 end
 
-Statistics.cov(lin::LinArd, x::AbstractVector, y::AbstractVector) = dot(x./lin.ℓ, y./lin.ℓ)
+cov(lin::LinArd, x::AbstractVector, y::AbstractVector) = dot(x./lin.ℓ, y./lin.ℓ)
 
 struct LinArdData{D} <: KernelData
     XtX_d::D
@@ -42,7 +42,7 @@ function KernelData(k::LinArd, X::AbstractMatrix)
     LinArdData(XtX_d)
 end
 kernel_data_key(k::LinArd, X::AbstractMatrix) = "LinArdData"
-function Statistics.cov(lin::LinArd, X::AbstractMatrix)
+function cov(lin::LinArd, X::AbstractMatrix)
     K = (X./lin.ℓ)' * (X./lin.ℓ)
     LinearAlgebra.copytri!(K, 'U')
     return K
@@ -55,7 +55,7 @@ function cov!(cK::AbstractMatrix, lin::LinArd, X::AbstractMatrix, data::LinArdDa
     end
     return cK
 end
-function Statistics.cov(lin::LinArd, X::AbstractMatrix, data::LinArdData)
+function cov(lin::LinArd, X::AbstractMatrix, data::LinArdData)
     nobs = size(X,2)
     K = zeros(Float64, nobs, nobs)
     cov!(K, lin, X, data)

@@ -45,13 +45,13 @@ end
     return dKij_dθ!(dK, masked.kernel, Xmasked, data, i, j, num_dims(masked), npars)
 end
 
-function Statistics.cov(masked::Masked, x1::AbstractMatrix, x2::AbstractMatrix)
+function cov(masked::Masked, x1::AbstractMatrix, x2::AbstractMatrix)
     return cov(masked.kernel, view(x1,masked.active_dims,:), view(x2,masked.active_dims,:))
 end
-function Statistics.cov(masked::Masked, x1::AbstractVector, x2::AbstractVector)
+function cov(masked::Masked, x1::AbstractVector, x2::AbstractVector)
     return cov(masked.kernel, view(x1,masked.active_dims), view(x2,masked.active_dims))
 end
-function Statistics.cov(masked::Masked, X::AbstractMatrix, data::KernelData)
+function cov(masked::Masked, X::AbstractMatrix, data::KernelData)
     return cov(masked.kernel, view(X,masked.active_dims,:), data)
 end
 function cov!(
@@ -76,7 +76,7 @@ function grad_slice!(
 end
 
 # with EmptyData
-function Statistics.cov(masked::Masked, X::AbstractMatrix, data::EmptyData)
+function cov(masked::Masked, X::AbstractMatrix, data::EmptyData)
     return cov(masked.kernel, view(X,masked.active_dims,:), data)
 end
 function cov!(s::AbstractMatrix, masked::Masked, X::AbstractMatrix, data::EmptyData)
