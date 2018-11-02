@@ -2,7 +2,7 @@ import Base.append!
 append!(gp, x::VecF64, y::Float64) = append!(gp, reshape(x, :, 1), [y])
 function append!(gp::GPE{X,Y,M,K,P,D}, x::MatF64, y::VecF64) where {X,Y,M,K,P <: ElasticPDMat, D}
     size(x, 2) == length(y) || error("$(size(x, 2)) observations, but $(length(y)) targets.")
-    newcov = [cov(gp.kernel, gp.x, x); cov(gp.kernel, x, x) + (exp(2*gp.logNoise) + 1e-5)*I]
+    newcov = [cov(gp.kernel, gp.x, x); cov(gp.kernel, x, x) + (exp(2*gp.logNoise) + eps())*I]
     append!(gp.data, gp.kernel, gp.x, x)
     append!(gp.x, x)
     append!(gp.cK, newcov)
@@ -11,7 +11,7 @@ function append!(gp::GPE{X,Y,M,K,P,D}, x::MatF64, y::VecF64) where {X,Y,M,K,P <:
     update_target!(gp, kern = false, noise = false)
 end
 
-wrap_cK(cK::ElasticPDMat, Σbuffer, chol) = cK
+wrap_cK(cK::ElasticPDMat, Σbuffer, chol::Cholesky) = cK
 mat(cK::ElasticPDMat) = view(cK.mat)
 cholfactors(cK::ElasticPDMat) = view(cK.chol).factors
 
@@ -25,14 +25,14 @@ function ElasticGPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel,
                     logNoise::Float64 = -2.0;
                     capacity = 10^3, stepsize = 10^3)
     data = ElasticKernelData(kernel, x, capacity = capacity, stepsize = stepsize)
-    N = length(y)
-    gp = GPE(ElasticArray(x), ElasticArray(y), mean, kernel, data, 
-             ElasticPDMat(Σ_default(x, kernel, data, logNoise), 
-                          capacity = capacity, stepsize = stepsize), 
-             logNoise)
+    nobs = length(y)
+    # create placeholder PDMat
+    m    = Matrix{Float64}(undef, nobs, nobs)
+    chol = Matrix{Float64}(undef, nobs, nobs)
+    cK = ElasticPDMat(m, Cholesky(chol, :U, 0), capacity=capacity, stepsize=stepsize)
+    gp = GPE(ElasticArray(x), ElasticArray(y), mean, kernel, data, cK, logNoise)
     initialise_target!(gp)
 end
-export ElasticGPE
 
 function prepareappend!(kd, Xnew)
     dim, nobs_new = size(Xnew)

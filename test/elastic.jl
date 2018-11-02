@@ -18,14 +18,14 @@ using Test, GaussianProcesses
             xtest = rand(N, 2)
             mu1, sig1 = predict_y(gp1, xtest)
             mu2, sig2 = predict_y(gp2, xtest)
-            @test mu1 ≈ mu2
-            @test sig1 ≈ sig2
-            @test gp1.mll ≈ gp2.mll
-            @test isapprox(gp1.alpha, gp2.alpha, atol = 1e-4)
+            @test isapprox(mu1, mu2, atol = 1e-6)
+            @test isapprox(sig1, sig2, atol = 1e-6)
+            @test isapprox(gp1.mll, gp2.mll, atol = 1e-6)
+            @test isapprox(gp1.alpha, gp2.alpha, atol = 1e-6)
             optimize!(gp1)
             optimize!(gp2)
-            @test gp1.mll ≈ gp2.mll
-            @test isapprox(gp1.alpha, gp2.alpha, atol = 1e-4)
+            @test isapprox(gp1.mll, gp2.mll, atol = 1e-6)
+            @test isapprox(gp1.alpha, gp2.alpha, atol = 1e-6)
         end
     end
     gp = ElasticGPE(N, kernel = SEIso(0., 0.), capacity = 50)

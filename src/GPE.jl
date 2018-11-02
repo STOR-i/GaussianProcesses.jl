@@ -64,9 +64,12 @@ end
 function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0)
     nobs = length(y)
     kerneldata = KernelData(kernel, x)
-    GPE(x, y, mean, kernel, kerneldata, 
-        PDMat(Σ_default(x, kernel, kerneldata, logNoise)), 
-        logNoise)
+    Σ = Σ_default(x, kernel, kerneldata, logNoise)
+    # create placeholder PDMat
+    m = Matrix{Float64}(undef, nobs, nobs)
+    chol = Matrix{Float64}(undef, nobs, nobs)
+    cK = PDMats.PDMat(m, Cholesky(chol, 'U', 0))
+    GPE(x, y, mean, kernel, kerneldata, cK, logNoise)
 end
 GPE(x::VecF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0) =
     GPE(x', y, mean, kernel, logNoise)
@@ -118,9 +121,9 @@ fit!(gp::GPE, x::VecF64, y::VecF64) = fit!(gp, x', y)
 """
     get_ααinvcKI!(ααinvcKI::Matrix{Float64}, cK::AbstractPDMat, α::Vector)
 
-Write `ααᵀ - cK * eye(nobs)` to `ααinvcKI` avoiding any memory allocation, where `cK` and
+Write `ααᵀ - cK⁻¹` to `ααinvcKI` avoiding any memory allocation, where `cK` and
 `α` are the covariance matrix and the alpha vector of a Gaussian process, respectively.
-Hereby `α` is defined as `cK \\ (Y - μ)`.
+Hereby `α` is defined as `cK⁻¹ (Y - μ)`.
 """
 function get_ααinvcKI!(ααinvcKI::MatF64, cK::AbstractPDMat, α::Vector)
     nobs = length(α)
@@ -132,6 +135,7 @@ function get_ααinvcKI!(ααinvcKI::MatF64, cK::AbstractPDMat, α::Vector)
     @inbounds for i in 1:nobs
         ααinvcKI[i,i] = -1.0
     end
+    # `ldiv!(A, B)`: Compute A \ B in-place and overwriting B to store the result.
     ldiv!(cK.chol, ααinvcKI)
     BLAS.ger!(1.0, α, α, ααinvcKI)
 end
@@ -140,8 +144,7 @@ end
 #Functions for calculating the log-target
 
 Σ_default(gp) = Σ_default(gp.x, gp.kernel, gp.data, gp.logNoise)
-
-Σ_default(x, kernel, data, logNoise) = make_posdef!(cov(kernel, x, data) + exp(2*logNoise)*I)[1]
+Σ_default(x, kernel, data, logNoise) = cov(kernel, x, data) + (exp(2*logNoise)+eps())*I
 
 """
     update_cK!(gp::GPE)
@@ -152,20 +155,17 @@ function update_cK!(gp::GPE)
     old_cK = gp.cK
     Σbuffer = mat(old_cK)
     cov!(Σbuffer, gp.kernel, gp.x, gp.data)
-    noise = (exp(2*gp.logNoise) + 1e-5)
+    noise = exp(2*gp.logNoise)+eps()
     for i in 1:gp.nobs
         Σbuffer[i,i] += noise
     end
-    chol_buffer = cholfactors(old_cK)
-    copyto!(chol_buffer, Σbuffer)
-    chol = cholesky!(Symmetric(chol_buffer))
+    Σbuffer, chol = make_posdef!(Σbuffer, cholfactors(old_cK))
     gp.cK = wrap_cK(gp.cK, Σbuffer, chol)
-    gp.cK
+    # copyto!(chol_buffer, Σbuffer)
+    # chol = cholesky!(Symmetric(chol_buffer))
+    # gp.cK = wrap_cK(gp.cK, Σbuffer, chol)
+    # gp.cK = new_cK
 end
-
-wrap_cK(cK::PDMat, Σbuffer, chol) = PDMat(Σbuffer, chol)
-mat(cK::PDMat) = cK.mat
-cholfactors(cK::PDMat) = cK.chol.factors
 
 # modification of initialise_target! that reuses existing matrices to avoid
 # unnecessary memory allocations, which speeds things up significantly
@@ -347,8 +347,8 @@ function _predict(gp::GPE, x::MatF64)
     mu = mean(gp.mean, x) + cK'*gp.alpha        # Predictive mean
     Sigma_raw = cov(gp.kernel, x) - Lck'Lck # Predictive covariance
     # Add jitter to get stable covariance
-    Sigma = tolerant_PDMat(Sigma_raw)
-    return mu, Sigma
+    m, chol = make_posdef!(Sigma_raw)
+    return mu, PDMat(m, chol)
 end
 
 #———————————————————————————————————————————————————————————
@@ -361,7 +361,8 @@ function Random.rand!(gp::GPE, x::MatF64, A::DenseMatrix)
         # Prior mean and covariance
         μ = mean(gp.mean, x);
         Σraw = cov(gp.kernel, x);
-        Σ = tolerant_PDMat(Σraw)
+        Σraw, chol = make_posdef!(Σraw)
+        Σ = PDMat(Σraw, chol)
     else
         # Posterior mean and covariance
         μ, Σ = predict_f(gp, x; full_cov=true)

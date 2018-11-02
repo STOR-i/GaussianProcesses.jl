@@ -29,13 +29,34 @@ end
 # 1D Case for prediction
 predict_f(gp::GPBase, x::VecF64; full_cov::Bool=false) = predict_f(gp, x'; full_cov=full_cov)
 
-function make_posdef!(m::MatF64)
+wrap_cK(cK::PDMat, Σbuffer, chol::Cholesky) = PDMat(Σbuffer, chol)
+mat(cK::PDMat) = cK.mat
+cholfactors(cK::PDMat) = cK.chol.factors
+"""
+    make_posdef!(m::Matrix{Float64}, chol_factors::Matrix{Float64})
+
+Try to encode covariance matrix `m` as a positive definite matrix.
+The `chol_factors` matrix is recycled to store the cholesky decomposition,
+so as to reduce the number of memory allocations.
+
+Sometimes covariance matrices of Gaussian processes are positive definite mathematically
+but have negative eigenvalues numerically. To resolve this issue, small weights are added
+to the diagonal (and hereby all eigenvalues are raised by that amount mathematically)
+until all eigenvalues are positive numerically.
+"""
+function make_posdef!(m::MatF64, chol_factors::MatF64)
     n = size(m, 1)
     size(m, 2) == n || throw(ArgumentError("Covariance matrix must be square"))
     for _ in 1:10 # 10 chances
         try 
-            return m, cholesky(m)
-        catch
+            # return m, cholesky(m)
+            copyto!(chol_factors, m)
+            chol = cholesky!(Symmetric(chol_factors, :U))
+            return m, chol
+        catch err
+            if typeof(err)!=LinearAlgebra.PosDefException
+                throw(err)
+            end
             # that wasn't (numerically) positive definite,
             # so let's add some weight to the diagonal
             ϵ = 1e-6 * tr(m) / n
@@ -44,20 +65,12 @@ function make_posdef!(m::MatF64)
             end
         end
     end
-    m, cholesky(m)
+    copyto!(chol_factors, m)
+    chol = cholesky!(Symmetric(chol_factors, :U))
+    return m, chol
+end
+function make_posdef!(m::MatF64)
+    chol_buffer = similar(m)
+    return make_posdef!(m, chol_buffer)
 end
 
-"""
-    tolerant_PDMat(Σ::Matrix{Float64})
-
-Try to encode covariance matrix `Σ` as positive definite matrix of type `PDMat`.
-
-Sometimes covariance matrices of Gaussian processes are positive definite mathematically
-but have negative eigenvalues numerically. To resolve this issue, small weights are added
-to the diagonal (and hereby all eigenvalues are raised by that amount mathematically)
-until all eigenvalues are positive numerically.
-"""
-function tolerant_PDMat(Sigma_raw::MatF64)
-    Sigma_raw, chol = make_posdef!(Sigma_raw)
-    PDMat(Sigma_raw, chol)
-end
