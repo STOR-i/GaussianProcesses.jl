@@ -71,6 +71,12 @@ function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64
     cK = PDMats.PDMat(m, Cholesky(chol, 'U', 0))
     GPE(x, y, mean, kernel, kerneldata, cK, logNoise)
 end
+function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData)
+    nobs = length(y)
+    GPE(x, y, mean, kernel, kerneldata, 
+        PDMat(Σ_default(x, kernel, kerneldata, logNoise)), 
+        logNoise)
+end
 GPE(x::VecF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0) =
     GPE(x', y, mean, kernel, logNoise)
 
