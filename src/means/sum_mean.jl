@@ -4,11 +4,11 @@ end
 
 SumMean(means::Mean...) = SumMean(means)
 
-mean(sm::SumMean, x::VecF64) = sum(mean(m, x) for m in components(sm))
+mean(sm::SumMean, x::AbstractVector) = sum(mean(m, x) for m in components(sm))
 
 get_param_names(sm::SumMean) = composite_param_names(components(sm), :sm)
 
-function grad_mean(sm::SumMean, x::VecF64)
+function grad_mean(sm::SumMean, x::AbstractVector)
     dm = Array{Float64}(undef, num_params(sm))
     v = 1
     for m in components(sm)

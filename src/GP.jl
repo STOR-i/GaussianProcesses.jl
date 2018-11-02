@@ -9,13 +9,13 @@ Return posterior mean and variance of the Gaussian Process `gp` at specfic point
 given as columns of matrix `X`. If `full_cov` is `true`, the full covariance matrix is
 returned instead of only variances.
 """
-function predict_f(gp::GPBase, x::MatF64; full_cov::Bool=false)
+function predict_f(gp::GPBase, x::AbstractMatrix; full_cov::Bool=false)
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
     if full_cov
         return _predict(gp, x)
     else
         ## Calculate prediction for each point independently
-            μ = Array{Float64}(undef, size(x,2))
+            μ = Array{eltype(x)}(undef, size(x,2))
             σ2 = similar(μ)
         for k in 1:size(x,2)
             m, sig = _predict(gp, x[:,k:k])
@@ -27,7 +27,7 @@ function predict_f(gp::GPBase, x::MatF64; full_cov::Bool=false)
 end
 
 # 1D Case for prediction
-predict_f(gp::GPBase, x::VecF64; full_cov::Bool=false) = predict_f(gp, x'; full_cov=full_cov)
+predict_f(gp::GPBase, x::AbstractVector; full_cov::Bool=false) = predict_f(gp, x'; full_cov=full_cov)
 
 wrap_cK(cK::PDMat, Σbuffer, chol::Cholesky) = PDMat(Σbuffer, chol)
 mat(cK::PDMat) = cK.mat
@@ -44,7 +44,7 @@ but have negative eigenvalues numerically. To resolve this issue, small weights 
 to the diagonal (and hereby all eigenvalues are raised by that amount mathematically)
 until all eigenvalues are positive numerically.
 """
-function make_posdef!(m::MatF64, chol_factors::MatF64)
+function make_posdef!(m::AbstractMatrix, chol_factors::AbstractMatrix)
     n = size(m, 1)
     size(m, 2) == n || throw(ArgumentError("Covariance matrix must be square"))
     for _ in 1:10 # 10 chances
@@ -69,7 +69,7 @@ function make_posdef!(m::MatF64, chol_factors::MatF64)
     chol = cholesky!(Symmetric(chol_factors, :U))
     return m, chol
 end
-function make_posdef!(m::MatF64)
+function make_posdef!(m::AbstractMatrix)
     chol_buffer = similar(m)
     return make_posdef!(m, chol_buffer)
 end

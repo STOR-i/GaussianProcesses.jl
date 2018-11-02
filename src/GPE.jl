@@ -1,6 +1,6 @@
 # Main GaussianProcess type
 
-mutable struct GPE{X<:MatF64,Y<:VecF64,M<:Mean,K<:Kernel,P<:AbstractPDMat,D<:KernelData} <: GPBase
+mutable struct GPE{X<:AbstractMatrix,Y<:AbstractVector,M<:Mean,K<:Kernel,P<:AbstractPDMat,D<:KernelData} <: GPBase
     # Observation data
     "Input observations"
     x::X
@@ -58,7 +58,7 @@ assumed that the observations are noise free.
 - `logNoise::Float64`: Natural logarithm of the standard deviation for the observation
   noise. The default is -2.0, which is equivalent to assuming no observation noise.
 """
-function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData, cK::AbstractPDMat) 
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData, cK::AbstractPDMat) 
     GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(cK),typeof(kerneldata)}(x, y, mean, kernel, logNoise, kerneldata, cK)
 end
 function alloc_cK(nobs)
@@ -68,16 +68,16 @@ function alloc_cK(nobs)
     cK = PDMats.PDMat(m, Cholesky(chol, 'U', 0))
     return cK
 end
-function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData)
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData)
     nobs = length(y)
     cK = alloc_cK(nobs)
     GPE(x, y, mean, kernel, logNoise, kerneldata, cK)
 end
-function GPE(x::MatF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0)
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0)
     kerneldata = KernelData(kernel, x)
     GPE(x, y, mean, kernel, logNoise, kerneldata)
 end
-GPE(x::VecF64, y::VecF64, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0) =
+GPE(x::AbstractVector, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0) =
     GPE(x', y, mean, kernel, logNoise)
 
 """
@@ -100,7 +100,7 @@ Fit a Gaussian process that is defined by its `mean`, its `kernel`, and the loga
 
 See also: [`GPE`](@ref)
 """
-GP(x::AbstractVecOrMat{Float64}, y::VecF64, mean::Mean, kernel::Kernel,
+GP(x::AbstractVecOrMat{Float64}, y::AbstractVector, mean::Mean, kernel::Kernel,
    logNoise::Float64 = -2.0) = GPE(x, y, mean, kernel, logNoise)
 
 """
@@ -119,7 +119,7 @@ function fit!(gp::GPE{X,Y}, x::X, y::Y) where {X,Y}
     initialise_target!(gp)
 end
 
-fit!(gp::GPE, x::VecF64, y::VecF64) = fit!(gp, x', y)
+fit!(gp::GPE, x::AbstractVector, y::AbstractVector) = fit!(gp, x', y)
 
 #———————————————————————————————————————————————————————————
 #Fast memory allocation function
@@ -131,7 +131,7 @@ Write `ααᵀ - cK⁻¹` to `ααinvcKI` avoiding any memory allocation, where 
 `α` are the covariance matrix and the alpha vector of a Gaussian process, respectively.
 Hereby `α` is defined as `cK⁻¹ (Y - μ)`.
 """
-function get_ααinvcKI!(ααinvcKI::MatF64, cK::AbstractPDMat, α::Vector)
+function get_ααinvcKI!(ααinvcKI::AbstractMatrix, cK::AbstractPDMat, α::Vector)
     nobs = length(α)
     size(ααinvcKI) == (nobs, nobs) || throw(ArgumentError(
                 @sprintf("Buffer for ααinvcKI should be a %dx%d matrix, not %dx%d",
@@ -184,7 +184,7 @@ function update_mll!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tr
     gp
 end
 
-function dmll_kern!(dmll::VecF64, k::Kernel, X::MatF64, data::KernelData, ααinvcKI::MatF64)
+function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::KernelData, ααinvcKI::AbstractMatrix)
     dim, nobs = size(X)
     nparams = num_params(k)
     @assert nparams == length(dmll)
@@ -211,7 +211,7 @@ end
 
 Update the gradient of the marginal log-likelihood of Gaussian process `gp`.
 """
-function update_dmll!(gp::GPE, ααinvcKI::MatF64;
+function update_dmll!(gp::GPE, ααinvcKI::AbstractMatrix;
     noise::Bool=true, # include gradient component for the logNoise term
     domean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
@@ -252,7 +252,7 @@ Update the gradient of the marginal log-likelihood of a Gaussian
 process `gp`.
 """
 function update_mll_and_dmll!(gp::GPE,
-        ααinvcKI::MatF64;
+        ααinvcKI::AbstractMatrix;
         kwargs...)
     update_mll!(gp; kwargs...)
     update_dmll!(gp, ααinvcKI; kwargs...)
@@ -290,7 +290,7 @@ function update_target!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool
     gp
 end
 
-function update_dtarget!(gp::GPE, Kgrad::MatF64, L_bar::MatF64; kwargs...)
+function update_dtarget!(gp::GPE, Kgrad::AbstractMatrix, L_bar::AbstractMatrix; kwargs...)
     update_dmll!(gp, L_bar; kwargs...)
     gp.dtarget = gp.dmll + prior_gradlogpdf(gp; kwargs...)
     gp
@@ -305,7 +305,7 @@ Update the log-posterior
 ```
 of a Gaussian process `gp` and its derivative.
 """
-function update_target_and_dtarget!(gp::GPE, Kgrad::MatF64, L_bar::MatF64; kwargs...)
+function update_target_and_dtarget!(gp::GPE, Kgrad::AbstractMatrix, L_bar::AbstractMatrix; kwargs...)
     update_target!(gp; kwargs...)
     update_dtarget!(gp, Kgrad, L_bar; kwargs...)
 end
@@ -329,7 +329,7 @@ Return the predictive mean and variance of Gaussian Process `gp` at specfic poin
 are given as columns of matrix `x`. If `full_cov` is `true`, the full covariance matrix is
 returned instead of only variances.
 """
-function predict_y(gp::GPE, x::MatF64; full_cov::Bool=false)
+function predict_y(gp::GPE, x::AbstractMatrix; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
     if full_cov
         return μ, σ2 + ScalMat(gp.nobs, exp(2*gp.logNoise))
@@ -339,12 +339,12 @@ function predict_y(gp::GPE, x::MatF64; full_cov::Bool=false)
 end
 
 # 1D Case for predictions
-predict_y(gp::GPE, x::VecF64; full_cov::Bool=false) = predict_y(gp, x'; full_cov=full_cov)
+predict_y(gp::GPE, x::AbstractVector; full_cov::Bool=false) = predict_y(gp, x'; full_cov=full_cov)
 
 @deprecate predict predict_y
 
 ## compute predictions
-function _predict(gp::GPE, x::MatF64)
+function _predict(gp::GPE, x::AbstractMatrix)
     cK = cov(gp.kernel, gp.x, x)
     Lck = whiten(gp.cK, cK)
     mu = mean(gp.mean, x) + cK'*gp.alpha        # Predictive mean
@@ -356,7 +356,7 @@ end
 
 #———————————————————————————————————————————————————————————
 # Sample from the GPE
-function Random.rand!(gp::GPE, x::MatF64, A::DenseMatrix)
+function Random.rand!(gp::GPE, x::AbstractMatrix, A::DenseMatrix)
     nobs = size(x,2)
     n_sample = size(A,2)
 
@@ -373,14 +373,14 @@ function Random.rand!(gp::GPE, x::MatF64, A::DenseMatrix)
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end
 
-Random.rand(gp::GPE, x::MatF64, n::Int) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n))
+Random.rand(gp::GPE, x::AbstractMatrix, n::Int) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n))
 
 # Sample from 1D GPE
-Random.rand(gp::GPE, x::VecF64, n::Int) = rand(gp, x', n)
+Random.rand(gp::GPE, x::AbstractVector, n::Int) = rand(gp, x', n)
 
 # Generate only one sample from the GPE and returns a vector
-Random.rand(gp::GPE, x::MatF64) = vec(rand(gp,x,1))
-Random.rand(gp::GPE, x::VecF64) = vec(rand(gp,x',1))
+Random.rand(gp::GPE, x::AbstractMatrix) = vec(rand(gp,x,1))
+Random.rand(gp::GPE, x::AbstractVector) = vec(rand(gp,x',1))
 
 #—————————————————————————————————————————————————————–
 #Functions for setting and calling the parameters of the GP object
@@ -405,7 +405,7 @@ function num_params(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tru
     n
 end
 
-function set_params!(gp::GPE, hyp::VecF64;
+function set_params!(gp::GPE, hyp::AbstractVector;
                      noise::Bool=true, domean::Bool=true, kern::Bool=true)
     n_mean_params = num_params(gp.mean)
     n_kern_params = num_params(gp.kernel)
@@ -440,7 +440,7 @@ end
 
 #———————————————————————————————————————————————————————————-
 # Push function
-function Base.push!(gp::GPE, x::MatF64, y::VecF64)
+function Base.push!(gp::GPE, x::AbstractMatrix, y::AbstractVector)
     @warn "push! method is currently inefficient as it refits all observations"
     if gp.nobs == 0
         GaussianProcesses.fit!(gp, x, y)
@@ -451,9 +451,9 @@ function Base.push!(gp::GPE, x::MatF64, y::VecF64)
     end
 end
 
-Base.push!(gp::GPE, x::VecF64, y::VecF64) = push!(gp, x', y)
+Base.push!(gp::GPE, x::AbstractVector, y::AbstractVector) = push!(gp, x', y)
 Base.push!(gp::GPE, x::Float64, y::Float64) = push!(gp, [x], [y])
-Base.push!(gp::GPE, x::VecF64, y::Float64) = push!(gp, reshape(x, length(x), 1), [y])
+Base.push!(gp::GPE, x::AbstractVector, y::Float64) = push!(gp, reshape(x, length(x), 1), [y])
 
 
 # —————————————————————————————————————————————————————————————
