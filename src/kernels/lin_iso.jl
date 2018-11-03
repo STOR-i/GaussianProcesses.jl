@@ -9,19 +9,19 @@ k(x, x') = xᵀx'/ℓ²
 ```
 with length scale ``ℓ``.
 """
-mutable struct LinIso <: Kernel
+mutable struct LinIso{T<:Real} <: Kernel
     "Squared length scale"
-    ℓ2::Float64
+    ℓ2::T
     "Priors for kernel parameters"
     priors::Array
-
-    """
-        LinIso(ll::Float64)
-
-    Create `LinIso` with length scale `exp(ll)`.
-    """
-    LinIso(ll::Float64) = new(exp(2 * ll), [])
 end
+
+"""
+    LinIso(ll::T)
+
+Create `LinIso` with length scale `exp(ll)`.
+"""
+LinIso(ll::T) where T = LinIso{T}(exp(2 * ll), [])
 
 struct LinIsoData{D} <: KernelData
     XtX::D
@@ -57,7 +57,7 @@ function cov!(cK::AbstractMatrix, lin::LinIso, X::AbstractMatrix, data::LinIsoDa
     return cK
 end
 
-get_params(lin::LinIso) = Float64[log(lin.ℓ2) / 2]
+get_params(lin::LinIso{T}) where T = T[log(lin.ℓ2) / 2]
 get_param_names(::LinIso) = [:ll]
 num_params(lin::LinIso) = 1
 
@@ -66,7 +66,7 @@ function set_params!(lin::LinIso, hyp::AbstractVector)
     lin.ℓ2 = exp(2 * hyp[1])
 end
 
-@inline dk_dll(lin::LinIso, xTy::Float64) = -2 * _cov(lin,xTy)
+@inline dk_dll(lin::LinIso, xTy::Real) = -2 * _cov(lin,xTy)
 @inline function dKij_dθp(lin::LinIso, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
     if p==1
         return dk_dll(lin, dotij(X,i,j,dim))

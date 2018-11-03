@@ -7,26 +7,26 @@ k(x,x') = σ²
 ```
 with signal standard deviation ``σ``.
 """
-mutable struct Const <: Kernel
+mutable struct Const{T} <: Kernel where {T<:Real}
     "Signal variance"
-    σ2::Float64
+    σ2::T
     "Priors for kernel parameters"
     priors::Array
-
-    """
-        Const(lσ::Float64)
-
-    Create `Const` with signal standard deviation `exp(lσ)`.
-    """
-    Const(lσ::Float64) = new(exp(2 * lσ), [])
 end
+
+"""
+    Const(lσ::T)
+
+Create `Const` with signal standard deviation `exp(lσ)`.
+"""
+Const(lσ::T) where T = Const{T}(exp(2 * lσ), [])
 
 function set_params!(cons::Const, hyp::AbstractVector)
     length(hyp) == 1 || throw(ArgumentError("Constant kernel only has one parameters"))
     cons.σ2 = exp(2.0*hyp[1])
 end
 
-get_params(cons::Const) = Float64[log(cons.σ2)/2.0]
+get_params(cons::Const{T}) where T = T[log(cons.σ2)/2.0]
 get_param_names(cons::Const) = [:lσ]
 num_params(cons::Const) = 1
 
