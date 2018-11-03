@@ -23,7 +23,7 @@ KernelData(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix) = EmptyData()
 kernel_data_key(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix) = "EmptyData"
 
 """
-    cov(k::Kernel, X₁::Matrix{Float64}, X₂::Matrix{Float64})
+    cov(k::Kernel, X₁::AbstractMatrix, X₂::AbstractMatrix)
 
 Create covariance matrix from kernel `k` and matrices of observations `X₁` and `X₂`, where
 each column is an observation.
@@ -35,7 +35,7 @@ function cov(k::Kernel, X₁::AbstractMatrix, X₂::AbstractMatrix, kerneldata::
 end
 
 """
-    cov!(cK::Matrix{Float64}, k::Kernel, X₁::Matrix{Float64}, X₂::Matrix{Float64})
+    cov!(cK::AbstractMatrix, k::Kernel, X₁::AbstractMatrix, X₂::AbstractMatrix)
 
 Like [`cov(k, X₁, X₂)`](@ref), but stores the result in `cK` rather than a new matrix.
 """
@@ -51,7 +51,7 @@ function cov!(cK::AbstractMatrix, k::Kernel, X₁::AbstractMatrix, X₂::Abstrac
 end
 
 """
-    cov(k::Kernel, X::Matrix{Float64}[, data::KernelData = KernelData(k, X, X)])
+    cov(k::Kernel, X::AbstractMatrix[, data::KernelData = KernelData(k, X, X)])
 
 Create covariance function from kernel `k`, matrix of observations `X`, where each column is
 an observation, and kernel data `data` constructed from input observations.

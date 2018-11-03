@@ -11,12 +11,6 @@ mutable struct ADkernel{Kraw<:Kernel, Kdual<:Kernel, D<:Dual,CFG<:GradientConfig
     priors::Array          # Array of priors for kernel parameters
     cfg::CFG
 end
-# mutable struct IsotropicADkernel{K<:Isotropic{SqEuclidean},D<:Dual,CFG<:GradientConfig} <: Isotropic{SqEuclidean}, AutoDiffKernel
-    # raw::K{Float64}
-    # dual::K{D}
-    # priors::Array          # Array of priors for kernel parameters
-    # cfg::CFG
-# end
 
 function autodiff(k::Kernel)
     cfg = GradientConfig(nothing, zeros(num_params(k)))
@@ -44,6 +38,7 @@ cov_ij(ad::AutoDiffKernel, X::AbstractMatrix, data::KernelData, i::Int, j::Int, 
 cov_ij(ad::AutoDiffKernel, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(raw(ad), X, i, j, dim)
 
 KernelData(ad::AutoDiffKernel, X::AbstractMatrix) = KernelData(raw(ad), X)
+kernel_data_key(ad::AutoDiffKernel, X::AbstractMatrix) = kernel_data_key(raw(ad), X)
 
 # function dKij_dθ!(dK::AbstractVector, ad::AutoDiffKernel, X::AbstractMatrix, data::IsotropicData, 
                                 # i::Int, j::Int, dim::Int, npars::Int)
@@ -58,12 +53,15 @@ KernelData(ad::AutoDiffKernel, X::AbstractMatrix) = KernelData(raw(ad), X)
     # return dK
 # end
 
-function dKij_dθp(ad::AutoDiffKernel, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
+function dKij_dθp(ad::AutoDiffKernel, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
     lθ = get_params(raw(ad))
     seed!(ad.cfg.duals, lθ, ad.cfg.seeds)
     set_params!(dual(ad), ad.cfg.duals)
     k_eval = cov_ij(dual(ad), X, i, j, dim)
     return partials(k_eval)[p]
+end
+function dKij_dθp(ad::AutoDiffKernel, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
+    dKij_dθp(ad, X, i, j, p, dim)
 end
 function dKij_dθp(ad::AutoDiffKernel, X::AbstractMatrix, data::KernelData, i::Int, j::Int, p::Int, dim::Int)
     lθ = get_params(raw(ad))

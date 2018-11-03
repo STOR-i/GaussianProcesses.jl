@@ -120,16 +120,23 @@ end
         println("\tTesting ", nameof(typeof(kern)), "...")
         testkernel(kern)
     end
-    @testset for kernel in kernels
+    @testset "Masked" for kernel in kernels
+        println("\tTesting masked", nameof(typeof(kernel)), "...")
         if isa(kernel, LinArd) || isa(kernel, GaussianProcesses.StationaryARD)
             par = GaussianProcesses.get_params(kernel)
-            k_masked = typeof(kernel)([par[1]], par[d+1:end]...)
+            k_masked = typeof(kernel).name.wrapper([par[1]], par[d+1:end]...)
             kern = Masked(k_masked, [1])
         else
             kern = Masked(kernel, [1])
         end
         println("\tTesting masked ", nameof(typeof(kern)), "...")
         testkernel(kern)
+    end
+    @testset "autodiff" begin
+        for kernel in [SEIso(1.0, 1.0), RQIso(1.0, 1.0, 1.0), LinIso(1.0)]
+            println("\tTesting autodiff", nameof(typeof(kernel)), "...")
+            testkernel(autodiff(kernel))
+        end
     end
 
 end # testset
