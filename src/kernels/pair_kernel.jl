@@ -47,6 +47,10 @@ struct PairData{KD1 <: KernelData, KD2 <: KernelData} <: KernelData
 end
 const KernelDict = Dict{String,KernelData}
 KernelData(k::Kernel, X::AbstractMatrix, cache::KernelDict) = KernelData(k, X)
+function KernelData(masked::Masked, X::AbstractMatrix, cache::KernelDict)
+    return KernelData(masked.kernel, view(X,masked.active_dims,:), cache)
+end
+KernelData(k::FixedKernel, X::AbstractMatrix, cache::KernelDict) = KernelData(k.kernel, X, cache)
 function KernelData(pairkern::PairKernel, X::AbstractMatrix, cache::KernelDict=KernelDict())
     leftk  = leftkern(pairkern)
     rightk = rightkern(pairkern)

@@ -73,7 +73,6 @@ cov_ij(fk::FixedKernel, X::AbstractMatrix, i::Int, j::Int, dim::Int) = cov_ij(fk
 cov_ij(fk::FixedKernel, X::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int) = cov_ij(fk.kernel, X, data, i, j, dim)
 cov_ij(fk::FixedKernel, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(fk, X, i, j, dim)
 cov(fk::FixedKernel, x::AbstractVector, y::AbstractVector) = cov(fk.kernel, x, y)
-KernelData(fk::FixedKernel, args...) = KernelData(fk.kernel, args...)
 KernelData(fk::FixedKernel, X::AbstractMatrix) = KernelData(fk.kernel, X)
 kernel_data_key(fk::FixedKernel, args...) = kernel_data_key(fk.kernel, args...)
 kernel_data_key(fk::FixedKernel, X::AbstractMatrix) = kernel_data_key(fk.kernel, X)
