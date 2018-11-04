@@ -32,11 +32,11 @@ const kernelswithtags = Dict((k => ["simple", "isotropic"] for k in
 const suite = BenchmarkGroup(["kernels"])
 
 for (kernel, tags) in kernelswithtags
-    data = GaussianProcesses.KernelData(kernel, X)
+    data = GaussianProcesses.KernelData(kernel, X, X)
     np = GaussianProcesses.num_params(kernel)
     stack = Array{Float64}(undef, nt, nt, np)
     group = suite[string(typeof(kernel))] = BenchmarkGroup(tags)
-    group["data"] = @benchmarkable GaussianProcesses.KernelData($kernel, $X)
+    group["data"] = @benchmarkable GaussianProcesses.KernelData($kernel, $X, $X)
     group["cov"] =  @benchmarkable GaussianProcesses.cov!($cK, $kernel, $X, $data)
     group["grad"] = @benchmarkable GaussianProcesses.grad_stack!($stack, $kernel, $X, $data)
 end

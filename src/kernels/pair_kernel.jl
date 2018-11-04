@@ -46,34 +46,36 @@ struct PairData{KD1 <: KernelData, KD2 <: KernelData} <: KernelData
     data2::KD2
 end
 const KernelDict = Dict{String,KernelData}
-KernelData(k::Kernel, X::AbstractMatrix, cache::KernelDict) = KernelData(k, X)
-function KernelData(masked::Masked, X::AbstractMatrix, cache::KernelDict)
-    return KernelData(masked.kernel, view(X,masked.active_dims,:), cache)
+KernelData(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, cache::KernelDict) = KernelData(k, X1, X2)
+function KernelData(masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, cache::KernelDict)
+    X1view = view(X1,masked.active_dims,:)
+    X2view = view(X2,masked.active_dims,:)
+    wrappeddata = KernelData(masked.kernel, X1view, X2view, cache)
+    return MaskedData(X1view, X2view, wrappeddata)
 end
-KernelData(k::FixedKernel, X::AbstractMatrix, cache::KernelDict) = KernelData(k.kernel, X, cache)
-function KernelData(pairkern::PairKernel, X::AbstractMatrix, cache::KernelDict=KernelDict())
+KernelData(k::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, cache::KernelDict) = KernelData(k.kernel, X1, X2, cache)
+function KernelData(pairkern::PairKernel, X1::AbstractMatrix, X2::AbstractMatrix, cache::KernelDict=KernelDict())
     leftk  = leftkern(pairkern)
     rightk = rightkern(pairkern)
     # this is a bit broken:
-    leftkey = kernel_data_key(leftk, X)
-    rightkey = kernel_data_key(rightk, X)
+    leftkey = kernel_data_key(leftk, X1, X2)
+    rightkey = kernel_data_key(rightk, X1, X2)
     if leftkey ∉ keys(cache)
-        leftdata = KernelData(leftk, X, cache)
+        leftdata = KernelData(leftk, X1, X2, cache)
         cache[leftkey] = leftdata
     else
         leftdata = cache[leftkey]
     end
     if rightkey ∉ keys(cache)
-        rightdata = KernelData(rightk, X, cache)
+        rightdata = KernelData(rightk, X1, X2, cache)
         cache[rightkey] = rightdata
     else
         rightdata = cache[rightkey]
     end
     return PairData(leftdata, rightdata)
 end
-
-function kernel_data_key(pairkern::PairKernel, X::AbstractMatrix)
+function kernel_data_key(pairkern::PairKernel, X1::AbstractMatrix, X2::AbstractMatrix)
     kl = leftkern(pairkern)
     kr = rightkern(pairkern)
-    @sprintf("PairData:%s+%s", kernel_data_key(kl, X), kernel_data_key(kr, X))
+    @sprintf("PairData:%s+%s", kernel_data_key(kl, X1, X2), kernel_data_key(kr, X1, X2))
 end

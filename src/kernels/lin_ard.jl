@@ -29,19 +29,22 @@ struct LinArdData{D} <: KernelData
     XtX_d::D
 end
 
-function KernelData(k::LinArd, X::AbstractMatrix)
-    dim, nobs = size(X)
-    XtX_d = Array{Float64}(undef, nobs, nobs, dim)
+function KernelData(k::LinArd, X1::AbstractMatrix, X2::AbstractMatrix)
+    dim1, nobs1 = size(X1)
+    dim2, nobs2 = size(X2)
+	@assert dim1==dim2
+	dim = dim1
+    XtX_d = Array{Float64}(undef, nobs1, nobs2, dim)
     @inbounds @simd for d in 1:dim
-        for i in 1:nobs
-            for j in 1:i
-                XtX_d[i, j, d] = XtX_d[j, i, d] = X[d, i] * X[d, j]
+        for i in 1:nobs1
+            for j in 1:nobs2
+                XtX_d[i, j, d] = X1[d, i] * X2[d, j]
             end
         end
     end
     LinArdData(XtX_d)
 end
-kernel_data_key(k::LinArd, X::AbstractMatrix) = "LinArdData"
+kernel_data_key(k::LinArd, X1::AbstractMatrix, X2::AbstractMatrix) = "LinArdData"
 function cov(lin::LinArd, X::AbstractMatrix)
     K = (X./lin.ℓ)' * (X./lin.ℓ)
     LinearAlgebra.copytri!(K, 'U')
@@ -60,14 +63,13 @@ function cov(lin::LinArd, X::AbstractMatrix, data::LinArdData)
     K = zeros(Float64, nobs, nobs)
     cov!(K, lin, X, data)
 end
-@inline @inbounds function cov_ij(lin::LinArd, X::AbstractMatrix, data::LinArdData, i::Int, j::Int, dim::Int)
+@inline @inbounds function cov_ij(lin::LinArd, X1::AbstractMatrix, X2::AbstractMatrix, data::LinArdData, i::Int, j::Int, dim::Int)
     ck = 0.0
     for d in 1:dim
         ck += data.XtX_d[i,j,d] * 1/lin.ℓ[d]^2
     end
     return ck
 end
-
 get_params(lin::LinArd) = log.(lin.ℓ)
 get_param_names(lin::LinArd) = get_param_names(lin.ℓ, :ll)
 num_params(lin::LinArd) = length(lin.ℓ)

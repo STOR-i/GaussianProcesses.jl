@@ -68,14 +68,12 @@ end
 end
 
 # delegate everything else to the wrapped kernel
-# (is there a better way to do this?)
-cov_ij(fk::FixedKernel, X::AbstractMatrix, i::Int, j::Int, dim::Int) = cov_ij(fk.kernel, X, i, j, dim)
-cov_ij(fk::FixedKernel, X::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int) = cov_ij(fk.kernel, X, data, i, j, dim)
-cov_ij(fk::FixedKernel, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(fk, X, i, j, dim)
+@inline cov_ij(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, dim::Int) = cov_ij(fk.kernel, X1, X2, i, j, dim)
+@inline cov_ij(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int) = cov_ij(fk.kernel, X1, X2, data, i, j, dim)
+@inline cov_ij(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(fk, X1, X2, i, j, dim)
 cov(fk::FixedKernel, x::AbstractVector, y::AbstractVector) = cov(fk.kernel, x, y)
-KernelData(fk::FixedKernel, X::AbstractMatrix) = KernelData(fk.kernel, X)
-kernel_data_key(fk::FixedKernel, args...) = kernel_data_key(fk.kernel, args...)
-kernel_data_key(fk::FixedKernel, X::AbstractMatrix) = kernel_data_key(fk.kernel, X)
+KernelData(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix) = KernelData(fk.kernel, X1, X2)
+kernel_data_key(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix) = kernel_data_key(fk.kernel, X1, X2)
 
 ##########
 # Priors #

@@ -41,7 +41,7 @@ mutable struct GPMC{X<:AbstractMatrix,Y<:AbstractVector{<:Real},M<:Mean,K<:Kerne
     function GPMC{X,Y,M,K,L}(x::X, y::Y, mean::M, kernel::K, lik::L) where {X,Y,M,K,L}
         dim, nobs = size(x)
         length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        data = KernelData(kernel, x)
+        data = KernelData(kernel, x, x)
         gp = new{X,Y,M,K,L,typeof(data)}(x, y, mean, kernel, lik, dim, nobs, data,
                                          zeros(nobs))
         initialise_target!(gp)

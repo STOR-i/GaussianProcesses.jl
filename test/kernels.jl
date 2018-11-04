@@ -30,10 +30,10 @@ function testkernel(kern::Kernel)
         @test spec ≈ invoke(cov, Tuple{Kernel, Matrix{Float64}}, kern, X)
         @test spec[i, j] ≈ cov(kern, Xi, Xj)
 
-        key = GaussianProcesses.kernel_data_key(kern, X)
+        key = GaussianProcesses.kernel_data_key(kern, X, X)
         @test typeof(key) == String
         # check we've overwritten the default if necessary
-        kdata = GaussianProcesses.KernelData(kern, X)
+        kdata = GaussianProcesses.KernelData(kern, X, X)
         if typeof(kdata) != EmptyData
             @test key != "EmptyData"
         end
@@ -47,7 +47,7 @@ function testkernel(kern::Kernel)
     @testset "Gradient" begin
         nparams = GaussianProcesses.num_params(kern)
         init_params = GaussianProcesses.get_params(kern)
-        data = GaussianProcesses.KernelData(kern, X)
+        data = GaussianProcesses.KernelData(kern, X, X)
         stack1 = Array{Float64}(undef, n, n, nparams)
         stack2 = Array{Float64}(undef, n, n, nparams)
 

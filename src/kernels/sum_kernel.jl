@@ -11,8 +11,9 @@ function cov(sk::SumKernel, x::AbstractVector, y::AbstractVector)
     cov(sk.kleft, x, y) + cov(sk.kright, x, y)
 end
 
-@inline cov_ij(k::K, X::AbstractMatrix, i::Int, j::Int, dim::Int) where {K<:SumKernel} = cov_ij(k.kleft, X, i, j, dim) + cov_ij(k.kright, X, i, j, dim)
-@inline cov_ij(k::K, X::AbstractMatrix, data::PairData, i::Int, j::Int, dim::Int) where {K<:SumKernel} = cov_ij(k.kleft, X, data.data1, i, j, dim) + cov_ij(k.kright, X, data.data2, i, j, dim)
+
+@inline cov_ij(k::SumKernel, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, dim::Int) = cov_ij(k.kleft, X1, X2, i, j, dim) + cov_ij(k.kright, X1, X2, i, j, dim)
+@inline cov_ij(k::SumKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::PairData, i::Int, j::Int, dim::Int) = cov_ij(k.kleft, X1, X2, data.data1, i, j, dim) + cov_ij(k.kright, X1, X2, data.data2, i, j, dim)
     
 @inline function dKij_dθp(sumkern::SumKernel, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
     np = num_params(sumkern.kleft)

@@ -5,26 +5,32 @@
 abstract type Stationary{D} <: Kernel where D <: Distances.SemiMetric end
 abstract type StationaryData <: KernelData end
 
-function metric(kernel::Stationary{D}) where D <: Distances.SemiMetric
+const _sqeuclidean = SqEuclidean()
+const _euclidean = Euclidean()
+@inline metric(kernel::Stationary{SqEuclidean}) = _sqeuclidean
+@inline metric(kernel::Stationary{Euclidean}) = _euclidean
+@inline function metric(kernel::Stationary{D}) where D <: Distances.SemiMetric
     return D()
 end
-function metric(kernel::Stationary{WeightedSqEuclidean})
+@inline function metric(kernel::Stationary{WeightedSqEuclidean})
     return WeightedSqEuclidean(ard_weights(kernel))
 end
-function metric(kernel::Stationary{WeightedEuclidean})
+@inline function metric(kernel::Stationary{WeightedEuclidean})
     return WeightedEuclidean(ard_weights(kernel))
 end
-ard_weights(kernel::Stationary{WeightedSqEuclidean}) = kernel.iℓ2
-ard_weights(kernel::Stationary{WeightedEuclidean}) = kernel.iℓ2
+@inline ard_weights(kernel::Stationary{WeightedSqEuclidean}) = kernel.iℓ2
+@inline ard_weights(kernel::Stationary{WeightedEuclidean}) = kernel.iℓ2
 
 cov(k::Stationary, x::AbstractVector, y::AbstractVector) = cov(k, distance(k, x, y))
-@inline function cov_ij(k::Stationary, X::AbstractMatrix, i::Int, j::Int, dim::Int)
-    cov(k, distij(metric(k), X, i, j, dim))
+@inline function cov_ij(k::Stationary, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, dim::Int)
+    cov(k, distij(metric(k), X1, X2, i, j, dim))
 end
-@inline function cov_ij(k::Stationary, X::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int)
-    cov(k, distij(metric(k), X, i, j, dim))
+@inline function cov_ij(k::Stationary, X1::AbstractMatrix, X2::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int)
+    cov(k, distij(metric(k), X1, X2, i, j, dim))
 end
-@inline cov_ij(k::Stationary, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(k, X, i, j, dim)
+@inline function cov_ij(k::Stationary, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int)
+    cov(k, distij(metric(k), X1, X2, i, j, dim))
+end
 function cov!(cK::AbstractMatrix, k::Stationary, X1::AbstractMatrix, X2::AbstractMatrix)
     dim1, nobsv1 = size(X1)
     dim2, nobsv2 = size(X2)
@@ -83,14 +89,14 @@ struct IsotropicData{D} <: StationaryData
     R::D
 end
 
-function KernelData(k::Isotropic, X::AbstractMatrix)
-     IsotropicData(distance(k, X))
+function KernelData(k::Isotropic, X1::AbstractMatrix, X2::AbstractMatrix)
+	 IsotropicData(distance(k, X1, X2))
 end
-function kernel_data_key(k::Isotropic, X::AbstractMatrix)
-    return @sprintf("%s_%s", "IsotropicData", metric(k))
+function kernel_data_key(k::Isotropic, X1::AbstractMatrix, X2::AbstractMatrix)
+	return @sprintf("%s_%s", "IsotropicData", metric(k))
 end
 
-@inline @inbounds function cov_ij(kern::Isotropic, X::AbstractMatrix, data::IsotropicData, i::Int, j::Int, dim::Int)
+@inline @inbounds function cov_ij(kern::Isotropic, X1::AbstractMatrix, X2::AbstractMatrix, data::IsotropicData, i::Int, j::Int, dim::Int)
     return cov(kern, data.R[i,j])
 end
 @inline function dKij_dθp(kern::Isotropic,X::AbstractMatrix,i::Int,j::Int,p::Int,dim::Int)
@@ -122,13 +128,16 @@ struct StationaryARDData{D} <: StationaryData
 end
 
 # May need to customized in subtypes
-function KernelData(k::StationaryARD, X::AbstractMatrix)
-    dim, nobsv = size(X)
-    dist_stack = Array{Float64}(undef, nobsv, nobsv, dim)
-    for d in 1:dim
-        grad_ls = view(dist_stack, :, :, d)
-        distance!(grad_ls, SqEuclidean(), view(X, d:d,:))
-    end
-    StationaryARDData(dist_stack)
+function KernelData(k::StationaryARD, X1::AbstractMatrix, X2::AbstractMatrix)
+	dim1, n1 = size(X1)
+	dim2, n2 = size(X2)
+	@assert dim1 == dim2
+	dim = dim1
+	dist_stack = Array{Float64}(undef, n1, n2, dim)
+	for d in 1:dim1
+		grad_ls = view(dist_stack, :, :, d)
+		distance!(grad_ls, SqEuclidean(), view(X1, d:d,:), view(X2, d:d,:))
+	end
+	StationaryARDData(dist_stack)
 end
-kernel_data_key(k::StationaryARD, X::AbstractMatrix) = @sprintf("%s_%s", "StationaryARDData", metric(k))
+kernel_data_key(k::StationaryARD, X1::AbstractMatrix, X2::AbstractMatrix) = @sprintf("%s_%s", "StationaryARDData", metric(k))
