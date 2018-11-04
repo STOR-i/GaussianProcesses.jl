@@ -345,10 +345,15 @@ predict_y(gp::GPE, x::AbstractVector; full_cov::Bool=false) = predict_y(gp, x'; 
 
 ## compute predictions
 function _predict(gp::GPE, x::AbstractMatrix)
-    cK = cov(gp.kernel, gp.x, x)
-    Lck = whiten(gp.cK, cK)
+    crossdata = KernelData(gp.kernel, gp.x, x)
+    priordata = KernelData(gp.kernel, x, x)
+    cK = cov(gp.kernel, gp.x, x, crossdata)
     mu = mean(gp.mean, x) + cK'*gp.alpha        # Predictive mean
-    Sigma_raw = cov(gp.kernel, x) - Lck'Lck # Predictive covariance
+    Lck = whiten!(gp.cK, cK)
+    Sigma_raw = cov(gp.kernel, x, x, priordata)
+    # Sigma_raw = Sigma_raw - Lck'Lck
+    LinearAlgebra.BLAS.syrk!('U', 'T', -1.0, Lck, 1.0, Sigma_raw)
+    LinearAlgebra.copytri!(Sigma_raw, 'U')
     # Add jitter to get stable covariance
     m, chol = make_posdef!(Sigma_raw)
     return mu, PDMat(m, chol)
