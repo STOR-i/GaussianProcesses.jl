@@ -19,8 +19,8 @@ Default empty `KernelData`.
 """
 struct EmptyData <: KernelData end
 
-KernelData(k::Kernel, X::AbstractMatrix) = EmptyData()
-kernel_data_key(k::Kernel, X::AbstractMatrix) = "EmptyData"
+KernelData(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix) = EmptyData()
+kernel_data_key(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix) = "EmptyData"
 
 """
     cov(k::Kernel, X₁::Matrix{Float64}, X₂::Matrix{Float64})
@@ -28,9 +28,10 @@ kernel_data_key(k::Kernel, X::AbstractMatrix) = "EmptyData"
 Create covariance matrix from kernel `k` and matrices of observations `X₁` and `X₂`, where
 each column is an observation.
 """
-function cov(k::Kernel, X₁::AbstractMatrix, X₂::AbstractMatrix)
-    d(x1,x2) = cov(k, x1, x2)
-    return map_column_pairs(d, X₁, X₂)
+function cov(k::Kernel, X₁::AbstractMatrix, X₂::AbstractMatrix, kerneldata::KernelData=EmptyData())
+    n1, n2 = size(X₁, 2), size(X₂, 2)
+    cK = Array{eltype(X₁)}(undef, n1, n2)
+    cov!(cK, k, X₁, X₂, kerneldata)
 end
 
 """
@@ -38,13 +39,19 @@ end
 
 Like [`cov(k, X₁, X₂)`](@ref), but stores the result in `cK` rather than a new matrix.
 """
-function cov!(cK::AbstractMatrix, k::Kernel, X₁::AbstractMatrix, X₂::AbstractMatrix)
-    d(x1,x2) = cov(k, x1, x2)
-    return map_column_pairs!(cK, d, X₁, X₂)
+function cov!(cK::AbstractMatrix, k::Kernel, X₁::AbstractMatrix, X₂::AbstractMatrix, kerneldata::KernelData=EmptyData())
+    n1, n2 = size(X₁, 2), size(X₂, 2)
+    dim = size(X₁, 1)
+    @inbounds for i in 1:n1
+        for j in 1:n2
+            cK[i,j] = cov_ij(k, X₁, X₂, kerneldata, i, j, dim)
+        end
+    end
+    return cK
 end
 
 """
-    cov(k::Kernel, X::Matrix{Float64}[, data::KernelData = KernelData(k, X)])
+    cov(k::Kernel, X::Matrix{Float64}[, data::KernelData = KernelData(k, X, X)])
 
 Create covariance function from kernel `k`, matrix of observations `X`, where each column is
 an observation, and kernel data `data` constructed from input observations.
@@ -55,9 +62,9 @@ cov!(k::Kernel, X::AbstractMatrix, data::EmptyData) = cov!(cK, k, X)
 function cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix)
     dim, nobsv = size(X)
     @inbounds for j in 1:nobsv
-        cK[j,j] = cov_ij(k, X, j, j, dim)
+        cK[j,j] = cov_ij(k, X, X, j, j, dim)
         for i in 1:j-1
-            cK[i,j] = cov_ij(k, X, i, j, dim)
+            cK[i,j] = cov_ij(k, X, X, i, j, dim)
             cK[j,i] = cK[i,j]
         end
     end
@@ -71,9 +78,9 @@ end
 function cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData)
     dim, nobsv = size(X)
     @inbounds for j in 1:nobsv
-        cK[j,j] = cov_ij(k, X, data, j, j, dim)
+        cK[j,j] = cov_ij(k, X, X, data, j, j, dim)
         for i in 1:j-1
-            cK[i,j] = cov_ij(k, X, data, i, j, dim)
+            cK[i,j] = cov_ij(k, X, X, data, i, j, dim)
             cK[j,i] = cK[i,j]
         end
     end
@@ -85,8 +92,8 @@ function cov(k::Kernel, X::AbstractMatrix, data::KernelData)
     cov!(cK, k, X, data)
 end
 
-@inline cov_ij(k::Kernel, X::AbstractMatrix, i::Int, j::Int, dim::Int) = cov(k, @view(X[:,i]), @view(X[:,j]))
-@inline cov_ij(k::Kernel, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(k, X, i, j, dim)
+@inline cov_ij(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, dim::Int) = cov(k, @view(X1[:,i]), @view(X2[:,j]))
+@inline cov_ij(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(k, X1, X2, i, j, dim)
 
 ############################
 ##### Kernel Gradients #####
@@ -135,9 +142,9 @@ function grad_stack!(stack::AbstractArray, k::Kernel, X::AbstractMatrix, data::K
 end
 
 grad_stack!(stack::AbstractArray, k::Kernel, X::AbstractMatrix) =
-    grad_stack!(stack, k, X, KernelData(k, X))
+    grad_stack!(stack, k, X, KernelData(k, X, X))
 
-grad_stack(k::Kernel, X::AbstractMatrix) = grad_stack(k, X, KernelData(k, X))
+grad_stack(k::Kernel, X::AbstractMatrix) = grad_stack(k, X, KernelData(k, X, X))
 
 function grad_stack(k::Kernel, X::AbstractMatrix, data::KernelData)
     nobs = size(X, 2)

@@ -74,7 +74,7 @@ function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, l
     GPE(x, y, mean, kernel, logNoise, kerneldata, cK)
 end
 function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0)
-    kerneldata = KernelData(kernel, x)
+    kerneldata = KernelData(kernel, x, x)
     GPE(x, y, mean, kernel, logNoise, kerneldata)
 end
 GPE(x::AbstractVector, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0) =
@@ -113,7 +113,7 @@ function fit!(gp::GPE{X,Y}, x::X, y::Y) where {X,Y}
     length(y) == size(x,2) || throw(ArgumentError("Input and output observations must have consistent dimensions."))
     gp.x = x
     gp.y = y
-    gp.data = KernelData(gp.kernel, x)
+    gp.data = KernelData(gp.kernel, x, x)
     gp.cK = alloc_cK(length(y))
     gp.dim, gp.nobs = size(x)
     initialise_target!(gp)

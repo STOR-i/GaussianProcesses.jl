@@ -24,7 +24,7 @@ end
 function ElasticGPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, 
                     logNoise::Float64 = -2.0;
                     capacity = 10^3, stepsize = 10^3)
-    data = ElasticKernelData(kernel, x, capacity = capacity, stepsize = stepsize)
+    data = ElasticKernelData(kernel, x, x, capacity = capacity, stepsize = stepsize)
     nobs = length(y)
     # create placeholder PDMat
     m    = Matrix{Float64}(undef, nobs, nobs)
@@ -44,7 +44,9 @@ function prepareappend!(kd, Xnew)
     kd, dim, nobs, nobs_new
 end
 
-function ElasticKernelData(k::Isotropic, X::AbstractMatrix; capacity = 10^3, stepsize = 10^3)
+function ElasticKernelData(k::Isotropic, X1::AbstractMatrix, X2::AbstractMatrix; capacity = 10^3, stepsize = 10^3)
+    @assert X1==X2 # TODO: extend to X1 != X2
+    X = X1
     kerneldata = IsotropicData(AllElasticArray(2; capacity = (capacity, capacity), stepsize = (stepsize, stepsize)))
     nobs = size(X, 2)
     distance!(view(kerneldata.R, 1:nobs, 1:nobs), k, X)
@@ -61,7 +63,9 @@ function append!(kerneldata::IsotropicData{<:AllElasticArray}, k::Isotropic, X::
 end
 append!(kerneldata, k, X, Xnew::AbstractVector) = append!(kerneldata, k, X, reshape(Xnew, :, 1))
 
-function ElasticKernelData(k::StationaryARD, X::AbstractMatrix; capacity = 10^3, stepsize = 10^3)
+function ElasticKernelData(k::StationaryARD, X1::AbstractMatrix, X2::AbstractMatrix; capacity = 10^3, stepsize = 10^3)
+    @assert X1==X2 # TODO: extend to X1 != X2
+    X = X1
     dim, nobs = size(X)
     dist_stack = AllElasticArray(3; capacity = (capacity, capacity, size(X, 1)),
                                     stepsize = (stepsize, stepsize, 0))
@@ -87,7 +91,9 @@ function append!(kerneldata::StationaryARDData, kernel::StationaryARD, X::Abstra
     kerneldata
 end
 
-function ElasticKernelData(k::LinArd, X::AbstractMatrix; capacity = 10^3, stepsize = 10^3)
+function ElasticKernelData(k::LinArd, X1::AbstractMatrix, X2::AbstractMatrix; capacity = 10^3, stepsize = 10^3)
+    @assert X1==X2 # TODO: extend to X1 != X2
+    X = X1
     dim, nobs = size(X)
     XtX_d = AllElasticArray(3; capacity = (capacity, capacity, size(X, 1)),
                                     stepsize = (stepsize, stepsize, 0))
@@ -120,7 +126,9 @@ function append!(kerneldata::LinArdData, kernel::LinArd, X::AbstractMatrix, Xnew
     kerneldata
 end
 
-function ElasticKernelData(k::LinIso, X::AbstractMatrix; capacity = 10^3, stepsize = 10^3)
+function ElasticKernelData(k::LinIso, X1::AbstractMatrix, X2::AbstractMatrix; capacity = 10^3, stepsize = 10^3)
+    @assert X1==X2 # TODO: extend to X1 != X2
+    X = X1
     dim, nobs = size(X)
     XtX = AllElasticArray(2, capacity = (capacity, capacity), stepsize = (stepsize, stepsize))
     @inbounds @simd for d in 1:dim

@@ -27,12 +27,14 @@ struct LinIsoData{D} <: KernelData
     XtX::D
 end
 
-function KernelData(k::LinIso, X::AbstractMatrix)
-    XtX=X'*X
-    LinearAlgebra.copytri!(XtX, 'U') # make sure it's symmetric
+function KernelData(k::LinIso, X1::AbstractMatrix, X2::AbstractMatrix)
+    XtX=X1'*X2
+	if X1==X2
+		LinearAlgebra.copytri!(XtX, 'U') # make sure it's symmetric
+	end
     LinIsoData(XtX)
 end
-kernel_data_key(k::LinIso, X::AbstractMatrix) = "LinIsoData"
+kernel_data_key(k::LinIso, X1::AbstractMatrix, X2::AbstractMatrix) = "LinIsoData"
 
 _cov(lin::LinIso, xTy) = xTy ./ lin.ℓ2
 function cov(lin::LinIso, x::AbstractVector, y::AbstractVector)
@@ -40,7 +42,7 @@ function cov(lin::LinIso, x::AbstractVector, y::AbstractVector)
     return K
 end
 
-@inline @inbounds function cov_ij(lin::LinIso, X::AbstractMatrix, data::LinIsoData, i::Int, j::Int, dim::Int)
+@inline @inbounds function cov_ij(lin::LinIso, X1::AbstractMatrix, X2::AbstractMatrix, data::LinIsoData, i::Int, j::Int, dim::Int)
     return _cov(lin, data.XtX[i, j])
 end
 function cov(lin::LinIso, X::AbstractMatrix, data::LinIsoData)

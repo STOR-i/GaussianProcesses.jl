@@ -1,6 +1,7 @@
 # distance(k::Stationary, X::AbstractMatrix, Y::AbstractMatrix) = pairwise(metric(k), X, Y)
 distance(k::Stationary, x::AbstractVector, y::AbstractVector) = evaluate(metric(k), x, y)
 
+distance(k::Stationary, X::AbstractMatrix, data::EmptyData) = distance(k, X)
 distance(k::Isotropic, X::AbstractMatrix, data::IsotropicData) = data.R
 function distance(k::Stationary, X::AbstractMatrix)
     nobsv = size(X, 2)
