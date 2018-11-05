@@ -4,11 +4,11 @@ end
 
 ProdMean(means::Mean...) = ProdMean(means)
 
-mean(pm::ProdMean, x::VecF64) = prod(mean(m, x) for m in components(pm))
+mean(pm::ProdMean, x::AbstractVector) = prod(mean(m, x) for m in components(pm))
 
 get_param_names(pm::ProdMean) = composite_param_names(components(pm), :pm)
 
-function grad_mean(pm::ProdMean, x::VecF64)
+function grad_mean(pm::ProdMean, x::AbstractVector)
     dm = Array{Float64}(undef, num_params(pm))
     means = [mean(m, x) for m in components(pm)]
     v = 1

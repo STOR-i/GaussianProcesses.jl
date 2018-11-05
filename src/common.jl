@@ -70,7 +70,7 @@ end
 
 num_params(obj::CompositeMeanOrKernel) = sum(num_params, components(obj))
 
-function set_params!(obj::CompositeMeanOrKernel, hyp::VecF64)
+function set_params!(obj::CompositeMeanOrKernel, hyp::AbstractVector)
     length(hyp) == num_params(obj) ||
         throw(ArgumentError("$(typeof(obj)) object requires $(num_params(obj)) hyperparameters"))
     i = 1

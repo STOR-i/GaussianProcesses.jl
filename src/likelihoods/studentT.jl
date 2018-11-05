@@ -26,7 +26,7 @@ mutable struct StuTLik <: Likelihood
 end
 
 #log of probability density
-function log_dens(studentT::StuTLik, f::VecF64, y::VecF64)
+function log_dens(studentT::StuTLik, f::AbstractVector, y::AbstractVector)
     ν = studentT.ν
     σ = studentT.σ
     c = lgamma(0.5*(ν+1)) - lgamma(0.5*ν) - 0.5*log(pi*ν) - log(σ)
@@ -34,24 +34,24 @@ function log_dens(studentT::StuTLik, f::VecF64, y::VecF64)
 end
 
 #derivative of log pdf wrt latent function
-function dlog_dens_df(studentT::StuTLik, f::VecF64, y::VecF64)
+function dlog_dens_df(studentT::StuTLik, f::AbstractVector, y::AbstractVector)
     ν = studentT.ν
     σ = studentT.σ
     return [(ν+1)*(yi-fi)/(ν*σ^2 + (yi-fi)^2) for (fi,yi) in zip(f,y)]
 end
 
 #derivative of log pdf wrt to parameters
-function dlog_dens_dθ(studentT::StuTLik, f::VecF64, y::VecF64)
+function dlog_dens_dθ(studentT::StuTLik, f::AbstractVector, y::AbstractVector)
     ν = studentT.ν
     σ = studentT.σ
     return σ*[-1/σ+(ν+1)*(yi-fi)^2/(ν*σ^3 + σ*(yi-fi)^2) for (fi,yi) in zip(f,y)]
 end
 
 #mean and variance under likelihood
-mean_lik(studentT::StuTLik, f::VecF64) = f
-var_lik(studentT::StuTLik, f::VecF64) = studentT.σ^2*(studentT.ν/(studentT.ν-2.0))*ones(length(f))
+mean_lik(studentT::StuTLik, f::AbstractVector) = f
+var_lik(studentT::StuTLik, f::AbstractVector) = studentT.σ^2*(studentT.ν/(studentT.ν-2.0))*ones(length(f))
 
-function set_params!(studentT::StuTLik, hyp::VecF64)
+function set_params!(studentT::StuTLik, hyp::AbstractVector)
     length(hyp) == 1 || throw(ArgumentError("Student-t likelihood has only one free parameter"))
     studentT.σ = exp(hyp[])
 end

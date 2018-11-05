@@ -29,7 +29,7 @@ mutable struct RQIso <: Isotropic{SqEuclidean}
         new(exp(2 * ll), exp(2 * lσ), exp(lα), [])
 end
 
-function set_params!(rq::RQIso, hyp::VecF64)
+function set_params!(rq::RQIso, hyp::AbstractVector)
     length(hyp) == 3 || throw(ArgumentError("Rational Quadratic function has three parameters"))
     rq.ℓ2, rq.σ2, rq.α = exp(2 * hyp[1]), exp(2 * hyp[2]), exp(hyp[3])
 end
@@ -38,7 +38,7 @@ get_params(rq::RQIso) = Float64[log(rq.ℓ2) / 2, log(rq.σ2) / 2, log(rq.α)]
 get_param_names(rq::RQIso) = [:ll, :lσ, :lα]
 num_params(rq::RQIso) = 3
 
-Statistics.cov(rq::RQIso, r::Float64) = rq.σ2 * (1 + r / (2 * rq.α * rq.ℓ2))^(-rq.α)
+Statistics.cov(rq::RQIso, r::Number) = rq.σ2 * (1 + r / (2 * rq.α * rq.ℓ2))^(-rq.α)
 
 @inline dk_dll(rq::RQIso, r::Float64) =
     (s = r / rq.ℓ2; rq.σ2 * s * (1 + s / (2 * rq.α))^(-rq.α - 1)) # dK_d(log ℓ)dK_dℓ

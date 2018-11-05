@@ -37,7 +37,7 @@ function optimize!(gp::GPBase; method = LBFGS(), domean::Bool = true, kern::Bool
 end
 
 function get_optim_target(gp::GPBase; params_kwargs...)
-    function ltarget(hyp::VecF64)
+    function ltarget(hyp::AbstractVector)
         prev = get_params(gp; params_kwargs...)
         try
             set_params!(gp, hyp; params_kwargs...)
@@ -62,7 +62,7 @@ function get_optim_target(gp::GPBase; params_kwargs...)
         end
     end
 
-    function ltarget_and_dltarget!(grad::VecF64, hyp::VecF64)
+    function ltarget_and_dltarget!(grad::AbstractVector, hyp::AbstractVector)
         prev = get_params(gp; params_kwargs...)
         try
             set_params!(gp, hyp; params_kwargs...)
@@ -87,8 +87,8 @@ function get_optim_target(gp::GPBase; params_kwargs...)
         end
     end
 
-    function dltarget!(grad::VecF64, hyp::VecF64)
-        ltarget_and_dltarget!(grad::VecF64, hyp::VecF64)
+    function dltarget!(grad::AbstractVector, hyp::AbstractVector)
+        ltarget_and_dltarget!(grad::AbstractVector, hyp::AbstractVector)
     end
 
     xinit = get_params(gp; params_kwargs...)
