@@ -26,7 +26,7 @@ Create `Mat32Iso` with length scale `exp(ll)` and signal standard deviation `exp
 Mat32Iso(ll::T, lσ::T) where T = Mat32Iso{T}(exp(ll), exp(2 * lσ), [])
 
 function set_params!(mat::Mat32Iso, hyp::AbstractVector)
-    length(hyp) == 2 || throw(ArgumentError("Matern 3/2 only has two parameters"))
+    length(hyp) == 2 || throw(ArgumentError("Matern 3/2 has two parameters, received $(length(hyp))."))
     mat.ℓ, mat.σ2 = exp(hyp[1]), exp(2 * hyp[2])
 end
 

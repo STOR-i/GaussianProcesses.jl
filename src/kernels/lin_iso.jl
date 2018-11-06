@@ -62,7 +62,7 @@ get_param_names(::LinIso) = [:ll]
 num_params(lin::LinIso) = 1
 
 function set_params!(lin::LinIso, hyp::AbstractVector)
-    length(hyp) == 1 || throw(ArgumentError("Linear isotropic kernel only has one parameter"))
+    length(hyp) == 1 || throw(ArgumentError("Linear isotropic kernel has one parameter, received $(length(hyp))."))
     lin.ℓ2 = exp(2 * hyp[1])
 end
 

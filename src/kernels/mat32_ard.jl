@@ -27,7 +27,7 @@ Create `Mat32Ard` with length scale `exp.(ll)` and signal standard deviation `ex
 Mat32Ard(ll::Vector{T}, lσ::T) where T = Mat32Ard{T}(exp.(-2 .* ll), exp(2 * lσ), [])
 
 function set_params!(mat::Mat32Ard, hyp::AbstractVector)
-    length(hyp) == num_params(mat) || throw(ArgumentError("Mat32 kernel only has $(num_params(mat)) parameters"))
+    length(hyp) == num_params(mat) || throw(ArgumentError("Mat32 kernel has $(num_params(mat)) parameters, received $(length(hyp))."))
     @views @. mat.iℓ2 = exp(-2 * hyp[1:(end-1)])
     mat.σ2 = exp(2 * hyp[end])
 end

@@ -24,7 +24,7 @@ Create `SEIso` with length scale `exp(ll)` and signal standard deviation `exp(l�
 SEIso(ll::T, lσ::T) where T = SEIso{T}(exp(2 * ll), exp(2 * lσ), [])
 
 function set_params!(se::SEIso, hyp::AbstractVector)
-    length(hyp) == 2 || throw(ArgumentError("Squared exponential only has two parameters"))
+    length(hyp) == 2 || throw(ArgumentError("Squared exponential has two parameters, received $(length(hyp))."))
     se.ℓ2, se.σ2 = exp(2 * hyp[1]), exp(2 * hyp[2])
 end
 

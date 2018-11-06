@@ -27,7 +27,7 @@ Create `SEArd` with length scale `exp.(ll)` and signal standard deviation `exp(l
 SEArd(ll::Vector{T}, lσ::T) where T = SEArd{T}(exp.(-2 .* ll), exp(2 * lσ), [])
 
 function set_params!(se::SEArd, hyp::AbstractVector)
-    length(hyp) == num_params(se) || throw(ArgumentError("SEArd only has $(num_params(se)) parameters"))
+    length(hyp) == num_params(se) || throw(ArgumentError("SEArd has $(num_params(se)) parameters, received $(length(hyp))."))
     @views @. se.iℓ2 = exp(-2 * hyp[1:(end-1)])
     se.σ2 = exp(2 * hyp[end])
 end

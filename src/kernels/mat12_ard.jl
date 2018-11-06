@@ -27,8 +27,8 @@ Create `Mat12Ard` with length scale `exp.(ll)` and signal standard deviation `ex
 Mat12Ard(ll::Vector{T}, lσ::T) where T = Mat12Ard{T}(exp.(-2 .* ll), exp(2 * lσ), [])
 
 function set_params!(mat::Mat12Ard, hyp::AbstractVector)
-    length(hyp) == num_params(mat) || throw(ArgumentError("Mat12 kernel only has $(num_params(mat)) parameters"))
-    @views @. mat.iℓ2  = exp(-2 * hyp[1:(end-1)])
+    length(hyp) == num_params(mat) || throw(ArgumentError("Mat12 kernel has $(num_params(mat)) parameters, received $(length(hyp))."))
+    mat.iℓ2  = exp.(-2 .* @view(hyp[1:(end-1)]))
     mat.σ2 = exp(2 * hyp[end])
 end
 

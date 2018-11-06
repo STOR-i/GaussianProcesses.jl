@@ -26,7 +26,7 @@ Create `Mat12Iso` with length scale `exp(ll)` and signal standard deviation `exp
 Mat12Iso(ll::T, lσ::T) where T = Mat12Iso{T}(exp(ll), exp(2 * lσ), [])
 
 function set_params!(mat::Mat12Iso, hyp::AbstractVector)
-    length(hyp) == 2 || throw(ArgumentError("Matern 1/2 covariance function only has two parameters"))
+    length(hyp) == 2 || throw(ArgumentError("Matern 1/2 covariance function has two parameters, received $(length(hyp))."))
     mat.ℓ, mat.σ2 = exp(hyp[1]), exp(2 * hyp[2])
 end
 

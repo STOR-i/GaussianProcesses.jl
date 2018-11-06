@@ -22,7 +22,7 @@ Create `Const` with signal standard deviation `exp(lσ)`.
 Const(lσ::T) where T = Const{T}(exp(2 * lσ), [])
 
 function set_params!(cons::Const, hyp::AbstractVector)
-    length(hyp) == 1 || throw(ArgumentError("Constant kernel only has one parameters"))
+    length(hyp) == 1 || throw(ArgumentError("Constant kernel has one parameter, received $(length(hyp))."))
     cons.σ2 = exp(2.0*hyp[1])
 end
 

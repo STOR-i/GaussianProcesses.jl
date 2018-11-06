@@ -26,7 +26,7 @@ Create `Mat52Iso` with length scale `exp(ll)` and signal standard deviation `exp
 Mat52Iso(ll::T, lσ::T) where T = Mat52Iso{T}(exp(ll), exp(2 * lσ), [])
 
 function set_params!(mat::Mat52Iso, hyp::AbstractVector)
-    length(hyp) == 2 || throw(ArgumentError("Matern 5/2 only has two parameters"))
+    length(hyp) == 2 || throw(ArgumentError("Matern 5/2 has two parameters, received $(length(hyp))."))
     mat.ℓ, mat.σ2 = exp(hyp[1]), exp(2 * hyp[2])
 end
 get_params(mat::Mat52Iso{T}) where T = T[log(mat.ℓ), log(mat.σ2) / 2]
