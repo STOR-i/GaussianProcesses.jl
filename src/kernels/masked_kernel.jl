@@ -55,6 +55,10 @@ end
 @inline function dKij_dθp(masked::Masked, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
     return dKij_dθp(masked, X, i, j, p, dim)
 end
+@inline @inbounds function dKij_dθ!(dK::AbstractVector, masked::Masked, X::AbstractMatrix, i::Int, j::Int, dim::Int, npars::Int)
+    Xview = view(X,masked.active_dims,:)
+    return dKij_dθ!(dK, masked.kernel, Xview, i, j, num_dims(masked), npars)
+end
 @inline @inbounds function dKij_dθ!(dK::AbstractVector, masked::Masked, X::AbstractMatrix, data::MaskedData, i::Int, j::Int, dim::Int, npars::Int)
     return dKij_dθ!(dK, masked.kernel, data.X1view, data.wrappeddata, i, j, num_dims(masked), npars)
 end
