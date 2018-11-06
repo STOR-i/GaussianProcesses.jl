@@ -15,7 +15,7 @@ num_params(pairkern::PairKernel) = num_params(leftkern(pairkern))+num_params(rig
 get_params(pairkern::PairKernel) = vcat(get_params(leftkern(pairkern)), get_params(rightkern(pairkern)))
 get_param_names(pairkern::PairKernel) = composite_param_names([leftkern(pairkern), rightkern(pairkern)], :sk)
 
-function set_params!(pairkern::PairKernel, hyp::Vector{Float64})
+function set_params!(pairkern::PairKernel, hyp::AbstractVector)
     npl = num_params(leftkern(pairkern))
     hyp_left = hyp[1:npl]
     hyp_right = hyp[npl+1:end]

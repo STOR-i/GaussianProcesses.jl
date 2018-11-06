@@ -1,7 +1,9 @@
 module TestKernels
 using GaussianProcesses, Calculus
 using Test, LinearAlgebra, Statistics, Random
-using GaussianProcesses: EmptyData, update_target_and_dtarget!
+using GaussianProcesses: EmptyData, update_target_and_dtarget!, 
+      cov_ij, dKij_dθp, dKij_dθ!, 
+      get_params, set_params!, StationaryARD, WeightedEuclidean
 import Calculus: gradient
 
 Random.seed!(1)
@@ -44,10 +46,42 @@ function testkernel(kern::Kernel)
         @test spec[i,j] ≈ cov(kern, Xi, X2j)
     end
 
+    data = GaussianProcesses.KernelData(kern, X, X)
+
     @testset "Gradient" begin
         nparams = GaussianProcesses.num_params(kern)
         init_params = Vector(GaussianProcesses.get_params(kern))
-        data = GaussianProcesses.KernelData(kern, X, X)
+        dK = zeros(nparams)
+        i, j = 3, 5
+        dKij_dθ!(dK, kern, X, i, j, d, nparams)
+        dK1 = copy(dK)
+        dKij_dθ!(dK, kern, X, data, i, j, d, nparams)
+        dK2 = copy(dK)
+        dKij_dθ!(dK, kern, X, EmptyData(), i, j, d, nparams)
+        dK3 = copy(dK)
+        @test dK1 ≈ dK2
+        @test dK1 ≈ dK3
+        for p in 1:nparams
+            @test dK[p] ≈ dKij_dθp(kern, X, i, j, p, d)
+            @test dK[p] ≈ dKij_dθp(kern, X, data, i, j, p, d)
+            @test dK[p] ≈ dKij_dθp(kern, X, EmptyData(), i, j, p, d)
+        end
+        # if nparams > 0
+            # numer_grad = Calculus.gradient(init_params) do params
+                # set_params!(kern, params)
+                # t = cov_ij(kern, X, X, i, j, d)
+                # set_params!(kern, init_params)
+                # t
+            # end
+            # theor_grad = dK
+            # @test numer_grad ≈ theor_grad rtol=1e-3 atol=1e-3
+            # end
+        # end
+    end
+
+    @testset "Gradient stack" begin
+        nparams = GaussianProcesses.num_params(kern)
+        init_params = Vector(GaussianProcesses.get_params(kern))
         stack1 = Array{Float64}(undef, n, n, nparams)
         stack2 = Array{Float64}(undef, n, n, nparams)
 
@@ -62,7 +96,9 @@ function testkernel(kern::Kernel)
         if nparams > 0
             numer_grad = Calculus.gradient(init_params) do params
                 set_params!(kern, params)
-                sum(cov(kern, X))
+                t = sum(cov(kern, X))
+                set_params!(kern, init_params)
+                t
             end
             @test theor_grad ≈ numer_grad rtol=1e-1 atol=1e-2
         end
@@ -78,7 +114,9 @@ function testkernel(kern::Kernel)
             numer_grad = Calculus.gradient(init_params) do params
                 set_params!(gp, params)
                 update_target!(gp)
-                gp.target
+                t = gp.target
+                set_params!(gp, init_params)
+                t
             end
             @test theor_grad ≈ numer_grad rtol=1e-3 atol=1e-3
         end
@@ -120,16 +158,29 @@ end
         println("\tTesting ", nameof(typeof(kern)), "...")
         testkernel(kern)
     end
-    @testset for kernel in kernels
+    @testset "Masked" for kernel in kernels
+        println("\tTesting masked", nameof(typeof(kernel)), "...")
         if isa(kernel, LinArd) || isa(kernel, GaussianProcesses.StationaryARD)
             par = GaussianProcesses.get_params(kernel)
-            k_masked = typeof(kernel)([par[1]], par[d+1:end]...)
+            k_masked = typeof(kernel).name.wrapper([par[1]], par[d+1:end]...)
             kern = Masked(k_masked, [1])
         else
             kern = Masked(kernel, [1])
         end
         println("\tTesting masked ", nameof(typeof(kern)), "...")
         testkernel(kern)
+    end
+    @testset "autodiff" for kernel in kernels[1:end-1]
+        if typeof(kernel) <: FixedKernel
+            # TODO: autodiff for FixedKernel
+            continue
+        end
+        if typeof(kernel) <: StationaryARD{WeightedEuclidean}
+            # causes trouble
+            continue
+        end
+        println("\tTesting autodiff ", nameof(typeof(kernel)), "...")
+        testkernel(autodiff(kernel))
     end
 
 end # testset

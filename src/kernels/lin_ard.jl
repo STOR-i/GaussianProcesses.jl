@@ -9,23 +9,23 @@ k(x,x') = xᵀL⁻²x'
 ```
 with length scale ``ℓ = (ℓ₁, ℓ₂, …)`` and ``L = diag(ℓ₁, ℓ₂, …)``.
 """
-mutable struct LinArd <: Kernel
+mutable struct LinArd{T<:Real} <: Kernel
     "Length scale"
-    ℓ::Vector{Float64}
+    ℓ::Vector{T}
     "Priors for kernel parameters"
     priors::Array
-
-    """
-        LinArd(ll::Vector{Float64})
-
-    Create `LinArd` with length scale `exp.(ll)`.
-    """
-    LinArd(ll::Vector{Float64}) = new(exp.(ll), [])
 end
+
+"""
+    LinArd(ll::Vector{T})
+
+Create `LinArd` with length scale `exp.(ll)`.
+"""
+LinArd(ll::Vector{T}) where T = LinArd{T}(exp.(ll), [])
 
 cov(lin::LinArd, x::AbstractVector, y::AbstractVector) = dot(x./lin.ℓ, y./lin.ℓ)
 
-struct LinArdData{D} <: KernelData
+struct LinArdData{D<:AbstractArray} <: KernelData
     XtX_d::D
 end
 
@@ -60,7 +60,7 @@ function cov!(cK::AbstractMatrix, lin::LinArd, X::AbstractMatrix, data::LinArdDa
 end
 function cov(lin::LinArd, X::AbstractMatrix, data::LinArdData)
     nobs = size(X,2)
-    K = zeros(Float64, nobs, nobs)
+    K = Array{Float64}(undef, nobs, nobs)
     cov!(K, lin, X, data)
 end
 @inline @inbounds function cov_ij(lin::LinArd, X1::AbstractMatrix, X2::AbstractMatrix, data::LinArdData, i::Int, j::Int, dim::Int)
@@ -79,7 +79,7 @@ function set_params!(lin::LinArd, hyp::AbstractVector)
     @. lin.ℓ = exp(hyp)
 end
 
-@inline dk_dll(lin::LinArd, xy::Float64, d::Int) = -2 * xy / lin.ℓ[d]^2
+@inline dk_dll(lin::LinArd, xy::Real, d::Int) = -2 * xy / lin.ℓ[d]^2
 @inline function dKij_dθp(lin::LinArd, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
     if p<=dim
         return dk_dll(lin, dotijp(X,i,j,p), p)
