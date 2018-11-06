@@ -16,9 +16,9 @@ function to_autodiff(k::Kernel, duals::Vector{D}) where {D<:Dual}
     kerneltype = typeof(k)
     @assert !kerneltype.abstract
     @assert !kerneltype.hasfreetypevars
-    
+
     typeparams = kerneltype.parameters
-    
+
     fnames = fieldnames(kerneltype)
     values = []
     newtypes = []
@@ -79,14 +79,18 @@ end
 KernelData(ad::AutoDiffKernel, X1::AbstractMatrix, X2::AbstractMatrix) = KernelData(raw(ad), X1, X2)
 kernel_data_key(ad::AutoDiffKernel, X1::AbstractMatrix, X2::AbstractMatrix) = kernel_data_key(raw(ad), X1, X2)
 
-@inline function dKij_dθ!(dK::AbstractVector, ad::AutoDiffKernel, X::AbstractMatrix, 
+@inline function dKij_dθ!(dK::AbstractVector, ad::AutoDiffKernel, X::AbstractMatrix,
                   i::Int, j::Int, dim::Int, npars::Int)
     seed!(ad)
     k_eval = cov_ij(dual(ad), X, X, i, j, dim)
     copyto!(dK, partials(k_eval))
     return dK
 end
-@inline function dKij_dθ!(dK::AbstractVector, ad::AutoDiffKernel, X::AbstractMatrix, data::IsotropicData, 
+@inline function dKij_dθ!(dK::AbstractVector, ad::AutoDiffKernel, X::AbstractMatrix, data::EmptyData,
+                  i::Int, j::Int, dim::Int, npars::Int)
+    dKij_dθ!(dK, ad, X, i, j, dim, npars)
+end
+@inline function dKij_dθ!(dK::AbstractVector, ad::AutoDiffKernel, X::AbstractMatrix, data::KernelData,
                   i::Int, j::Int, dim::Int, npars::Int)
     seed!(ad)
     k_eval = cov_ij(dual(ad), X, X, data, i, j, dim)
