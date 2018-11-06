@@ -39,12 +39,12 @@ function to_autodiff(k::Kernel, duals::Vector{D}) where {D<:Dual}
     kerneltype.name.wrapper(values...)
 end
 function autodiff(k::Kernel)
-    cfg = GradientConfig(nothing, zeros(num_params(k)))
+    # TODO: smaller chunk sizes
+    cfg = GradientConfig(nothing, zeros(num_params(k)), Chunk{num_params(k)}())
     D = eltype(cfg)
     CFG = typeof(cfg)
     hyp = get_params(k)
     duals = cfg.duals
-    @show length(duals)
     kdual = to_autodiff(k, duals)
     set_params!(kdual, duals)
     ad = ADkernel{typeof(k),typeof(kdual),typeof(hyp),eltype(cfg),typeof(cfg)}(k, kdual, hyp, cfg)

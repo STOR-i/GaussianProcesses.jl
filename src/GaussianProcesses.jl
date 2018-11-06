@@ -14,7 +14,7 @@ export GPBase, GP, GPE, GPMC, ElasticGPE, predict_f, predict_y, Kernel, Likeliho
     GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
     mcmc, optimize!,                                           #inference functions
     set_priors!,set_params!, update_target!, autodiff
-using ForwardDiff: GradientConfig, Dual, partials, copyto!
+using ForwardDiff: GradientConfig, Dual, partials, copyto!, Chunk
 import ForwardDiff: seed!
 
 

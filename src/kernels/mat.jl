@@ -6,7 +6,11 @@ abstract type MaternARD <: StationaryARD{WeightedEuclidean} end
     r=distij(metric(mat),X,i,j,dim)
     if p <= dim
         wdiffp=dist2ijk(metric(mat),X,i,j,p)
-        return wdiffp == 0.0 ? 0.0 : dk_dll(mat,r,wdiffp)
+        if wdiffp > 0
+            return dk_dll(mat,r,wdiffp)
+        else
+            return zero(dk_dll(mat,r,wdiffp))
+        end
     elseif p==dim+1
         return dk_dlσ(mat, r)
     else
