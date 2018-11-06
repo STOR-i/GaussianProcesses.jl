@@ -36,7 +36,22 @@ end
         return dKij_sub * cK_other
     end
 end
-@inline @inbounds function dKij_dθ!(dK::AbstractVector, prodkern::ProdKernel, X::AbstractMatrix, data::PairData, 
+@inline @inbounds function dKij_dθ!(dK::AbstractVector, prodkern::ProdKernel, X::AbstractMatrix,
+                                    i::Int, j::Int, dim::Int, npars::Int)
+    cov_left  = cov_ij(prodkern.kleft,  X, X, i, j, dim)
+    cov_right = cov_ij(prodkern.kright, X, X, i, j, dim)
+    npright = num_params(prodkern.kright)
+    npleft = num_params(prodkern.kleft)
+    dKij_dθ!(dK, prodkern.kright, X, i, j, dim, npars-npleft)
+    for ipar in npright:-1:1
+        dK[npleft+ipar] = dK[ipar]*cov_left
+    end
+    dKij_dθ!(dK,  prodkern.kleft,  X, i, j, dim, npleft)
+    for ipar in 1:npleft
+        dK[ipar] *= cov_right
+    end
+end
+@inline @inbounds function dKij_dθ!(dK::AbstractVector, prodkern::ProdKernel, X::AbstractMatrix, data::PairData,
                                     i::Int, j::Int, dim::Int, npars::Int)
     cov_left  = cov_ij(prodkern.kleft,  X, X, data.data1, i, j, dim)
     cov_right = cov_ij(prodkern.kright, X, X, data.data2, i, j, dim)
