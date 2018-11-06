@@ -1,6 +1,6 @@
-struct FixedKernel{K<:Kernel} <: Kernel
+struct FixedKernel{K<:Kernel, NFREE} <: Kernel
     kernel::K
-    free::Vector{Int} # vector of *free* parameters
+    free::SVector{NFREE, Int64}
 end
 
 @deprecate FixedKern FixedKernel
@@ -12,9 +12,14 @@ function set_params!(k::FixedKernel, hyp)
     p[k.free] = hyp
     set_params!(k.kernel, p)
 end
-num_params(k::FixedKernel) = length(k.free)
+num_params(k::FixedKernel{K,NFREE}) where {K,NFREE} = NFREE
 
 # convenience functions to fix a parameter
+function FixedKernel(k::Kernel, free::AbstractVector{<:Int})
+    npars = length(free)
+    sfree = SVector{npars, Int64}(free)
+    return FixedKernel(k, sfree)
+end
 function fix(k::Kernel, par::Symbol)
     npars = num_params(k)
     free = collect(1:npars)

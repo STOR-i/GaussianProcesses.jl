@@ -2,6 +2,7 @@ module TestKernels
 using GaussianProcesses, Calculus
 using Test, LinearAlgebra, Statistics, Random
 using GaussianProcesses: EmptyData, update_target_and_dtarget!
+import Calculus: gradient
 
 Random.seed!(1)
 const d, n, n2 = 3, 10, 5
@@ -19,7 +20,6 @@ function testkernel(kern::Kernel)
     # Preallocate some matrices
     cK = zeros(n, n)
     cK2 = zeros(n, n2)
-    println("\tTesting ", nameof(typeof(kern)), "...")
     @test length(GaussianProcesses.get_param_names(kern)) ==
         length(GaussianProcesses.get_params(kern)) ==
         GaussianProcesses.num_params(kern)
@@ -46,7 +46,7 @@ function testkernel(kern::Kernel)
 
     @testset "Gradient" begin
         nparams = GaussianProcesses.num_params(kern)
-        init_params = GaussianProcesses.get_params(kern)
+        init_params = Vector(GaussianProcesses.get_params(kern))
         data = GaussianProcesses.KernelData(kern, X, X)
         stack1 = Array{Float64}(undef, n, n, nparams)
         stack2 = Array{Float64}(undef, n, n, nparams)
@@ -59,24 +59,29 @@ function testkernel(kern::Kernel)
         @test stack1 ≈ stack2
 
         theor_grad = vec(sum(stack1; dims=[1,2]))
-        numer_grad = Calculus.gradient(init_params) do params
-            set_params!(kern, params)
-            sum(cov(kern, X))
+        if nparams > 0
+            numer_grad = Calculus.gradient(init_params) do params
+                set_params!(kern, params)
+                sum(cov(kern, X))
+            end
+            @test theor_grad ≈ numer_grad rtol=1e-1 atol=1e-2
         end
-        @test theor_grad ≈ numer_grad rtol=1e-1 atol=1e-2
     end
 
     @testset "dtarget" begin
+        nparams = GaussianProcesses.num_params(kern)
         gp = GPE(X, y, MeanConst(0.0), kern, -3.0)
-        init_params = GaussianProcesses.get_params(gp)
+        init_params = Vector(GaussianProcesses.get_params(gp))
         update_target_and_dtarget!(gp)
         theor_grad = copy(gp.dtarget)
-        numer_grad = Calculus.gradient(init_params) do params
-            set_params!(gp, params)
-            update_target!(gp)
-            gp.target
+        if nparams > 0
+            numer_grad = Calculus.gradient(init_params) do params
+                set_params!(gp, params)
+                update_target!(gp)
+                gp.target
+            end
+            @test theor_grad ≈ numer_grad rtol=1e-3 atol=1e-3
         end
-        @test theor_grad ≈ numer_grad rtol=1e-3 atol=1e-3
     end
 
     @testset "EmptyData" begin
@@ -106,11 +111,13 @@ end
                SEIso(1.0, 1.0) * Mat12Iso(1.0, 1.0),
                (SEIso(1.0, 1.0) * Mat12Iso(1.0, 1.0)) * Lin(1.0),
                # Fixed Kernel
-               fix(RQIso(1.0, 1.0, 1.0), :lσ), fix(RQIso(1.0, 1.0, 1.0)),
+               fix(RQIso(1.0, 1.0, 1.0), :lσ), 
+               fix(RQIso(1.0, 1.0, 1.0)),
                # Sum and Product and Fix
                SEIso(1.0, 1.0) * Mat12Iso(1.0, 1.0) +
                Lin(1.0) * fix(RQIso(1.0, 1.0, 1.0), :lσ)]
     @testset for kern in kernels
+        println("\tTesting ", nameof(typeof(kern)), "...")
         testkernel(kern)
     end
     @testset for kernel in kernels
@@ -121,6 +128,7 @@ end
         else
             kern = Masked(kernel, [1])
         end
+        println("\tTesting masked ", nameof(typeof(kern)), "...")
         testkernel(kern)
     end
 
