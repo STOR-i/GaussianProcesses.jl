@@ -1,8 +1,8 @@
 # abstract type AutoDiffKernel end
 abstract type AutoDiffKernel <: Kernel end
 
-raw(k::AutoDiffKernel) = k.raw
-dual(k::AutoDiffKernel) = k.dual
+@inline raw(k::AutoDiffKernel) = k.raw
+@inline dual(k::AutoDiffKernel) = k.dual
 priors(k::AutoDiffKernel) = k.priors
 
 mutable struct ADkernel{Kraw<:Kernel, Kdual<:Kernel, V<:AbstractVector, D<:Dual,CFG<:GradientConfig} <: AutoDiffKernel
@@ -12,13 +12,43 @@ mutable struct ADkernel{Kraw<:Kernel, Kdual<:Kernel, V<:AbstractVector, D<:Dual,
     priors::Array          # Array of priors for kernel parameters
     cfg::CFG
 end
-
+function to_autodiff(k::Kernel, duals::Vector{D}) where {D<:Dual}
+    kerneltype = typeof(k)
+    @assert !kerneltype.abstract
+    @assert !kerneltype.hasfreetypevars
+    
+    typeparams = kerneltype.parameters
+    
+    fnames = fieldnames(kerneltype)
+    values = []
+    newtypes = []
+    for field in fnames
+        ftype = fieldtype(kerneltype, field)
+        if ftype<:Float64
+            push!(newtypes, D)
+            push!(values, duals[1]) # whatever
+        elseif ftype<:Vector{Float64}
+            push!(newtypes, Vector{D})
+            push!(values, duals[1:1]) # whatever
+        elseif ftype<:Kernel
+            subkernel = getfield(k, field)
+            ad_subkernel = to_autodiff(subkernel, duals)
+            push!(newtypes, typeof(ad_subkernel))
+            push!(values, ad_subkernel)
+        else
+            push!(newtypes, ftype)
+            push!(values, getfield(k, field))
+        end
+    end
+    kerneltype.name.wrapper(values...)
+end
 function autodiff(k::Kernel)
     cfg = GradientConfig(nothing, zeros(num_params(k)))
     D = eltype(cfg)
     CFG = typeof(cfg)
-    dual = typeof(k).name.wrapper(cfg.duals...) # a little hacky
     hyp = get_params(k)
+    duals = cfg.duals
+    dual = to_autodiff(k, duals)
     ad = ADkernel{typeof(k),typeof(dual),typeof(hyp),eltype(cfg),typeof(cfg)}(k, dual, hyp, [], cfg)
     return ad
 end
@@ -41,37 +71,37 @@ function seed!(ad::AutoDiffKernel)
     seed!(ad.cfg.duals, ad.hyp, ad.cfg.seeds)
     set_params!(dual(ad), ad.cfg.duals)
 end
-cov(ad::AutoDiffKernel, r::Real) = cov(raw(ad), r)
-cov(ad::AutoDiffKernel, x1::AbstractVector, x2::AbstractVector) = cov(raw(ad), x1, x2)
-cov_ij(ad::AutoDiffKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int) = cov_ij(raw(ad), X1, X2, data, i, j, dim)
-cov_ij(ad::AutoDiffKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(raw(ad), X1, X2, i, j, dim)
+@inline cov(ad::AutoDiffKernel, r::Real) = cov(raw(ad), r)
+@inline cov(ad::AutoDiffKernel, x1::AbstractVector, x2::AbstractVector) = cov(raw(ad), x1, x2)
+@inline cov_ij(ad::AutoDiffKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int) = cov_ij(raw(ad), X1, X2, data, i, j, dim)
+@inline cov_ij(ad::AutoDiffKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(raw(ad), X1, X2, i, j, dim)
 
 KernelData(ad::AutoDiffKernel, X1::AbstractMatrix, X2::AbstractMatrix) = KernelData(raw(ad), X1, X2)
 kernel_data_key(ad::AutoDiffKernel, X1::AbstractMatrix, X2::AbstractMatrix) = kernel_data_key(raw(ad), X1, X2)
 
-function dKij_dθ!(dK::AbstractVector, ad::AutoDiffKernel, X::AbstractMatrix, 
+@inline function dKij_dθ!(dK::AbstractVector, ad::AutoDiffKernel, X::AbstractMatrix, 
                   i::Int, j::Int, dim::Int, npars::Int)
     seed!(ad)
     k_eval = cov_ij(dual(ad), X, X, i, j, dim)
     copyto!(dK, partials(k_eval))
     return dK
 end
-function dKij_dθ!(dK::AbstractVector, ad::AutoDiffKernel, X::AbstractMatrix, data::IsotropicData, 
+@inline function dKij_dθ!(dK::AbstractVector, ad::AutoDiffKernel, X::AbstractMatrix, data::IsotropicData, 
                   i::Int, j::Int, dim::Int, npars::Int)
     seed!(ad)
     k_eval = cov_ij(dual(ad), X, X, data, i, j, dim)
     copyto!(dK, partials(k_eval))
     return dK
 end
-function dKij_dθp(ad::AutoDiffKernel, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(ad::AutoDiffKernel, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
     seed!(ad)
     k_eval = cov_ij(dual(ad), X, X, i, j, dim)
     return partials(k_eval)[p]
 end
-function dKij_dθp(ad::AutoDiffKernel, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(ad::AutoDiffKernel, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
     dKij_dθp(ad, X, i, j, p, dim)
 end
-function dKij_dθp(ad::AutoDiffKernel, X::AbstractMatrix, data::KernelData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(ad::AutoDiffKernel, X::AbstractMatrix, data::KernelData, i::Int, j::Int, p::Int, dim::Int)
     seed!(ad)
     k_eval = cov_ij(dual(ad), X, X, data, i, j, dim)
     return partials(k_eval)[p]
