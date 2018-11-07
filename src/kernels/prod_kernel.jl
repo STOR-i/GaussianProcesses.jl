@@ -51,6 +51,9 @@ end
         dK[ipar] *= cov_right
     end
 end
+@inline @inbounds function dKij_dθ!(dK::AbstractVector, prodkern::ProdKernel, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int, npars::Int)
+    dKij_dθ!(dK, prodkern, X, i, j, dim, npars)
+end
 @inline @inbounds function dKij_dθ!(dK::AbstractVector, prodkern::ProdKernel, X::AbstractMatrix, data::PairData,
                                     i::Int, j::Int, dim::Int, npars::Int)
     cov_left  = cov_ij(prodkern.kleft,  X, X, data.data1, i, j, dim)

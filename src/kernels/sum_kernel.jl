@@ -40,6 +40,9 @@ end
     end
     dKij_dθ!(dK,  sumkern.kleft,  X, i, j, dim, npleft)
 end
+@inline @inbounds function dKij_dθ!(dK::AbstractVector, sumkern::SumKernel, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int, npars::Int)
+    dKij_dθ!(dK, sumkern, X, i, j, dim, npars)
+end
 @inline @inbounds function dKij_dθ!(dK::AbstractVector, sumkern::SumKernel, X::AbstractMatrix, data::PairData, i::Int, j::Int, dim::Int, npars::Int)
     npright = num_params(sumkern.kright)
     npleft = num_params(sumkern.kleft)
