@@ -63,6 +63,18 @@ Random.seed!(1)
             optimize!(gp; domean=true, kern=true, noise=false)
             @test noise_params == GaussianProcesses.get_params(gp; domean=false, kern=false,
                                                                noise=true)
+
+            set_params!(gp, init_params; domean=true, kern=true, noise=true)
+
+            # Box
+            kern_params = GaussianProcesses.get_params(gp; domean=false, kern=true,
+                                                       noise=false)
+            optimize!(gp, domean = false,
+                      kernbounds = [kern_params .- .01, kern_params .+ .01])
+            new_kern_params = GaussianProcesses.get_params(gp; domean=false, kern=true,
+                                                           noise=false)
+            @test (&)((@. kern_params - .01 <= new_kern_params <= kern_params + .01)...)
+            @test kern_params != new_kern_params
         end
     end
 
@@ -102,6 +114,18 @@ Random.seed!(1)
             lik_params = GaussianProcesses.get_params(gp.lik)
             optimize!(gp; domean=true, kern=true, lik=false)
             @test lik_params == GaussianProcesses.get_params(lik)
+
+            set_params!(gp, init_params; domean=true, kern=true, lik=true)
+
+            # Box
+            kern_params = GaussianProcesses.get_params(gp; domean=false, kern=true,
+                                                       lik=false)
+            optimize!(gp, domean = false,
+                      kernbounds = [kern_params .- .01, kern_params .+ .01])
+            new_kern_params = GaussianProcesses.get_params(gp; domean=false, kern=true,
+                                                           lik=false)
+            @test (&)((@. kern_params - .01 <= new_kern_params <= kern_params + .01)...)
+            @test kern_params != new_kern_params
         end
     end
 end

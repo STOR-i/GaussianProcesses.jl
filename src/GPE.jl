@@ -406,8 +406,33 @@ function num_params(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tru
     n = 0
     noise && (n += 1)
     domean && (n += num_params(gp.mean))
-    kern && (n += num_params(gp.kernelern))
+    kern && (n += num_params(gp.kernel))
     n
+end
+
+function appendbounds!(lb, ub, n, bounds)
+    n == 0 && return
+    if bounds == nothing
+        append!(lb, fill(-Inf, n))
+        append!(ub, fill(Inf, n))
+    else
+        append!(lb, bounds[1])
+        append!(ub, bounds[2])
+    end
+    return
+end
+appendnoisebounds!(lb, ub, gp::GPE, bounds) = appendbounds!(lb, ub, 1, bounds)
+appendnoisebounds!(lb, ub, gp, bounds) = Nothing
+appendlikbounds!(lb, ub, gp, bounds) = Nothing
+function bounds(gp::GPBase, noisebounds, meanbounds, kernbounds, likbounds; 
+                noise::Bool=true, domean::Bool=true, kern::Bool=true, lik::Bool=true)
+    lb = Float64[]
+    ub = Float64[]
+    noise && appendnoisebounds!(lb, ub, gp, noisebounds)
+    lik && appendlikbounds!(lb, ub, gp, likbounds)
+    domean && appendbounds!(lb, ub, num_params(gp.mean), meanbounds)
+    kern && appendbounds!(lb, ub, num_params(gp.kernel), kernbounds)
+    lb, ub
 end
 
 function set_params!(gp::GPE, hyp::AbstractVector;
