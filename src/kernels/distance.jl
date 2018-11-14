@@ -5,7 +5,7 @@ distance(k::Stationary, X::AbstractMatrix, data::EmptyData) = distance(k, X)
 distance(k::Isotropic, X::AbstractMatrix, data::IsotropicData) = data.R
 function distance(k::Stationary, X::AbstractMatrix)
     nobsv = size(X, 2)
-    return distance!(Matrix{Float64}(undef, nobsv, nobsv), metric(k), X)
+    return distance!(Matrix{eltype(X)}(undef, nobsv, nobsv), metric(k), X)
 end
 distance!(dist::AbstractMatrix, k::Stationary, X::AbstractMatrix) = distance!(dist, metric(k), X)
 function distance!(dist::AbstractMatrix, m::PreMetric, X::AbstractMatrix)
@@ -21,7 +21,7 @@ end
 function distance(k::Stationary, X::AbstractMatrix, Y::AbstractMatrix)
     nobsx = size(X, 2)
     nobsy = size(Y, 2)
-    return distance!(Matrix{Float64}(undef, nobsx, nobsy), metric(k), X, Y)
+    return distance!(Matrix{eltype(Y)}(undef, nobsx, nobsy), metric(k), X, Y)
 end
 distance!(dist::AbstractMatrix, k::Stationary, X::AbstractMatrix, Y::AbstractMatrix) = distance!(dist, metric(k), X, Y)
 function distance!(dist::AbstractMatrix, m::PreMetric, X::AbstractMatrix, Y::AbstractMatrix)

@@ -1,6 +1,7 @@
 module TestKernels
 using GaussianProcesses, Calculus
 using Test, LinearAlgebra, Statistics, Random
+using ForwardDiff
 using GaussianProcesses: EmptyData, update_target_and_dtarget!, 
       cov_ij, dKij_dθp, dKij_dθ!, 
       get_params, set_params!, StationaryARD, WeightedEuclidean
@@ -128,6 +129,12 @@ function testkernel(kern::Kernel)
         update_target_and_dtarget!(gp_empty)
         update_target_and_dtarget!(gp)
         @test gp.dmll ≈ gp_empty.dmll rtol=1e-6 atol=1e-6
+    end
+    
+    @testset "predict gradient" begin
+        gp = GPE(X, y, MeanConst(0.0), kern, -3.0)
+        f = x -> predict_y(gp, reshape(x, :, 1))[1][1]
+        g = ForwardDiff.gradient(f, rand(d))
     end
 end
 

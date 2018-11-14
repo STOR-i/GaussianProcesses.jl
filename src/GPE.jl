@@ -351,9 +351,9 @@ function _predict(gp::GPE, x::AbstractMatrix)
     mu = mean(gp.mean, x) + cK'*gp.alpha        # Predictive mean
     Lck = whiten!(gp.cK, cK)
     Sigma_raw = cov(gp.kernel, x, x, priordata)
-    # Sigma_raw = Sigma_raw - Lck'Lck
-    LinearAlgebra.BLAS.syrk!('U', 'T', -1.0, Lck, 1.0, Sigma_raw)
-    LinearAlgebra.copytri!(Sigma_raw, 'U')
+    Sigma_raw = Sigma_raw - Lck'Lck
+    # LinearAlgebra.BLAS.syrk!('U', 'T', -1.0, Lck, 1.0, Sigma_raw)
+    # LinearAlgebra.copytri!(Sigma_raw, 'U')
     # Add jitter to get stable covariance
     m, chol = make_posdef!(Sigma_raw)
     return mu, PDMat(m, chol)

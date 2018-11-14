@@ -34,7 +34,7 @@ function KernelData(k::LinArd, X1::AbstractMatrix, X2::AbstractMatrix)
     dim2, nobs2 = size(X2)
 	@assert dim1==dim2
 	dim = dim1
-    XtX_d = Array{Float64}(undef, nobs1, nobs2, dim)
+    XtX_d = Array{eltype(X2)}(undef, nobs1, nobs2, dim)
     @inbounds @simd for d in 1:dim
         for i in 1:nobs1
             for j in 1:nobs2
@@ -60,7 +60,7 @@ function cov!(cK::AbstractMatrix, lin::LinArd, X::AbstractMatrix, data::LinArdDa
 end
 function cov(lin::LinArd, X::AbstractMatrix, data::LinArdData)
     nobs = size(X,2)
-    K = Array{Float64}(undef, nobs, nobs)
+    K = Array{eltype(X)}(undef, nobs, nobs)
     cov!(K, lin, X, data)
 end
 @inline @inbounds function cov_ij(lin::LinArd, X1::AbstractMatrix, X2::AbstractMatrix, data::LinArdData, i::Int, j::Int, dim::Int)
