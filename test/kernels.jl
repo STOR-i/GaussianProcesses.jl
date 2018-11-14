@@ -133,8 +133,11 @@ function testkernel(kern::Kernel)
     
     @testset "predict gradient" begin
         gp = GPE(X, y, MeanConst(0.0), kern, -3.0)
-        f = x -> predict_y(gp, reshape(x, :, 1))[1][1]
-        g = ForwardDiff.gradient(f, rand(d))
+        f = x -> sum(predict_y(gp, reshape(x, :, 1)))[1]
+        z = rand(d)
+        autodiff_grad = ForwardDiff.gradient(f, z)
+        numer_grad = Calculus.gradient(f, z)
+        @test autodiff_grad ≈ numer_grad rtol = 1e-3 atol = 1e-3
     end
 end
 
