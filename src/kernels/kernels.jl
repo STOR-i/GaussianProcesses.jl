@@ -30,7 +30,7 @@ each column is an observation.
 """
 function cov(k::Kernel, X₁::AbstractMatrix, X₂::AbstractMatrix, kerneldata::KernelData=EmptyData())
     n1, n2 = size(X₁, 2), size(X₂, 2)
-    cK = Array{eltype(X₂)}(undef, n1, n2)
+    cK = Array{promote_type(eltype(X₁), eltype(X₂))}(undef, n1, n2)
     cov!(cK, k, X₁, X₂, kerneldata)
 end
 

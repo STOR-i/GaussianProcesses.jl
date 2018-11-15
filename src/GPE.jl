@@ -351,16 +351,16 @@ function _predict(gp::GPE, x::AbstractMatrix)
     mu = mean(gp.mean, x) + cK'*gp.alpha        # Predictive mean
     Lck = whiten!(gp.cK, cK)
     Sigma_raw = cov(gp.kernel, x, x, priordata)
-    subtract_Lck!(eltype(x), Sigma_raw, Lck)
+    subtract_Lck!(Sigma_raw, Lck)
     # Add jitter to get stable covariance
     m, chol = make_posdef!(Sigma_raw)
     return mu, PDMat(m, chol)
 end
-@inline function subtract_Lck!(::Any, Sigma_raw, Lck)
+@inline function subtract_Lck!(Sigma_raw::AbstractArray{Float64}, Lck::AbstractArray{Float64})
     LinearAlgebra.BLAS.syrk!('U', 'T', -1.0, Lck, 1.0, Sigma_raw)
     LinearAlgebra.copytri!(Sigma_raw, 'U')
 end
-@inline subtract_Lck!(::Type{<:Dual}, Sigma_raw, Lck) = Sigma_raw .-= Lck'Lck
+@inline subtract_Lck!(Sigma_raw, Lck) = Sigma_raw .-= Lck'Lck
 
 
 #———————————————————————————————————————————————————————————

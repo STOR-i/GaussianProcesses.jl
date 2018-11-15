@@ -64,7 +64,7 @@ end
 @inline distij(dist::Euclidean,X::AbstractMatrix,i::Int,j::Int,dim::Int)=√_SqEuclidean_ij(X,i,j,dim)
 @inline function distij(dist::Euclidean,X1::AbstractMatrix,X2::AbstractMatrix,i::Int,j::Int,dim::Int)
     if X1 === X2 && i == j
-        eltype(X2)(0)
+        zero(eltype(X2))
     else
         √_SqEuclidean_ij(X1,X2,i,j,dim)
     end
@@ -99,7 +99,7 @@ end
 @inline distij(dist::WeightedEuclidean,X::AbstractMatrix,i::Int,j::Int,dim::Int)=√_WeightedSqEuclidean_ij(dist.weights,X,i,j,dim)
 @inline function distij(dist::WeightedEuclidean,X1::AbstractMatrix,X2::AbstractMatrix,i::Int,j::Int,dim::Int)
     if X1 === X2 && i == j
-        eltype(X2)(0)
+        zero(eltype(X2))
     else
         √_WeightedSqEuclidean_ij(dist.weights,X1,X2,i,j,dim)
     end
