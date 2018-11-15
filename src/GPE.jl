@@ -83,7 +83,7 @@ GPE(x::AbstractVector, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::
 """
     GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0)
 
-Construct a [GPE](@ref) object without observations.
+Construct a [`GPE`](@ref) object without observations.
 """
 function GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0) 
     x = Array{Float64}(undef, 1, 0) # ElasticArrays don't like length(x) = 0.

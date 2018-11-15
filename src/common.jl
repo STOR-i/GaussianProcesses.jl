@@ -38,8 +38,8 @@ Call `get_param_names` on each element of `objects` and prefix the returned name
 element at index `i` with `prefix * i * '_'`.
 
 # Examples
-```jldoctest
-julia> get_param_names(ProdKernel(Mat(1/2, 1/2, 1/2), SEArd([0.0, 1.0], 0.0)))
+```
+julia> GaussianProcesses.get_param_names(ProdKernel(Mat12Iso(1/2, 1/2), SEArd([0.0, 1.0], 0.0)))
 5-element Array{Symbol,1}:
  :pk1_ll
  :pk1_lσ
