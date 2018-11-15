@@ -356,7 +356,7 @@ function _predict(gp::GPE, x::AbstractMatrix)
     m, chol = make_posdef!(Sigma_raw)
     return mu, PDMat(m, chol)
 end
-@inline function subtract_Lck!(Sigma_raw::AbstractArray{Float64}, Lck::AbstractArray{Float64})
+@inline function subtract_Lck!(Sigma_raw::AbstractArray{<:AbstractFloat}, Lck::AbstractArray{<:AbstractFloat})
     LinearAlgebra.BLAS.syrk!('U', 'T', -1.0, Lck, 1.0, Sigma_raw)
     LinearAlgebra.copytri!(Sigma_raw, 'U')
 end
