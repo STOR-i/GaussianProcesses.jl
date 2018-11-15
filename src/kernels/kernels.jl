@@ -30,7 +30,7 @@ each column is an observation.
 """
 function cov(k::Kernel, X₁::AbstractMatrix, X₂::AbstractMatrix, kerneldata::KernelData=EmptyData())
     n1, n2 = size(X₁, 2), size(X₂, 2)
-    cK = Array{eltype(X₁)}(undef, n1, n2)
+    cK = Array{promote_type(eltype(X₁), eltype(X₂))}(undef, n1, n2)
     cov!(cK, k, X₁, X₂, kerneldata)
 end
 
@@ -88,7 +88,7 @@ function cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData
 end
 function cov(k::Kernel, X::AbstractMatrix, data::KernelData)
     dim, nobsv = size(X)
-    cK = Array{Float64}(undef, nobsv, nobsv)
+    cK = Array{eltype(X)}(undef, nobsv, nobsv)
     cov!(cK, k, X, data)
 end
 
@@ -148,7 +148,7 @@ grad_stack(k::Kernel, X::AbstractMatrix) = grad_stack(k, X, KernelData(k, X, X))
 
 function grad_stack(k::Kernel, X::AbstractMatrix, data::KernelData)
     nobs = size(X, 2)
-    stack = Array{Float64}(undef, nobs, nobs, num_params(k))
+    stack = Array{eltype(X)}(undef, nobs, nobs, num_params(k))
     grad_stack!(stack, k, X, data)
 end
 

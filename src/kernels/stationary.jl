@@ -133,7 +133,7 @@ function KernelData(k::StationaryARD, X1::AbstractMatrix, X2::AbstractMatrix)
 	dim2, n2 = size(X2)
 	@assert dim1 == dim2
 	dim = dim1
-	dist_stack = Array{Float64}(undef, n1, n2, dim)
+    dist_stack = Array{eltype(X2)}(undef, n1, n2, dim)
 	for d in 1:dim1
 		grad_ls = view(dist_stack, :, :, d)
 		distance!(grad_ls, SqEuclidean(), view(X1, d:d,:), view(X2, d:d,:))
