@@ -12,13 +12,13 @@ active dimensions.
 """
 struct Masked{K<:Kernel, DIM} <: Kernel
     kernel::K
-    active_dims::SVector{DIM, Int64}
+    active_dims::SVector{DIM, Int}
 end
 num_dims(masked::Masked{K, DIM}) where {K, DIM} = DIM
 function Masked(kern::Kernel, active_dims::AbstractVector)
     dim = length(active_dims)
     K = typeof(kern)
-    return Masked{K,dim}(kern, SVector{dim, Int64}(active_dims))
+    return Masked{K,dim}(kern, SVector{dim, Int}(active_dims))
 end
 
 ################

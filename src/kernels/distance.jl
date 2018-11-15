@@ -5,7 +5,7 @@ distance(k::Stationary, X::AbstractMatrix, data::EmptyData) = distance(k, X)
 distance(k::Isotropic, X::AbstractMatrix, data::IsotropicData) = data.R
 function distance(k::Stationary, X::AbstractMatrix)
     nobsv = size(X, 2)
-    return distance!(Matrix{Float64}(undef, nobsv, nobsv), metric(k), X)
+    return distance!(Matrix{eltype(X)}(undef, nobsv, nobsv), metric(k), X)
 end
 distance!(dist::AbstractMatrix, k::Stationary, X::AbstractMatrix) = distance!(dist, metric(k), X)
 function distance!(dist::AbstractMatrix, m::PreMetric, X::AbstractMatrix)
@@ -21,7 +21,7 @@ end
 function distance(k::Stationary, X::AbstractMatrix, Y::AbstractMatrix)
     nobsx = size(X, 2)
     nobsy = size(Y, 2)
-    return distance!(Matrix{Float64}(undef, nobsx, nobsy), metric(k), X, Y)
+    return distance!(Matrix{eltype(Y)}(undef, nobsx, nobsy), metric(k), X, Y)
 end
 distance!(dist::AbstractMatrix, k::Stationary, X::AbstractMatrix, Y::AbstractMatrix) = distance!(dist, metric(k), X, Y)
 function distance!(dist::AbstractMatrix, m::PreMetric, X::AbstractMatrix, Y::AbstractMatrix)
@@ -62,7 +62,13 @@ end
 
 # Euclidean
 @inline distij(dist::Euclidean,X::AbstractMatrix,i::Int,j::Int,dim::Int)=√_SqEuclidean_ij(X,i,j,dim)
-@inline distij(dist::Euclidean,X1::AbstractMatrix,X2::AbstractMatrix,i::Int,j::Int,dim::Int)=√_SqEuclidean_ij(X1,X2,i,j,dim)
+@inline function distij(dist::Euclidean,X1::AbstractMatrix,X2::AbstractMatrix,i::Int,j::Int,dim::Int)
+    if X1 === X2 && i == j
+        zero(eltype(X2))
+    else
+        √_SqEuclidean_ij(X1,X2,i,j,dim)
+    end
+end
 
 @inline _WeightedSqEuclidean_ijk(weights::AbstractVector,X::AbstractMatrix,i::Int,j::Int,k::Int)=(X[k,i]-X[k,j])^2*weights[k]
 @inline _WeightedSqEuclidean_ijk(weights::AbstractVector,X1::AbstractMatrix,X2::AbstractMatrix,i::Int,j::Int,k::Int)=(X1[k,i]-X2[k,j])^2*weights[k]
@@ -91,4 +97,10 @@ end
 @inline dist2ijk(dist::WeightedEuclidean,X::AbstractMatrix,i::Int,j::Int,k::Int)=_WeightedSqEuclidean_ijk(dist.weights,X,i,j,k)
 @inline dist2ijk(dist::WeightedEuclidean,X1::AbstractMatrix,X2::AbstractMatrix,i::Int,j::Int,k::Int)=_WeightedSqEuclidean_ijk(dist.weights,X1,X2,i,j,k)
 @inline distij(dist::WeightedEuclidean,X::AbstractMatrix,i::Int,j::Int,dim::Int)=√_WeightedSqEuclidean_ij(dist.weights,X,i,j,dim)
-@inline distij(dist::WeightedEuclidean,X1::AbstractMatrix,X2::AbstractMatrix,i::Int,j::Int,dim::Int)=√_WeightedSqEuclidean_ij(dist.weights,X1,X2,i,j,dim)
+@inline function distij(dist::WeightedEuclidean,X1::AbstractMatrix,X2::AbstractMatrix,i::Int,j::Int,dim::Int)
+    if X1 === X2 && i == j
+        zero(eltype(X2))
+    else
+        √_WeightedSqEuclidean_ij(dist.weights,X1,X2,i,j,dim)
+    end
+end
