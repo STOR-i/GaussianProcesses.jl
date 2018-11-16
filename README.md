@@ -4,6 +4,9 @@
 [![Coverage Status](https://coveralls.io/repos/github/STOR-i/GaussianProcesses.jl/badge.svg?branch=master)](https://coveralls.io/github/STOR-i/GaussianProcesses.jl?branch=master)
 [![codecov](https://codecov.io/gh/STOR-i/GaussianProcesses.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/STOR-i/GaussianProcesses.jl)
 
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://STOR-i.github.io/GaussianProcesses.jl/stable)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://STOR-i.github.io/GaussianProcesses.jl/dev)
+
 A Gaussian Processes package for Julia.
 
 This package is still under development. If you have any suggestions to improve the package, or if you've noticed a bug, then please post an [issue](https://github.com/STOR-i/GaussianProcesses.jl/issues/new) for us and we'll get to it as quickly as we can. Pull requests are also welcome.
