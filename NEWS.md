@@ -1,8 +1,8 @@
 # News
 
 ## Version 0.9.0 (coming soon)
-* Introduction of `ElasticPDMats` to allow `GP` which can grow without
-  "refitting" whole Gaussian process.
+* Introduction of `ElasticGPE` to allow `GP` which can grow without
+  "refitting" whole Gaussian process (see also #88).
 * Various performance and interface improvements to 
 * Introduction of `ADKernel` to simplify introduction of new/custom kernels
   through use of auto-differentiation.
