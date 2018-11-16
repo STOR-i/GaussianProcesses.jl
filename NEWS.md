@@ -1,8 +1,11 @@
 # News
 
 ## Version 0.9.0 (coming soon)
-* Introduction of `ElasticPDMats` to allow `GP` which can grow without doing
+* Introduction of `ElasticPDMats` to allow `GP` which can grow without
   "refitting" whole Gaussian process.
+* Various performance and interface improvements to 
+* Introduction of `ADKernel` to simplify introduction of new/custom kernels
+  through use of auto-differentiation.
 
 ## Version 0.8.0 (2018-10-02)
 * Updated Julia requirement to v1.0
