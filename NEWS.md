@@ -1,5 +1,9 @@
 # News
 
+## Version 0.9.0 (coming soon)
+* Introduction of `ElasticPDMats` to allow `GP` which can grow without doing
+  "refitting" whole Gaussian process.
+
 ## Version 0.8.0 (2018-10-02)
 * Updated Julia requirement to v1.0
 * Updated requirement of `RecipesBase.jl` to v0.6
