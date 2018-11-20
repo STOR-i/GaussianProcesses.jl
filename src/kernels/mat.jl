@@ -61,7 +61,7 @@ function Matern(ν::Real, ll::Real, lσ::Real)
     return kern
 end
 
-function Matern(ν::Real, ll::Vector{Real}, lσ::Real)
+function Matern(ν::Real, ll::Vector{<:Real}, lσ::Real)
     if ν==1/2
         kern = Mat12Ard(ll, lσ)
     elseif ν==3/2
