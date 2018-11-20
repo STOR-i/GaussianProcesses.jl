@@ -3,7 +3,7 @@
 ## Version 0.9.0 (coming soon)
 * Introduction of `ElasticGPE` to allow `GP` which can grow without
   "refitting" whole Gaussian process (see also [#88](https://github.com/STOR-i/GaussianProcesses.jl/issues/88)).
-* Various performance and interface improvements to 
+* Various performance and interface improvements to Kernels
 * Introduction of `ADKernel` to simplify introduction of new/custom kernels
   through use of auto-differentiation.
 
