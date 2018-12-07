@@ -680,4 +680,76 @@ var documenterSearchIndex = {"docs": [
     "text": "Modules = [GaussianProcesses]\nPages = readdir(joinpath(\"..\", \"src\", \"means\"))"
 },
 
+{
+    "location": "lik.html#",
+    "page": "Likelihoods",
+    "title": "Likelihoods",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "lik.html#GaussianProcesses.BernLik",
+    "page": "Likelihoods",
+    "title": "GaussianProcesses.BernLik",
+    "category": "type",
+    "text": "BernLik <: Likelihood\n\nBernoulli likelihood\n\np(y = k  f) = θᵏ (1 - θ)^1-k\n\nfor k  01, where θ = Φ(f) and f is the latent Gaussian process.\n\n\n\n\n\n"
+},
+
+{
+    "location": "lik.html#GaussianProcesses.BinLik",
+    "page": "Likelihoods",
+    "title": "GaussianProcesses.BinLik",
+    "category": "type",
+    "text": "BinLik <: Likelihood\n\nBinomial likelihood\n\np(y = k  f) = k(n(n-k)) θᵏ(1 - θ)^n-k\n\nfor number of successes k  0 1  n out of n Bernoulli trials, where θ = exp(f)(1 + exp(f)) and f is the latent Gaussian process.\n\n\n\n\n\n"
+},
+
+{
+    "location": "lik.html#GaussianProcesses.ExpLik",
+    "page": "Likelihoods",
+    "title": "GaussianProcesses.ExpLik",
+    "category": "type",
+    "text": "ExpLik <: Likelihood\n\nExponential likelihood\n\np(y  f) = θexp(-θy)\n\nwhere θ = exp(-f) and f is the latent Gaussian process.\n\n\n\n\n\n"
+},
+
+{
+    "location": "lik.html#GaussianProcesses.GaussLik",
+    "page": "Likelihoods",
+    "title": "GaussianProcesses.GaussLik",
+    "category": "type",
+    "text": "GaussLik <: Likelihood\n\nGaussian, a.k.a. Normal, likelihood\n\np(y  f σ) = 1  (2πσ²) exp(-(x - f)²(2σ²))\n\nwhere standard deviation σ is a non-fixed hyperparameter and f is the latent Gaussian process.\n\n\n\n\n\n"
+},
+
+{
+    "location": "lik.html#GaussianProcesses.PoisLik",
+    "page": "Likelihoods",
+    "title": "GaussianProcesses.PoisLik",
+    "category": "type",
+    "text": "PoisLik <: Likelihood\n\nPoisson likelihood\n\np(yᵢ = k  fᵢ) = θᵏexp(-θ)k\n\nfor k  N₀, where θ = exp(f) and f is the latent Gaussian process.\n\n\n\n\n\n"
+},
+
+{
+    "location": "lik.html#GaussianProcesses.StuTLik",
+    "page": "Likelihoods",
+    "title": "GaussianProcesses.StuTLik",
+    "category": "type",
+    "text": "StuTLik <: Likelihood\n\nStudent-t likelihood (a.k.a. non-standardized Student\'s t-distribution)\n\np(y  f σ) = Γ((ν + 1)2)Γ(ν2)(πν)σ(1 + 1ν((y - f)σ)²)^-(ν + 1)2\n\nwith degrees of freedom ν  N₀, where scale σ is a non-fixed hyperparameter and f is the latent Gaussian process.\n\n\n\n\n\n"
+},
+
+{
+    "location": "lik.html#GaussianProcesses.predict_obs-Tuple{Likelihood,AbstractArray{T,1} where T,AbstractArray{T,1} where T}",
+    "page": "Likelihoods",
+    "title": "GaussianProcesses.predict_obs",
+    "category": "method",
+    "text": "Computes the predictive mean and variance given a Gaussian distribution for f using quadrature\n\n\n\n\n\n"
+},
+
+{
+    "location": "lik.html#Likelihoods-1",
+    "page": "Likelihoods",
+    "title": "Likelihoods",
+    "category": "section",
+    "text": "Modules = [GaussianProcesses]\nPages = readdir(joinpath(\"..\", \"src\", \"likelihoods\"))"
+},
+
 ]}
