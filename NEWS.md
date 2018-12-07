@@ -1,6 +1,6 @@
 # News
 
-## Version 0.9.0 (coming soon)
+## Version 0.9.0 (2018-12-07)
 * Introduction of `ElasticGPE` to allow `GP` which can grow without
   "refitting" whole Gaussian process (see also [#88](https://github.com/STOR-i/GaussianProcesses.jl/issues/88)).
 * Various performance and interface improvements to Kernels
