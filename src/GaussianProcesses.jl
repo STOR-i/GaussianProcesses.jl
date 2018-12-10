@@ -6,6 +6,8 @@ using StatsFuns, SpecialFunctions
 
 using LinearAlgebra, Printf, Random, Statistics
 import Statistics: mean, cov
+import Base: size
+import PDMats: dim, Matrix, diag, pdadd!, *, \, inv, logdet, eigmax, eigmin, whiten!, unwhiten!, quad, quad!, invquad, invquad!, X_A_Xt, Xt_A_X, X_invA_Xt, Xt_invA_X
 
 # Functions that should be available to package
 # users should be explicitly exported here
@@ -37,6 +39,7 @@ include("mcmc.jl")
 include("optimize.jl")
 include("crossvalidation.jl")
 include("plot.jl")
+include("sparse/sparseGP.jl")
 
 # ScikitLearnBase, which is a skeleton package.
 include("ScikitLearn.jl")
