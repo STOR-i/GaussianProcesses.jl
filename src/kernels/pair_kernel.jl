@@ -15,7 +15,7 @@ num_params(pairkern::PairKernel) = num_params(leftkern(pairkern))+num_params(rig
 get_params(pairkern::PairKernel) = vcat(get_params(leftkern(pairkern)), get_params(rightkern(pairkern)))
 get_param_names(pairkern::PairKernel) = composite_param_names([leftkern(pairkern), rightkern(pairkern)], :sk)
 
-function set_params!(pairkern::PairKernel, hyp::Vector{Float64})
+function set_params!(pairkern::PairKernel, hyp::AbstractVector)
     npl = num_params(leftkern(pairkern))
     hyp_left = hyp[1:npl]
     hyp_right = hyp[npl+1:end]
@@ -45,23 +45,37 @@ struct PairData{KD1 <: KernelData, KD2 <: KernelData} <: KernelData
     data1::KD1
     data2::KD2
 end
-function KernelData(pairkern::PairKernel, X::MatF64)
-    kl = leftkern(pairkern)
-    kr = rightkern(pairkern)
-    # this is a bit broken:
-    if kernel_data_key(kl, X) == kernel_data_key(kr, X)
-        kdata = KernelData(kl, X)
-        return PairData(kdata, kdata)
-    else
-        return PairData(
-                KernelData(kl, X),
-                KernelData(kr, X)
-               )
-    end
+const KernelDict = Dict{String,KernelData}
+KernelData(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, cache::KernelDict) = KernelData(k, X1, X2)
+function KernelData(masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, cache::KernelDict)
+    X1view = view(X1,masked.active_dims,:)
+    X2view = view(X2,masked.active_dims,:)
+    wrappeddata = KernelData(masked.kernel, X1view, X2view, cache)
+    return MaskedData(X1view, X2view, wrappeddata)
 end
-
-function kernel_data_key(pairkern::PairKernel, X::MatF64)
+KernelData(k::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, cache::KernelDict) = KernelData(k.kernel, X1, X2, cache)
+function KernelData(pairkern::PairKernel, X1::AbstractMatrix, X2::AbstractMatrix, cache::KernelDict=KernelDict())
+    leftk  = leftkern(pairkern)
+    rightk = rightkern(pairkern)
+    # this is a bit broken:
+    leftkey = kernel_data_key(leftk, X1, X2)
+    rightkey = kernel_data_key(rightk, X1, X2)
+    if leftkey ∉ keys(cache)
+        leftdata = KernelData(leftk, X1, X2, cache)
+        cache[leftkey] = leftdata
+    else
+        leftdata = cache[leftkey]
+    end
+    if rightkey ∉ keys(cache)
+        rightdata = KernelData(rightk, X1, X2, cache)
+        cache[rightkey] = rightdata
+    else
+        rightdata = cache[rightkey]
+    end
+    return PairData(leftdata, rightdata)
+end
+function kernel_data_key(pairkern::PairKernel, X1::AbstractMatrix, X2::AbstractMatrix)
     kl = leftkern(pairkern)
     kr = rightkern(pairkern)
-    @sprintf("PairData:%s+%s", kernel_data_key(kl, X), kernel_data_key(kr, X))
+    @sprintf("PairData:%s+%s", kernel_data_key(kl, X1, X2), kernel_data_key(kr, X1, X2))
 end

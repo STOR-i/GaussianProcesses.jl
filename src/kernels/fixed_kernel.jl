@@ -1,6 +1,6 @@
-struct FixedKernel{K<:Kernel} <: Kernel
+struct FixedKernel{K<:Kernel, NFREE} <: Kernel
     kernel::K
-    free::Vector{Int} # vector of *free* parameters
+    free::SVector{NFREE, Int}
 end
 
 @deprecate FixedKern FixedKernel
@@ -12,9 +12,14 @@ function set_params!(k::FixedKernel, hyp)
     p[k.free] = hyp
     set_params!(k.kernel, p)
 end
-num_params(k::FixedKernel) = length(k.free)
+num_params(k::FixedKernel{K,NFREE}) where {K,NFREE} = NFREE
 
 # convenience functions to fix a parameter
+function FixedKernel(k::Kernel, free::AbstractVector{<:Int})
+    npars = length(free)
+    sfree = SVector{npars, Int}(free)
+    return FixedKernel(k, sfree)
+end
 function fix(k::Kernel, par::Symbol)
     npars = num_params(k)
     free = collect(1:npars)
@@ -51,29 +56,29 @@ function free(k::FixedKernel, par::Symbol)
     return FixedKernel(k.kernel, free)
 end
 
-function grad_slice!(dK::MatF64, k::FixedKernel, X::MatF64, data::KernelData, p::Int)
+function grad_slice!(dK::AbstractMatrix, k::FixedKernel, X::AbstractMatrix, data::KernelData, p::Int)
     return grad_slice!(dK, k.kernel, X, data, k.free[p])
 end
-function grad_slice!(dK::MatF64, k::FixedKernel, X::MatF64, data::EmptyData, p::Int)
+function grad_slice!(dK::AbstractMatrix, k::FixedKernel, X::AbstractMatrix, data::EmptyData, p::Int)
     return grad_slice!(dK, k.kernel, X, data, k.free[p])
 end
-@inline function dKij_dθp(fk::FixedKernel,X::MatF64,i::Int,j::Int,p::Int,dim::Int)
+@inline function dKij_dθp(fk::FixedKernel,X::AbstractMatrix,i::Int,j::Int,p::Int,dim::Int)
     return dKij_dθp(fk.kernel, X, i, j, fk.free[p], dim)
 end
-@inline function dKij_dθp(fk::FixedKernel,X::MatF64,data::KernelData,i::Int,j::Int,p::Int,dim::Int)
+@inline function dKij_dθp(fk::FixedKernel,X::AbstractMatrix,data::EmptyData,i::Int,j::Int,p::Int,dim::Int)
+    return dKij_dθp(fk, X, i, j, p, dim)
+end
+@inline function dKij_dθp(fk::FixedKernel,X::AbstractMatrix,data::KernelData,i::Int,j::Int,p::Int,dim::Int)
     return dKij_dθp(fk.kernel, X, data, i, j, fk.free[p], dim)
 end
 
 # delegate everything else to the wrapped kernel
-# (is there a better way to do this?)
-cov_ij(fk::FixedKernel, X::MatF64, i::Int, j::Int, dim::Int) = cov_ij(fk.kernel, X, i, j, dim)
-cov_ij(fk::FixedKernel, X::MatF64, data::KernelData, i::Int, j::Int, dim::Int) = cov_ij(fk.kernel, X, data, i, j, dim)
-cov_ij(fk::FixedKernel, X::MatF64, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(fk, X, i, j, dim)
-Statistics.cov(fk::FixedKernel, x::VecF64, y::VecF64) = cov(fk.kernel, x, y)
-KernelData(fk::FixedKernel, args...) = KernelData(fk.kernel, args...)
-KernelData(fk::FixedKernel, X::MatF64) = KernelData(fk.kernel, X)
-kernel_data_key(fk::FixedKernel, args...) = kernel_data_key(fk.kernel, args...)
-kernel_data_key(fk::FixedKernel, X::MatF64) = kernel_data_key(fk.kernel, X)
+@inline cov_ij(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, dim::Int) = cov_ij(fk.kernel, X1, X2, i, j, dim)
+@inline cov_ij(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int) = cov_ij(fk.kernel, X1, X2, data, i, j, dim)
+@inline cov_ij(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(fk, X1, X2, i, j, dim)
+cov(fk::FixedKernel, x::AbstractVector, y::AbstractVector) = cov(fk.kernel, x, y)
+KernelData(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix) = KernelData(fk.kernel, X1, X2)
+kernel_data_key(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix) = kernel_data_key(fk.kernel, X1, X2)
 
 ##########
 # Priors #

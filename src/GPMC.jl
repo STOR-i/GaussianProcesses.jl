@@ -1,6 +1,6 @@
 # Main GaussianProcess type
 
-mutable struct GPMC{X<:MatF64,Y<:AbstractVector{<:Real},M<:Mean,K<:Kernel,L<:Likelihood,
+mutable struct GPMC{X<:AbstractMatrix,Y<:AbstractVector{<:Real},M<:Mean,K<:Kernel,L<:Likelihood,
                     D<:KernelData} <: GPBase
     # Observation data
     "Input observations"
@@ -41,7 +41,7 @@ mutable struct GPMC{X<:MatF64,Y<:AbstractVector{<:Real},M<:Mean,K<:Kernel,L<:Lik
     function GPMC{X,Y,M,K,L}(x::X, y::Y, mean::M, kernel::K, lik::L) where {X,Y,M,K,L}
         dim, nobs = size(x)
         length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        data = KernelData(kernel, x)
+        data = KernelData(kernel, x, x)
         gp = new{X,Y,M,K,L,typeof(data)}(x, y, mean, kernel, lik, dim, nobs, data,
                                          zeros(nobs))
         initialise_target!(gp)
@@ -66,11 +66,11 @@ values are represented by centered (whitened) variables ``f(x) = m(x) + Lv`` whe
 - `kernel::Kernel`: Covariance function
 - `lik::Likelihood`: Likelihood function
 """
-GPMC(x::MatF64, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood) =
+GPMC(x::AbstractMatrix, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood) =
     GPMC{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(lik)}(x, y, mean, kernel,
                                                                       lik)
 
-GPMC(x::VecF64, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood) =
+GPMC(x::AbstractVector, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood) =
     GPMC(x', y, mean, kernel, lik)
 
 """
@@ -137,7 +137,7 @@ end
 
 Update the gradient of the log-likelihood of Gaussian process `gp`.
 """
-function update_dll!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64;
+function update_dll!(gp::GPMC, Kgrad::AbstractMatrix, L_bar::AbstractMatrix;
     process::Bool=true, # include gradient components for the process itself
     lik::Bool=true,  # include gradient components for the likelihood parameters
     domean::Bool=true, # include gradient components for the mean parameters
@@ -202,7 +202,7 @@ function update_dll!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64;
     gp
 end
 
-function update_ll_and_dll!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64; kwargs...)
+function update_ll_and_dll!(gp::GPMC, Kgrad::AbstractMatrix, L_bar::AbstractMatrix; kwargs...)
     update_ll!(gp; kwargs...)
     update_dll!(gp, Kgrad, L_bar; kwargs...)
 end
@@ -240,7 +240,7 @@ function update_target!(gp::GPMC; process::Bool=true, lik::Bool=true, domean::Bo
     gp
 end
 
-function update_dtarget!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64; kwargs...)
+function update_dtarget!(gp::GPMC, Kgrad::AbstractMatrix, L_bar::AbstractMatrix; kwargs...)
     update_dll!(gp, Kgrad, L_bar; kwargs...)
     gp.dtarget = gp.dll + prior_gradlogpdf(gp; kwargs...)
     gp
@@ -255,7 +255,7 @@ Update the log-posterior
 ```
 of a Gaussian process `gp` and its derivative.
 """
-function update_target_and_dtarget!(gp::GPMC, Kgrad::MatF64, L_bar::MatF64; kwargs...)
+function update_target_and_dtarget!(gp::GPMC, Kgrad::AbstractMatrix, L_bar::AbstractMatrix; kwargs...)
     update_target!(gp; kwargs...)
     update_dtarget!(gp, Kgrad, L_bar; kwargs...)
 end
@@ -274,29 +274,29 @@ Return the predictive mean and variance of Gaussian Process `gp` at specfic poin
 are given as columns of matrix `x`. If `full_cov` is `true`, the full covariance matrix is
 returned instead of only variances.
 """
-function predict_y(gp::GPMC, x::MatF64; full_cov::Bool=false)
+function predict_y(gp::GPMC, x::AbstractMatrix; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
     return predict_obs(gp.lik, μ, σ2)
 end
 
 # 1D Case for prediction
-predict_y(gp::GPMC, x::VecF64; full_cov::Bool=false) = predict_y(gp, x'; full_cov=full_cov)
+predict_y(gp::GPMC, x::AbstractVector; full_cov::Bool=false) = predict_y(gp, x'; full_cov=full_cov)
 
 
 ## compute predictions
-function _predict(gp::GPMC, x::MatF64)
+function _predict(gp::GPMC, x::AbstractMatrix)
     cK = cov(gp.kernel, gp.x, x)
     Lck = whiten(gp.cK, cK)
     fmu =  mean(gp.mean,x) + Lck'gp.v     # Predictive mean
     Sigma_raw = cov(gp.kernel, x) - Lck'Lck # Predictive covariance
     # Add jitter to get stable covariance
-    fSigma = tolerant_PDMat(Sigma_raw)
-    return fmu, fSigma
+    Σ, chol = make_posdef!(Sigma_raw)
+    return fmu, Σ
 end
 
 
 # Sample from functions from the GP
-function Random.rand!(gp::GPMC, x::MatF64, A::DenseMatrix)
+function Random.rand!(gp::GPMC, x::AbstractMatrix, A::DenseMatrix)
     nobs = size(x,2)
     n_sample = size(A,2)
 
@@ -305,7 +305,7 @@ function Random.rand!(gp::GPMC, x::MatF64, A::DenseMatrix)
         μ = mean(gp.mean, x);
         Σraw = cov(gp.kernel, x);
         # Add jitter to get stable covariance
-        Σ = tolerant_PDMat(Σraw)
+        Σ, chol = make_posdef!(Σraw)
     else
         # Posterior mean and covariance
         μ, Σ = predict_f(gp, x; full_cov=true)
@@ -313,15 +313,16 @@ function Random.rand!(gp::GPMC, x::MatF64, A::DenseMatrix)
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end
 
-Random.rand(gp::GPMC, x::MatF64, n::Int) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n))
+Random.rand(gp::GPMC, x::AbstractMatrix, n::Int) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n))
 
 # Sample from 1D GP
-Random.rand(gp::GPMC, x::VecF64, n::Int) = rand(gp, x', n)
+Random.rand(gp::GPMC, x::AbstractVector, n::Int) = rand(gp, x', n)
 
 # Generate only one sample from the GP and returns a vector
-Random.rand(gp::GPMC, x::MatF64) = vec(rand(gp,x,1))
-Random.rand(gp::GPMC, x::VecF64) = vec(rand(gp,x',1))
+Random.rand(gp::GPMC, x::AbstractMatrix) = vec(rand(gp,x,1))
+Random.rand(gp::GPMC, x::AbstractVector) = vec(rand(gp,x',1))
 
+appendlikbounds!(lb, ub, gp::GPMC, bounds) = appendbounds!(lb, ub, num_params(gp.lik), bounds)
 
 function get_params(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     params = Float64[]
@@ -346,7 +347,7 @@ function num_params(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true
     n
 end
 
-function set_params!(gp::GPMC, hyp::VecF64; process::Bool=true, lik::Bool=true, domean::Bool=true, kern::Bool=true)
+function set_params!(gp::GPMC, hyp::AbstractVector; process::Bool=true, lik::Bool=true, domean::Bool=true, kern::Bool=true)
     n_lik_params = num_params(gp.lik)
     n_mean_params = num_params(gp.mean)
     n_kern_params = num_params(gp.kernel)

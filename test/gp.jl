@@ -12,13 +12,19 @@ Random.seed!(1)
     mZero = MeanZero()
     kern = SE(0.0, 0.0)
 
+    ntest = 5
+    Xtest = randn(d, ntest)
+
     gp = GP(X, y, mZero, kern)
 
     # Verify that predictive mean at input observations
     # are the same as the output observations
-    @testset "Predictive mean" begin
+    @testset "Predictive mean at obs locations" begin
         y_pred, sig = predict_y(gp, X)
         @test maximum(abs, gp.y - y_pred) ≈ 0.0 atol=0.1
+    end
+    @testset "Predictive mean at test locations" begin
+        y_pred, sig = predict_y(gp, Xtest)
     end
 
     # ScikitLearn interface test

@@ -9,7 +9,7 @@ Random.seed!(1)
     logℓ, logσ = rand(d), rand()
     X = rand(d,n)
     kern = SEArd(logℓ, logσ)
-    data = GaussianProcesses.KernelData(kern, X)
+    data = GaussianProcesses.KernelData(kern, X, X)
 
     @test GaussianProcesses.distance(kern, X, data) ≈ GaussianProcesses.distance(kern, X)
 end

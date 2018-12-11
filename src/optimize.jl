@@ -11,22 +11,33 @@ Optimise the hyperparameters of Gaussian process `gp` based on type II maximum l
     * `kern::Bool`: Kernel function hyperparameters should be optmized
     * `noise::Bool`: Observation noise hyperparameter should be optimized (GPE only)
     * `lik::Bool`: Likelihood hyperparameters should be optimized (GPMC only)
+    * `meanbounds`: [lowerbounds, upperbounds] for the mean hyperparameters
+    * `kernbounds`: [lowerbounds, upperbounds] for the kernel hyperparameters
+    * `noisebounds`: [lowerbound, upperbound] for the noise hyperparameter
     * `kwargs`: Keyword arguments for the optimize function from the Optim package
 """
 function optimize!(gp::GPBase; method = LBFGS(), domean::Bool = true, kern::Bool = true,
-                   noise::Bool = true, lik::Bool = true, kwargs...)
+                   noise::Bool = true, lik::Bool = true, 
+                   meanbounds = nothing, kernbounds = nothing, 
+                   noisebounds = nothing, likbounds = nothing, kwargs...)
     params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     # println(params_kwargs)
     func = get_optim_target(gp; params_kwargs...)
     init = get_params(gp; params_kwargs...)  # Initial hyperparameter values
-    results = optimize(func, init; method=method, kwargs...)     # Run optimizer
+    if meanbounds == kernbounds == noisebounds == likbounds == nothing 
+        results = optimize(func, init; method=method, kwargs...)     # Run optimizer
+    else
+        lb, ub = bounds(gp, noisebounds, meanbounds, kernbounds, likbounds;
+                        domean = domean, kern = kern, noise = noise, lik = lik)
+        results = optimize(func.f, func.df, lb, ub, init, Fminbox(method))
+    end
     set_params!(gp, Optim.minimizer(results); params_kwargs...)
     update_target!(gp)
     return results
 end
 
 function get_optim_target(gp::GPBase; params_kwargs...)
-    function ltarget(hyp::VecF64)
+    function ltarget(hyp::AbstractVector)
         prev = get_params(gp; params_kwargs...)
         try
             set_params!(gp, hyp; params_kwargs...)
@@ -51,7 +62,7 @@ function get_optim_target(gp::GPBase; params_kwargs...)
         end
     end
 
-    function ltarget_and_dltarget!(grad::VecF64, hyp::VecF64)
+    function ltarget_and_dltarget!(grad::AbstractVector, hyp::AbstractVector)
         prev = get_params(gp; params_kwargs...)
         try
             set_params!(gp, hyp; params_kwargs...)
@@ -76,8 +87,8 @@ function get_optim_target(gp::GPBase; params_kwargs...)
         end
     end
 
-    function dltarget!(grad::VecF64, hyp::VecF64)
-        ltarget_and_dltarget!(grad::VecF64, hyp::VecF64)
+    function dltarget!(grad::AbstractVector, hyp::AbstractVector)
+        ltarget_and_dltarget!(grad::AbstractVector, hyp::AbstractVector)
     end
 
     xinit = get_params(gp; params_kwargs...)

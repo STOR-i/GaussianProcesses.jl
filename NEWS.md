@@ -1,5 +1,12 @@
 # News
 
+## Version 0.9.0 (2018-12-07)
+* Introduction of `ElasticGPE` to allow `GP` which can grow without
+  "refitting" whole Gaussian process (see also [#88](https://github.com/STOR-i/GaussianProcesses.jl/issues/88)).
+* Various performance and interface improvements to Kernels
+* Introduction of `ADKernel` to simplify introduction of new/custom kernels
+  through use of auto-differentiation.
+
 ## Version 0.8.0 (2018-10-02)
 * Updated Julia requirement to v1.0
 * Updated requirement of `RecipesBase.jl` to v0.6

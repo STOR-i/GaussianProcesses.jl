@@ -13,7 +13,7 @@ include("binomial.jl")
 #Predict observations at test locations
 
 """ Computes the predictive mean and variance given a Gaussian distribution for f using quadrature"""
-function predict_obs(lik::Likelihood, fmean::VecF64, fvar::VecF64)
+function predict_obs(lik::Likelihood, fmean::AbstractVector, fvar::AbstractVector)
     n_gaussHermite = 20
     nodes, weights = gausshermite(n_gaussHermite)
     weights /= sqrtπ
