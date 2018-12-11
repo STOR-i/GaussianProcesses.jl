@@ -5,7 +5,7 @@
 
 ARD Squared Exponential kernel (covariance)
 ```math
-k(x,x') = σ²\\exp(- (x - x')ᵀL⁻²(x - y)/2)
+k(x,x') = σ²\\exp(- (x - x')ᵀL⁻²(x - x')/2)
 ```
 with length scale ``ℓ = (ℓ₁, ℓ₂, …)`` and signal standard deviation ``σ`` where
 ``L = diag(ℓ₁, ℓ₂, …)``.
