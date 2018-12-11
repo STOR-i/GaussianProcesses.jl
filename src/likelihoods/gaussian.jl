@@ -3,7 +3,7 @@
 
 Gaussian, a.k.a. Normal, likelihood
 ```math
-p(y | f, σ) = 1 / √(2πσ²) \\exp(-(x - f)²/(2σ²)),
+p(y | f, σ) = 1 / √(2πσ²) \\exp(-(y - f)²/(2σ²)),
 ```
 where standard deviation ``σ`` is a non-fixed hyperparameter and ``f`` is the latent
 Gaussian process.
