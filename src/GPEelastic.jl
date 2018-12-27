@@ -1,6 +1,12 @@
 import Base.append!
+
+struct ElasticCov <: CovarianceStrategy
+    capacity::Int
+    stepsize::Int
+end
+
 append!(gp, x::AbstractVector, y::Float64) = append!(gp, reshape(x, :, 1), [y])
-function append!(gp::GPE{X,Y,M,K,P,D}, x::AbstractMatrix, y::AbstractVector) where {X,Y,M,K,P <: ElasticPDMat, D}
+function append!(gp::GPE{X,Y,M,K,CS,D,P}, x::AbstractMatrix, y::AbstractVector) where {X,Y,M,K,CS,D,P <: ElasticPDMat}
     size(x, 2) == length(y) || error("$(size(x, 2)) observations, but $(length(y)) targets.")
     newcov = [cov(gp.kernel, gp.x, x); cov(gp.kernel, x, x) + (exp(2*gp.logNoise) + eps())*I]
     append!(gp.data, gp.kernel, gp.x, x)
@@ -21,16 +27,22 @@ function ElasticGPE(dim; mean::Mean = MeanZero(), kernel = SE(0.0, 0.0),
     y = ElasticArray(Array{Float64}(undef, 0))
     ElasticGPE(x, y, mean, kernel, logNoise; kwargs...)
 end
-function ElasticGPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, 
-                    logNoise::Float64 = -2.0;
-                    capacity = 10^3, stepsize = 10^3)
-    data = ElasticKernelData(kernel, x, x, capacity = capacity, stepsize = stepsize)
-    nobs = length(y)
+function alloc_cK(covstrat::ElasticCov, nobs)
     # create placeholder PDMat
     m    = Matrix{Float64}(undef, nobs, nobs)
     chol = Matrix{Float64}(undef, nobs, nobs)
-    cK = ElasticPDMat(m, Cholesky(chol, :U, 0), capacity=capacity, stepsize=stepsize)
-    gp = GPE(ElasticArray(x), ElasticArray(y), mean, kernel, logNoise, data, cK)
+    cK = ElasticPDMat(m, Cholesky(chol, :U, 0), capacity=covstrat.capacity, stepsize=covstrat.stepsize)
+    return cK
+end
+function ElasticGPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, 
+                    logNoise::Float64 = -2.0;
+                    capacity = 10^3, stepsize = 10^3)
+    data = ElasticKernelData(kernel, x, x, capacity=capacity, stepsize=stepsize)
+    nobs = length(y)
+    # create placeholder PDMat
+    covstrat = ElasticCov(capacity, stepsize)
+    cK = alloc_cK(covstrat, nobs)
+    gp = GPE(ElasticArray(x), ElasticArray(y), mean, kernel, logNoise, covstrat, data, cK)
     initialise_target!(gp)
 end
 
@@ -43,6 +55,10 @@ function prepareappend!(kd, Xnew)
     end
     kd, dim, nobs, nobs_new
 end
+
+#===========================
+    Elastic Kernel Data
+===========================#
 
 function ElasticKernelData(k::Isotropic, X1::AbstractMatrix, X2::AbstractMatrix; capacity = 10^3, stepsize = 10^3)
     @assert X1==X2 # TODO: extend to X1 != X2

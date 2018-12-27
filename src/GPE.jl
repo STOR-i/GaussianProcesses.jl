@@ -1,6 +1,6 @@
 # Main GaussianProcess type
 
-mutable struct GPE{X<:AbstractMatrix,Y<:AbstractVector,M<:Mean,K<:Kernel,P<:AbstractPDMat,D<:KernelData} <: GPBase
+mutable struct GPE{X<:AbstractMatrix,Y<:AbstractVector,M<:Mean,K<:Kernel,CS<:CovarianceStrategy,D<:KernelData,P<:AbstractPDMat} <: GPBase
     # Observation data
     "Input observations"
     x::X
@@ -14,6 +14,8 @@ mutable struct GPE{X<:AbstractMatrix,Y<:AbstractVector,M<:Mean,K<:Kernel,P<:Abst
     kernel::K
     "Log standard deviation of observation noise"
     logNoise::Scalar
+    "Strategy for computing or approximating covariance matrices"
+    covstrat::CS
 
     # Auxiliary data
     "Dimension of inputs"
@@ -35,14 +37,30 @@ mutable struct GPE{X<:AbstractMatrix,Y<:AbstractVector,M<:Mean,K<:Kernel,P<:Abst
     "Gradient of log-target (gradient of marginal log-likelihood + gradient of log priors)"
     dtarget::Vector{Float64}
 
-    function GPE{X,Y,M,K,P,D}(x::X, y::Y, mean::M, kernel::K, logNoise::Float64, data::D, cK::P) where {X,Y,M,K,P,D}
+    function GPE{X,Y,M,K,CS,D,P}(x::X, y::Y, mean::M, kernel::K, logNoise::Float64, covstrat::CS, data::D, cK::P) where {X,Y,M,K,CS,D,P}
         dim, nobs = size(x)
         length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        gp = new{X,Y,M,K,P,D}(x, y, mean, kernel, Scalar(logNoise), dim, nobs, data, cK)
+        gp = new{X,Y,M,K,P,D}(x, y, mean, kernel, Scalar(logNoise), covstrat, dim, nobs, data, cK)
         initialise_target!(gp)
     end
 end
 
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64, covstrat::CovarianceStrategy, kerneldata::KernelData, cK::AbstractPDMat)
+    GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(covstrat),typeof(kerneldata),typeof(cK)}(x, y, mean, kernel, logNoise, covstratkerneldata, cK)
+end
+function alloc_cK(nobs)
+    # create placeholder PDMat
+    m = Matrix{Float64}(undef, nobs, nobs)
+    chol = Matrix{Float64}(undef, nobs, nobs)
+    cK = PDMats.PDMat(m, Cholesky(chol, 'U', 0))
+    return cK
+end
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData)
+    nobs = length(y)
+    covstrat = FullCovariance()
+    cK = alloc_cK(covstrat, nobs)
+    GPE(x, y, mean, kernel, logNoise, covstrat, kerneldata, cK)
+end
 """
     GPE(x, y, mean, kernel[, logNoise])
 
@@ -58,21 +76,6 @@ assumed that the observations are noise free.
 - `logNoise::Float64`: Natural logarithm of the standard deviation for the observation
   noise. The default is -2.0, which is equivalent to assuming no observation noise.
 """
-function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData, cK::AbstractPDMat)
-    GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(cK),typeof(kerneldata)}(x, y, mean, kernel, logNoise, kerneldata, cK)
-end
-function alloc_cK(nobs)
-    # create placeholder PDMat
-    m = Matrix{Float64}(undef, nobs, nobs)
-    chol = Matrix{Float64}(undef, nobs, nobs)
-    cK = PDMats.PDMat(m, Cholesky(chol, 'U', 0))
-    return cK
-end
-function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData)
-    nobs = length(y)
-    cK = alloc_cK(nobs)
-    GPE(x, y, mean, kernel, logNoise, kerneldata, cK)
-end
 function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0)
     kerneldata = KernelData(kernel, x, x)
     GPE(x, y, mean, kernel, logNoise, kerneldata)
@@ -114,7 +117,7 @@ function fit!(gp::GPE{X,Y}, x::X, y::Y) where {X,Y}
     gp.x = x
     gp.y = y
     gp.data = KernelData(gp.kernel, x, x)
-    gp.cK = alloc_cK(length(y))
+    gp.cK = alloc_cK(gp.covstrat, length(y))
     gp.dim, gp.nobs = size(x)
     initialise_target!(gp)
 end
@@ -149,25 +152,25 @@ end
 #———————————————————————————————————————————————————————————————-
 #Functions for calculating the log-target
 
+function update_cK!(covstrat::CovarianceStrategy, cK::AbstractPDMat, x::AbstractMatrix, kernel::Kernel, logNoise::Real, data::KernelData)
+    nobsv = size(x, 2)
+    Σbuffer = mat(cK)
+    cov!(Σbuffer, kernel, x, data)
+    noise = exp(2*logNoise)+eps()
+    for i in 1:nobsv
+        Σbuffer[i,i] += noise
+    end
+    Σbuffer, chol = make_posdef!(Σbuffer, cholfactors(cK))
+    return wrap_cK(cK, Σbuffer, chol)
+end
+
 """
     update_cK!(gp::GPE)
 
 Update the covariance matrix and its Cholesky decomposition of Gaussian process `gp`.
 """
 function update_cK!(gp::GPE)
-    old_cK = gp.cK
-    Σbuffer = mat(old_cK)
-    cov!(Σbuffer, gp.kernel, gp.x, gp.data)
-    noise = exp(2*gp.logNoise)+eps()
-    for i in 1:gp.nobs
-        Σbuffer[i,i] += noise
-    end
-    Σbuffer, chol = make_posdef!(Σbuffer, cholfactors(old_cK))
-    gp.cK = wrap_cK(gp.cK, Σbuffer, chol)
-    # copyto!(chol_buffer, Σbuffer)
-    # chol = cholesky!(Symmetric(chol_buffer))
-    # gp.cK = wrap_cK(gp.cK, Σbuffer, chol)
-    # gp.cK = new_cK
+    gp.cK = update_cK!(gp.covstrat, gp.cK, gp.x, gp.kernel, gp.logNoise, gp.data)
 end
 
 # modification of initialise_target! that reuses existing matrices to avoid
@@ -320,6 +323,7 @@ end
 # Predict observations #
 #——————————————————————#
 
+predict_full(gp::GPE, xpred::AbstractMatrix) = predictMVN(xpred, gp.x, gp.y, gp.kernel, gp.mean, gp.logNoise, gp.alpha, gp.covstrat, gp.cK)
 """
     predict_y(gp::GPE, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
 
@@ -336,46 +340,23 @@ function predict_y(gp::GPE, x::AbstractMatrix; full_cov::Bool=false)
     end
 end
 
-# 1D Case for predictions
-predict_y(gp::GPE, x::AbstractVector; full_cov::Bool=false) = predict_y(gp, x'; full_cov=full_cov)
-
-@deprecate predict predict_y
-
-## compute predictions
-function _predict(gp::GPE, x::AbstractMatrix)
-    crossdata = KernelData(gp.kernel, gp.x, x)
-    priordata = KernelData(gp.kernel, x, x)
-    cK = cov(gp.kernel, gp.x, x, crossdata)
-    mu = mean(gp.mean, x) + cK'*gp.alpha        # Predictive mean
-    Lck = whiten!(gp.cK, cK)
-    Sigma_raw = cov(gp.kernel, x, x, priordata)
-    subtract_Lck!(Sigma_raw, Lck)
-    # Add jitter to get stable covariance
-    m, chol = make_posdef!(Sigma_raw)
-    return mu, PDMat(m, chol)
-end
-@inline function subtract_Lck!(Sigma_raw::AbstractArray{<:AbstractFloat}, Lck::AbstractArray{<:AbstractFloat})
-    LinearAlgebra.BLAS.syrk!('U', 'T', -1.0, Lck, 1.0, Sigma_raw)
-    LinearAlgebra.copytri!(Sigma_raw, 'U')
-end
-@inline subtract_Lck!(Sigma_raw, Lck) = Sigma_raw .-= Lck'Lck
-
-
 #———————————————————————————————————————————————————————————
 # Sample from the GPE
-function Random.rand!(gp::GPE, x::AbstractMatrix, A::DenseMatrix)
-    nobs = size(x,2)
+function Random.rand!(gp::GPE, xpred::AbstractMatrix, A::DenseMatrix)
+    nobs = size(xpred,2)
     n_sample = size(A,2)
 
     if gp.nobs == 0
         # Prior mean and covariance
-        μ = mean(gp.mean, x);
-        Σraw = cov(gp.kernel, x);
+        μ = mean(gp.mean, xpred);
+        Σraw = cov(gp.kernel, xpred);
         Σraw, chol = make_posdef!(Σraw)
         Σ = PDMat(Σraw, chol)
     else
         # Posterior mean and covariance
-        μ, Σ = predict_f(gp, x; full_cov=true)
+        μ, Σraw = predict_f(gp, xpred; full_cov=true)
+        Σraw, chol = make_posdef!(Σraw)
+        Σ = PDMat(Σraw, chol)
     end
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end
