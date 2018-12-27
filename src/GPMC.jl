@@ -267,6 +267,7 @@ function update_target_and_dtarget!(gp::GPMC; kwargs...)
 end
 
 
+predict_full(gp::GPMC, xpred::AbstractMatrix) = predictMVN(xpred, gp.x, xp.y, gp.kernel, gp.mean, -Inf, gp.alpha, gp.covstrat, gp.cK)
 """
     predict_y(gp::GPMC, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
 
@@ -277,21 +278,6 @@ returned instead of only variances.
 function predict_y(gp::GPMC, x::AbstractMatrix; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
     return predict_obs(gp.lik, μ, σ2)
-end
-
-# 1D Case for prediction
-predict_y(gp::GPMC, x::AbstractVector; full_cov::Bool=false) = predict_y(gp, x'; full_cov=full_cov)
-
-
-## compute predictions
-function _predict(gp::GPMC, x::AbstractMatrix)
-    cK = cov(gp.kernel, gp.x, x)
-    Lck = whiten(gp.cK, cK)
-    fmu =  mean(gp.mean,x) + Lck'gp.v     # Predictive mean
-    Sigma_raw = cov(gp.kernel, x) - Lck'Lck # Predictive covariance
-    # Add jitter to get stable covariance
-    Σ, chol = make_posdef!(Sigma_raw)
-    return fmu, Σ
 end
 
 

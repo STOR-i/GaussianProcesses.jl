@@ -3,6 +3,49 @@
 abstract type GPBase end
 
 """
+    The abstract CovarianceStrategy type is for types that control how
+    the covariance matrices and their positive definite representation
+    are obtained or approximated. See SparseStrategy for examples.
+"""
+abstract type CovarianceStrategy end
+struct FullCovariance <: CovarianceStrategy end
+function alloc_cK(covstrat::CovarianceStrategy, nobs)
+    # create placeholder PDMat
+    m = Matrix{Float64}(undef, nobs, nobs)
+    chol = Matrix{Float64}(undef, nobs, nobs)
+    cK = PDMats.PDMat(m, Cholesky(chol, 'U', 0))
+    return cK
+end
+
+#===============================
+  Predictions
+================================#
+""" Compute predictions using the standard multivariate normal 
+    conditional distribution formulae.
+"""
+function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector, 
+                   kernel::Kernel, meanf::Mean, logNoise::Real,
+                   alpha::AbstractVector,
+                   covstrat::CovarianceStrategy, Ktrain::AbstractPDMat)
+    crossdata = KernelData(kernel, xtrain, xpred)
+    priordata = KernelData(kernel, xpred, xpred)
+    Kcross = cov(kernel, xtrain, xpred, crossdata)
+    mu = mean(meanf, xpred) + Kcross'*alpha # Predictive mean
+    Lck = whiten!(Ktrain, Kcross)
+    Sigma_raw = cov(kernel, xpred, xpred, priordata)
+    subtract_Lck!(Sigma_raw, Lck)
+    return mu, Sigma_raw
+    # Add jitter to get stable covariance
+    # m, chol = make_posdef!(Sigma_raw)
+    # return mu, PDMat(m, chol)
+end
+@inline function subtract_Lck!(Sigma_raw::AbstractArray{<:AbstractFloat}, Lck::AbstractArray{<:AbstractFloat})
+    LinearAlgebra.BLAS.syrk!('U', 'T', -1.0, Lck, 1.0, Sigma_raw)
+    LinearAlgebra.copytri!(Sigma_raw, 'U')
+end
+@inline subtract_Lck!(Sigma_raw, Lck) = Sigma_raw .-= Lck'Lck
+
+"""
     predict_f(gp::GPBase, X::Matrix{Float64}[; full_cov::Bool = false])
 
 Return posterior mean and variance of the Gaussian Process `gp` at specfic points which are
@@ -12,13 +55,13 @@ returned instead of only variances.
 function predict_f(gp::GPBase, x::AbstractMatrix; full_cov::Bool=false)
     size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
     if full_cov
-        return _predict(gp, x)
+        return predict_full(gp, x)
     else
         ## Calculate prediction for each point independently
             μ = Array{eltype(x)}(undef, size(x,2))
             σ2 = similar(μ)
         for k in 1:size(x,2)
-            m, sig = _predict(gp, x[:,k:k])
+            m, sig = predict_full(gp, x[:,k:k])
             μ[k] = m[1]
             σ2[k] = max(diag(sig)[1], 0.0)
         end
@@ -26,8 +69,11 @@ function predict_f(gp::GPBase, x::AbstractMatrix; full_cov::Bool=false)
     end
 end
 
-# 1D Case for prediction
+# 1D Case for prediction of process
 predict_f(gp::GPBase, x::AbstractVector; full_cov::Bool=false) = predict_f(gp, x'; full_cov=full_cov)
+# 1D Case for prediction of observations
+predict_y(gp::GPBase, x::AbstractVector; full_cov::Bool=false) = predict_y(gp, x'; full_cov=full_cov)
+@deprecate predict predict_y
 
 wrap_cK(cK::PDMat, Σbuffer, chol::Cholesky) = PDMat(Σbuffer, chol)
 mat(cK::PDMat) = cK.mat
