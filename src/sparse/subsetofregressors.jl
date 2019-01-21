@@ -37,6 +37,18 @@ struct SubsetOfRegsStrategy{M<:AbstractMatrix} <: CovarianceStrategy
     inducing::M
 end
 
+function alloc_cK(covstrat::SubsetOfRegsStrategy, nobs)
+    inducing = covstrat.inducing
+    ninducing = size(inducing, 2)
+    Kuu  = Matrix{Float64}(undef, ninducing, ninducing)
+    Kuf  = Matrix{Float64}(undef, ninducing, nobs)
+    ΣQR  = Matrix{Float64}(undef, ninducing, ninducing)
+    chol = Matrix{Float64}(undef, ninducing, ninducing)
+    cK = SubsetOfRegsPDMat(inducing, 
+                            PDMats.PDMat(ΣQR, Cholesky(chol, 'U', 0)), # ΣQR_PD
+                            Kuu, Kuf, 42.0)
+    return cK
+end
 function update_cK!(covstrat::SubsetOfRegsStrategy, cK::SubsetOfRegsPDMat, x::AbstractMatrix, kernel::Kernel, logNoise::Real, data::KernelData)
     inducing = covstrat.inducing
     Kuu = cov!(cK.Kuu, kernel, inducing)
@@ -97,8 +109,6 @@ function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::Abstr
     Σpred = Kxu * (ΣQR_PD \ Kux)
     LinearAlgebra.copytri!(Σpred, 'U')
     return mupred, Σpred
-    # m, chol = make_posdef!(Sigma_raw)
-    # return mu, PDMat(m, chol)
 end
 
 
@@ -109,15 +119,3 @@ function SoR(x::AbstractMatrix, inducing::AbstractMatrix, y::AbstractVector, mea
     GPE(x, y, mean, kernel, logNoise, covstrat, EmptyData(), cK)
 end
 
-function alloc_cK(covstrat::SubsetOfRegsStrategy, nobs)
-    inducing = covstrat.inducing
-    ninducing = size(inducing, 2)
-    Kuu  = Matrix{Float64}(undef, ninducing, ninducing)
-    Kuf  = Matrix{Float64}(undef, ninducing, nobs)
-    ΣQR  = Matrix{Float64}(undef, ninducing, ninducing)
-    chol = Matrix{Float64}(undef, ninducing, ninducing)
-    cK = SubsetOfRegsPDMat(inducing, 
-                            PDMats.PDMat(ΣQR, Cholesky(chol, 'U', 0)), # ΣQR_PD
-                            Kuu, Kuf, 42.0)
-    return cK
-end
