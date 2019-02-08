@@ -4,12 +4,25 @@
 [![Coverage Status](https://coveralls.io/repos/github/STOR-i/GaussianProcesses.jl/badge.svg?branch=master)](https://coveralls.io/github/STOR-i/GaussianProcesses.jl?branch=master)
 [![codecov](https://codecov.io/gh/STOR-i/GaussianProcesses.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/STOR-i/GaussianProcesses.jl)
 
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://STOR-i.github.io/GaussianProcesses.jl/stable)
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://STOR-i.github.io/GaussianProcesses.jl/dev)
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](http://STOR-i.github.io/GaussianProcesses.jl/latest)
 
 A Gaussian Processes package for Julia.
 
 This package is still under development. If you have any suggestions to improve the package, or if you've noticed a bug, then please post an [issue](https://github.com/STOR-i/GaussianProcesses.jl/issues/new) for us and we'll get to it as quickly as we can. Pull requests are also welcome.
+
+
+## Citing GaussianProcesses.jl
+
+To cite GaussianProcesses.jl, please reference the [arXiv paper](https://arxiv.org/abs/1812.09064). Sample Bibtex is given below:
+
+```
+@article{gaussianprocesses.jl,
+  title={GaussianProcesses. jl: A Nonparametric Bayes package for the Julia Language},
+  author={Fairbrother, Jamie and Nemeth, Christopher and Rischard, Maxime and Brea, Johanni},
+  journal={arXiv preprint arXiv:1812.09064},
+  year={2018}
+}
+```
 
 ## Introduction
 
@@ -22,6 +35,7 @@ For an extensive review of Gaussian Processes there is an excellent book [Gaussi
 GaussianProcesses.jl requires Julia version 0.7 or above. To install GaussianProcesses.jl run the following command inside a Julia session:
 
 ```julia
+julia> using Pkg
 julia> Pkg.add("GaussianProcesses")
 ```
 ## Functionality
@@ -71,6 +85,8 @@ search: GP GPE GPMC GPBase gperm log1p getpid getproperty MissingException
 
   See also: GPMC
 ```
+
+Alternatively, [online documentation](http://stor-i.github.io/GaussianProcesses.jl/latest/index.html) and is under development
 
 ## Notebooks
 

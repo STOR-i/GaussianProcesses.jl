@@ -10,7 +10,7 @@ end
 distance!(dist::AbstractMatrix, k::Stationary, X::AbstractMatrix) = distance!(dist, metric(k), X)
 function distance!(dist::AbstractMatrix, m::PreMetric, X::AbstractMatrix)
     dim, nobsv = size(X)
-    for i in 1:nobsv
+    @inbounds @simd for i in 1:nobsv
         dist[i,i] = 0.0
         for j in 1:i-1
             dist[i,j] = dist[j,i] = distij(m, X, i, j, dim)
@@ -28,7 +28,7 @@ function distance!(dist::AbstractMatrix, m::PreMetric, X::AbstractMatrix, Y::Abs
     dimx, nobsx = size(X)
     dimy, nobsy = size(Y)
     dimx == dimy || error("size(X, 1) != size(Y, 1)")
-    for i in 1:nobsx
+    @inbounds @simd for i in 1:nobsx
         for j in 1:nobsy
             dist[i,j] = distij(m, X, Y, i, j, dimx)
         end
