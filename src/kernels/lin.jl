@@ -20,4 +20,4 @@ Create linear kernel with length scale `exp.(ll)`.
 See also [`LinIso`](@ref) and [`LinArd`](@ref).
 """
 Lin(ll::Real) = LinIso(ll)
-Lin(ll::AbstractVector) = LinArd(ll)
+Lin(ll::AbstractVector{<:Real}) = LinArd(ll)
