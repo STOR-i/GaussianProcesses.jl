@@ -12,4 +12,4 @@ Create squared exponential kernel with length scale `exp.(ll)` and signal standa
 See also [`SEIso`](@ref) and [`SEArd`](@ref).
 """
 SE(ll::Real, lσ::Real) = SEIso(ll, lσ)
-SE(ll::Vector{Real}, lσ::Real) = SEArd(ll, lσ)
+SE(ll::Vector{T}, lσ::T) where {T<:Real} = SEArd(ll, lσ)
