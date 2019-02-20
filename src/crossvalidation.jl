@@ -44,34 +44,28 @@ function logp_LOO(gp::GPE)
 end
 
 """
-    dlogpdθ_LOO(gp::GPE)
+    dlogpdθ_LOO_kern(gp::GPE)
 
 Derivative of leave-one-out CV criterion with respect to the kernel hyperparameters.
 See Rasmussen & Williams equations 5.13.
 
 TODO: mean and noise parameters also.
 """
-function dlogpdθ_LOO(gp::GPE)
-    Σ = gp.cK
-    x, y = gp.x, gp.y
-    data = gp.data
-    nobs = gp.nobs
-    k = gp.kernel
-    dim = num_params(k)
-    alpha = gp.alpha
+function dlogpdθ_LOO_kern!(∂logp∂θ::AbstractVector{<:Real}, invΣ::PDMat, kernel::Kernel, x::AbstractMatrix, y::AbstractVector, data::KernelData, alpha::AbstractVector)
+    dim = num_params(kernel)
+    nobs = length(y)
+    @assert length(∂logp∂θ) == dim
 
-    invΣ = inv(Σ)
     σi2 = 1 ./ diag(invΣ)
     μi = -alpha .* σi2 .+ y
 
     # Note: if useful, the derivatives of μ and σ could be moved to a separate function.
     # ∂μ∂θ = Matrix{Float64}(undef, nobs, dim)
     # ∂σ∂θ = Matrix{Float64}(undef, nobs, dim)
-    ∂logp∂θ = Vector{Float64}(undef, dim)
     Zj = Matrix{Float64}(undef, nobs, nobs)
     for j in 1:dim
-        grad_slice!(Zj, k, x, data, j)
-        Zj = Σ \ Zj
+        grad_slice!(Zj, kernel, x, data, j)
+        Zj = invΣ.mat * Zj
         # ldiv!(Σ, Zj)
 
         ZjΣinv = diag(Zj*Matrix(invΣ))
@@ -91,7 +85,63 @@ function dlogpdθ_LOO(gp::GPE)
         end
         ∂logp∂θ[j] = ∂logp∂θj
     end
-    return -∂logp∂θ ./ 2
+    ∂logp∂θ .*= -1/2
+    return ∂logp∂θ
+end
+
+function dlogpdσ2_LOO(invΣ::PDMat, x::AbstractMatrix, y::AbstractVector, data::KernelData, alpha::AbstractVector)
+    nobs = length(y)
+
+    σi2 = 1 ./ diag(invΣ)
+    μi = -alpha .* σi2 .+ y
+
+    Zj = invΣ.mat
+    ZjΣinv = diag(Zj^2)
+    ∂σ2∂σ2 = ZjΣinv.*(σi2.^2)
+    ∂μ∂σ2 = (Zj*alpha).*σi2 .- alpha .* ∂σ2∂σ2
+
+    ∂logp∂σ2 = 0.0
+    for i in 1:nobs
+        # exponentiated quadratic component:
+        ∂logp∂σ2 -= 2*(y[i]-μi[i]) / σi2[i] * ∂μ∂σ2[i]
+        ∂logp∂σ2 -= (y[i]-μi[i])^2 * ZjΣinv[i]
+        # log determinant component:
+        @assert ZjΣinv[i] * σi2[i] ≈ ∂σ2∂σ2[i] / σi2[i]
+        ∂logp∂σ2 += ZjΣinv[i] * σi2[i]
+    end
+    return -∂logp∂σ2 ./ 2
+end
+
+function dlogpdθ_LOO(gp::GPE; noise::Bool, domean::Bool, kern::Bool)
+    Σ = gp.cK
+    x, y = gp.x, gp.y
+    data = gp.data
+    kernel = gp.kernel
+    alpha = gp.alpha
+
+    invΣ = inv(Σ)
+
+    n_mean_params = num_params(gp.mean)
+    n_kern_params = num_params(gp.kernel)
+    ∂logp∂θ = Vector{Float64}(undef, noise + domean*n_mean_params + kern*n_kern_params)
+    i = 1
+    if noise
+        ∂logp∂θ[i] = dlogpdσ2_LOO(invΣ, x, y, data, alpha)*2*exp(2 * gp.logNoise)
+        i += 1
+    end
+    if domean && n_mean_params>0
+        throw("I don't know how to do means yet")
+        Mgrads = grad_stack(gp.mean, gp.x)
+        for j in 1:n_mean_params
+            gp.dmll[i] = dot(Mgrads[:,j], gp.alpha)
+            i += 1
+        end
+    end
+    if kern
+        ∂logp∂θ_k = @view(∂logp∂θ[i:end])
+        dlogpdθ_LOO_kern!(∂logp∂θ_k, invΣ, kernel, x, y, data, alpha)
+    end
+    return ∂logp∂θ
 end
 
 ########################
@@ -191,7 +241,7 @@ function dlogpdθ_CVfold_kern!(∂logp∂θ::AbstractVector{<:Real}, invΣ::PDMa
     return ∂logp∂θ
 end
 
-function dlogpdσ2(invΣ::PDMat, x::AbstractMatrix, y::AbstractVector, data::KernelData, alpha::AbstractVector, folds::Folds)
+function dlogpdσ2_CVfold(invΣ::PDMat, x::AbstractMatrix, y::AbstractVector, data::KernelData, alpha::AbstractVector, folds::Folds)
     nobs = length(y)
 
     Zj = invΣ.mat
@@ -213,8 +263,6 @@ function dlogpdσ2(invΣ::PDMat, x::AbstractMatrix, y::AbstractVector, data::Ker
     return -∂logp∂σ2 / 2
 end
 
-"""
-"""
 function dlogpdθ_CVfold(gp::GPE, folds::Folds; noise::Bool, domean::Bool, kern::Bool)
     Σ = gp.cK
     x, y = gp.x, gp.y
@@ -229,7 +277,7 @@ function dlogpdθ_CVfold(gp::GPE, folds::Folds; noise::Bool, domean::Bool, kern:
     ∂logp∂θ = Vector{Float64}(undef, noise + domean*n_mean_params + kern*n_kern_params)
     i = 1
     if noise
-        ∂logp∂θ[i] = dlogpdσ2(invΣ, x, y, data, alpha, folds)*2*exp(2 * gp.logNoise)
+        ∂logp∂θ[i] = dlogpdσ2_CVfold(invΣ, x, y, data, alpha, folds)*2*exp(2 * gp.logNoise)
         i += 1
     end
     if domean && n_mean_params>0
