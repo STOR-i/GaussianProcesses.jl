@@ -38,18 +38,34 @@ module TestCV
         @testset "CVmetric" begin
             @test CV ≈ GaussianProcesses.logp_LOO(gp)
         end
-        target = function(θ)
-            θprev = get_params(gp.kernel)
-            set_params!(gp.kernel, θ)
+        @testset "gradient" begin
+            target = function(θ)
+                θprev = get_params(gp.kernel)
+                set_params!(gp.kernel, θ)
+                update_mll!(gp)
+                CV = GaussianProcesses.logp_LOO(gp)
+                set_params!(gp.kernel, θprev) # put it back
+                return CV
+            end
+            grad_numerical = Calculus.gradient(target, get_params(k))
             update_mll!(gp)
-            CV = GaussianProcesses.logp_LOO(gp)
-            set_params!(gp.kernel, θprev) # put it back
-            return CV
+            grad_analytical = GaussianProcesses.dlogpdθ_LOO(gp; noise=false, kern=true, domean=false)
+            @test grad_numerical ≈ grad_analytical  atol=1e-6
         end
-        grad_numerical = Calculus.gradient(target, get_params(k))
-        update_mll!(gp)
-        grad_analytical = GaussianProcesses.dlogpdθ_LOO(gp)
-        @test grad_numerical ≈ grad_analytical  atol=1e-6
+        @testset "logNoise gradient" begin
+            target = function(θ)
+                θprev = get_params(gp; noise=true, kern=false, domean=false)
+                set_params!(gp, θ; noise=true, kern=false, domean=false)
+                update_mll!(gp)
+                CV = GaussianProcesses.logp_LOO(gp)
+                set_params!(gp, θprev; noise=true, kern=false, domean=false) # put it back
+                return CV
+            end
+            grad_numerical = Calculus.gradient(target, [gp.logNoise])
+            update_mll!(gp)
+            grad_analytical = GaussianProcesses.dlogpdθ_LOO(gp; noise=true, kern=false, domean=false)
+            @test grad_numerical ≈ grad_analytical  atol=1e-6
+        end
     end
 
     @testset "folds" begin
