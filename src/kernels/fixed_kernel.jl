@@ -8,6 +8,9 @@ end
 get_params(k::FixedKernel) = get_params(k.kernel)[k.free]
 get_param_names(k::FixedKernel) = get_param_names(k.kernel)[k.free]
 function set_params!(k::FixedKernel, hyp)
+    if length(k.free) == 0
+        return
+    end
     p = get_params(k.kernel)
     p[k.free] = hyp
     set_params!(k.kernel, p)

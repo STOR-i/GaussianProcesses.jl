@@ -149,29 +149,22 @@ function logp_CVfold(gp::GPE, folds::Folds)
 end
 
 """
-    dlogpdθ_CVfold(gp::GPE)
+    dlogpdθ_CVfold_kern!(∂logp∂θ::AbstractVector{<:Real}, gp::GPE, folds::Folds)
 
 Derivative of leave-one-out CV criterion with respect to the kernel hyperparameters.
 See Rasmussen & Williams equations 5.13.
 
 TODO: mean and noise parameters also.
 """
-function dlogpdθ_CVfold(gp::GPE, folds::Folds)
-    Σ = gp.cK
-    x, y = gp.x, gp.y
-    data = gp.data
-    nobs = gp.nobs
-    k = gp.kernel
-    dim = num_params(k)
-    alpha = gp.alpha
+function dlogpdθ_CVfold_kern!(∂logp∂θ::AbstractVector{<:Real}, invΣ::PDMat, kernel::Kernel, x::AbstractMatrix, y::AbstractVector, data::KernelData, alpha::AbstractVector, folds::Folds)
+    nobs = length(y)
+    dim = num_params(kernel)
 
-    invΣ = inv(Σ)
-
-    ∂logp∂θ = Vector{Float64}(undef, dim)
+    @assert length(∂logp∂θ) == dim
     buffer1 = Matrix{Float64}(undef, nobs, nobs)
     buffer2 = Matrix{Float64}(undef, nobs, nobs)
     for j in 1:dim
-        grad_slice!(buffer2, k, x, data, j)
+        grad_slice!(buffer2, kernel, x, data, j)
         mul!(buffer1, invΣ.mat, buffer2)
         Zj = buffer1
         # ldiv!(Σ, Zj)
@@ -194,5 +187,62 @@ function dlogpdθ_CVfold(gp::GPE, folds::Folds)
         end
         ∂logp∂θ[j] = ∂logp∂θj
     end
-    return -∂logp∂θ ./ 2
+    ∂logp∂θ .*= -1/2
+    return ∂logp∂θ
+end
+
+function dlogpdσ2(invΣ::PDMat, x::AbstractMatrix, y::AbstractVector, data::KernelData, alpha::AbstractVector, folds::Folds)
+    nobs = length(y)
+
+    Zj = invΣ.mat
+    Zjα = Zj*alpha
+    ZjΣinv = invΣ.mat^2
+
+    ∂logp∂σ2 = 0.0
+    for V in folds
+        ΣVT = inv(@view(invΣ.mat[V,V]))
+        μVT = y[V]-ΣVT*alpha[V]
+        # exponentiated quadratic component:
+        resid = y[V]-μVT
+        ZjΣinvVV = ZjΣinv[V,V]
+        ∂logp∂σ2 -= 2*dot(resid, Zjα[V] .- ZjΣinvVV*ΣVT*alpha[V])
+        ∂logp∂σ2 -= dot(resid, ZjΣinvVV*resid)
+        # log determinant component:
+        ∂logp∂σ2 += dot(ZjΣinvVV,ΣVT)
+    end
+    return -∂logp∂σ2 / 2
+end
+
+"""
+"""
+function dlogpdθ_CVfold(gp::GPE, folds::Folds; noise::Bool, domean::Bool, kern::Bool)
+    Σ = gp.cK
+    x, y = gp.x, gp.y
+    data = gp.data
+    kernel = gp.kernel
+    alpha = gp.alpha
+
+    invΣ = inv(Σ)
+
+    n_mean_params = num_params(gp.mean)
+    n_kern_params = num_params(gp.kernel)
+    ∂logp∂θ = Vector{Float64}(undef, noise + domean*n_mean_params + kern*n_kern_params)
+    i = 1
+    if noise
+        ∂logp∂θ[i] = dlogpdσ2(invΣ, x, y, data, alpha, folds)*2*exp(2 * gp.logNoise)
+        i += 1
+    end
+    if domean && n_mean_params>0
+        throw("I don't know how to do means yet")
+        Mgrads = grad_stack(gp.mean, gp.x)
+        for j in 1:n_mean_params
+            gp.dmll[i] = dot(Mgrads[:,j], gp.alpha)
+            i += 1
+        end
+    end
+    if kern
+        ∂logp∂θ_k = @view(∂logp∂θ[i:end])
+        dlogpdθ_CVfold_kern!(∂logp∂θ_k, invΣ, kernel, x, y, data, alpha, folds)
+    end
+    return ∂logp∂θ
 end
