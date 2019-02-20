@@ -16,7 +16,8 @@ module TestCV
         Y = f_star.(x) .+ rand(ϵ_distr,n)
         k = SEIso(0.5, 0.8)
         logNoise = log(σ_y)
-        gp = GP(Matrix(x'), Y, MeanZero(), k, logNoise)
+        m = MeanLin([1.0])
+        gp = GPE(Matrix(x'), Y, m, k, logNoise)
         optimize!(gp; domean=false, kern=true, noise=true)
 
         μi,σi2 = GaussianProcesses.predict_LOO(gp)
@@ -24,13 +25,13 @@ module TestCV
         CV = 0.0
         @testset "predictions" begin
             for i in 1:n
-                xV, yV = gp.x[:,i], gp.y[i]
+                xV, yV = gp.x[:,[i]], gp.y[i]
                 T = [j for j in 1:n if j!=i]
                 xT, yT = gp.x[:,T], gp.y[T]
                 gpT = GPE(xT, yT, gp.mean, gp.kernel, gp.logNoise)
                 pred_i = predict_y(gpT, xV)
-                @test pred_i[1][1] ≈ μi[i]
-                @test  pred_i[2][1] ≈ σi2[i]
+                @test pred_i[1][1] ≈ μi[i] atol=1e-5
+                @test  pred_i[2][1] ≈ σi2[i] atol=1e-5
                 CV += logpdf(Normal(μi[i], √σi2[i]), gp.y[i])
             end
         end
@@ -63,7 +64,8 @@ module TestCV
         Y = f_star.(x) .+ rand(ϵ_distr,n)
         k = SEIso(0.5, 0.8)
         logNoise = log(σ_y)
-        gp = GP(Matrix(x'), Y, MeanZero(), k, logNoise)
+        m = MeanLin([1.0])
+        gp = GPE(Matrix(x'), Y, m, k, logNoise)
         optimize!(gp; domean=false, kern=true, noise=true)
 
         μ,Σ = GaussianProcesses.predict_CVfold(gp, folds)
@@ -76,13 +78,13 @@ module TestCV
                 xT, yT = gp.x[:,T], gp.y[T]
                 gpT = GPE(xT, yT, gp.mean, gp.kernel, gp.logNoise)
                 pred_V = predict_y(gpT, xV; full_cov=true)
-                @test pred_V[1] ≈ μ[ifold]
-                @test Matrix(pred_V[2]) ≈ Σ[ifold]
+                @test pred_V[1] ≈ μ[ifold] atol=1e-5
+                @test Matrix(pred_V[2]) ≈ Σ[ifold] atol=1e-5
                 CV += logpdf(MvNormal(μ[ifold], pred_V[2]), gp.y[V])
             end
         end
         @testset "CVmetric" begin
-            @test CV ≈ GaussianProcesses.logp_CVfold(gp, folds)
+            @test CV ≈ GaussianProcesses.logp_CVfold(gp, folds) atol=1e-5
         end
         @testset "gradient" begin
             target = function(θ)
