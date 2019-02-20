@@ -35,6 +35,7 @@ include("GPEelastic.jl")
 include("GPMC.jl")
 include("mcmc.jl")
 include("optimize.jl")
+include("crossvalidation.jl")
 include("plot.jl")
 
 # ScikitLearnBase, which is a skeleton package.
