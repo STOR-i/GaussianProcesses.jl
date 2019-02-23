@@ -225,7 +225,7 @@ function dlogpdθ_CVfold_kern!(∂logp∂θ::AbstractVector{<:Real}, invΣ::PDMa
 
         ∂logp∂θj = 0.0
         for V in folds
-            ΣVT = inv(@view(invΣ.mat[V,V]))
+            ΣVT = inv(invΣ.mat[V,V])
             μVT = y[V]-ΣVT*alpha[V]
             # exponentiated quadratic component:
             resid = y[V]-μVT
@@ -250,7 +250,7 @@ function dlogpdσ2_CVfold(invΣ::PDMat, x::AbstractMatrix, y::AbstractVector, da
 
     ∂logp∂σ2 = 0.0
     for V in folds
-        ΣVT = inv(@view(invΣ.mat[V,V]))
+        ΣVT = inv(invΣ.mat[V,V])
         μVT = y[V]-ΣVT*alpha[V]
         # exponentiated quadratic component:
         resid = y[V]-μVT
