@@ -1,5 +1,5 @@
 using Distributions: Normal, logpdf
-using LinearAlgebra: ldiv!, diag, inv
+using LinearAlgebra: ldiv!, diag, inv, tr
 
 ########################
 # Leave-one-out        #
@@ -198,6 +198,19 @@ function logp_CVfold(gp::GPE, folds::Folds)
     return CV
 end
 
+@inline function gradient_fold(invΣ, alpha, ZjΣinv, Zjα, V::AbstractVector{Int})
+    ∂logp∂θj = 0.0
+    ΣVTinv = PDMats.PDMat(mat(invΣ)[V,V])
+    ΣVTα = ΣVTinv\alpha[V]
+    # exponentiated quadratic component:
+    ZjΣinvVV = ZjΣinv[V,V]
+    ∂logp∂θj -= 2*dot(ΣVTα,Zjα[V])
+    ∂logp∂θj += dot(ΣVTα, ZjΣinvVV*ΣVTα)
+    # log determinant component:
+    ∂logp∂θj += tr(ΣVTinv\ZjΣinvVV)
+    return ∂logp∂θj
+end
+
 """
     dlogpdθ_CVfold_kern!(∂logp∂θ::AbstractVector{<:Real}, gp::GPE, folds::Folds)
 
@@ -215,25 +228,16 @@ function dlogpdθ_CVfold_kern!(∂logp∂θ::AbstractVector{<:Real}, invΣ::PDMa
     buffer2 = Matrix{Float64}(undef, nobs, nobs)
     for j in 1:dim
         grad_slice!(buffer2, kernel, x, data, j)
-        mul!(buffer1, invΣ.mat, buffer2)
+        mul!(buffer1, mat(invΣ), buffer2)
         Zj = buffer1
-        # ldiv!(Σ, Zj)
         Zjα = Zj*alpha
 
-        mul!(buffer2, Zj, invΣ.mat)
+        mul!(buffer2, Zj, mat(invΣ))
         ZjΣinv = buffer2
 
         ∂logp∂θj = 0.0
         for V in folds
-            ΣVT = inv(invΣ.mat[V,V])
-            μVT = y[V]-ΣVT*alpha[V]
-            # exponentiated quadratic component:
-            resid = y[V]-μVT
-            ZjΣinvVV = ZjΣinv[V,V]
-            ∂logp∂θj -= 2*dot(resid, Zjα[V] .- ZjΣinvVV*ΣVT*alpha[V])
-            ∂logp∂θj -= dot(resid, ZjΣinvVV*resid)
-            # log determinant component:
-            ∂logp∂θj += dot(ZjΣinvVV,ΣVT)
+            ∂logp∂θj += gradient_fold(invΣ, alpha, ZjΣinv, Zjα, V)
         end
         ∂logp∂θ[j] = ∂logp∂θj
     end
@@ -241,24 +245,17 @@ function dlogpdθ_CVfold_kern!(∂logp∂θ::AbstractVector{<:Real}, invΣ::PDMa
     return ∂logp∂θ
 end
 
+
 function dlogpdσ2_CVfold(invΣ::PDMat, x::AbstractMatrix, y::AbstractVector, data::KernelData, alpha::AbstractVector, folds::Folds)
     nobs = length(y)
 
-    Zj = invΣ.mat
+    Zj = mat(invΣ)
     Zjα = Zj*alpha
-    ZjΣinv = invΣ.mat^2
+    ZjΣinv = Zj^2
 
     ∂logp∂σ2 = 0.0
     for V in folds
-        ΣVT = inv(invΣ.mat[V,V])
-        μVT = y[V]-ΣVT*alpha[V]
-        # exponentiated quadratic component:
-        resid = y[V]-μVT
-        ZjΣinvVV = ZjΣinv[V,V]
-        ∂logp∂σ2 -= 2*dot(resid, Zjα[V] .- ZjΣinvVV*ΣVT*alpha[V])
-        ∂logp∂σ2 -= dot(resid, ZjΣinvVV*resid)
-        # log determinant component:
-        ∂logp∂σ2 += dot(ZjΣinvVV,ΣVT)
+        ∂logp∂σ2 += gradient_fold(invΣ, alpha, ZjΣinv, Zjα, V)
     end
     return -∂logp∂σ2 / 2
 end
