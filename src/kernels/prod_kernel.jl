@@ -27,12 +27,12 @@ end
 @inline function dKij_dθp(prodkern::ProdKernel, X::AbstractMatrix, data::PairData, i::Int, j::Int, p::Int, dim::Int)
     np = num_params(prodkern.kleft)
     if p<=np
-        cK_other = cov_ij(prodkern.kright, X, X, i, j, dim)
-        dKij_sub = dKij_dθp(prodkern.kleft, X, data.data1,i,j,p,dim)
+        cK_other = cov_ij(prodkern.kright, X, X, data.data2, i, j, dim)
+        dKij_sub = dKij_dθp(prodkern.kleft, X,   data.data1, i, j, p, dim)
         return dKij_sub * cK_other
     else
-        cK_other = cov_ij(prodkern.kleft, X, X, i, j, dim)
-        dKij_sub = dKij_dθp(prodkern.kright, X, data.data2,i,j,p-np,dim)
+        cK_other = cov_ij(prodkern.kleft, X, X, data.data1, i, j, dim)
+        dKij_sub = dKij_dθp(prodkern.kright, X, data.data2, i, j, p-np, dim)
         return dKij_sub * cK_other
     end
 end

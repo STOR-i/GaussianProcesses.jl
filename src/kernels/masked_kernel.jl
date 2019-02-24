@@ -79,6 +79,16 @@ get_param_names(masked::Masked) = get_param_names(masked.kernel)
 num_params(masked::Masked) = num_params(masked.kernel)
 set_params!(masked::Masked, hyp) = set_params!(masked.kernel, hyp)
 
+function cov(masked::Masked, X::AbstractMatrix, data::MaskedData)
+    return cov(masked.kernel, data.X1view, data.wrappeddata)
+end
+function cov!(s::AbstractMatrix, masked::Masked, X::AbstractMatrix, data::MaskedData)
+    return cov!(s, masked.kernel, data.X1view, data.wrappeddata)
+end
+function grad_slice!(dK::AbstractMatrix, masked::Masked, X::AbstractMatrix, data::MaskedData, iparam::Int)
+    return grad_slice!(dK, masked.kernel, data.X1view, data.wrappeddata, iparam)
+end
+
 # with EmptyData
 function cov(masked::Masked, X::AbstractMatrix, data::EmptyData)
     return cov(masked.kernel, view(X,masked.active_dims,:), data)
