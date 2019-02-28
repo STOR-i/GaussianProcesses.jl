@@ -50,12 +50,6 @@ function autodiff(k::Kernel)
     ad = ADkernel{typeof(k),typeof(kdual),typeof(hyp),eltype(cfg),typeof(cfg)}(k, kdual, hyp, cfg)
     return ad
 end
-# function RQIsoRaw(θ::Vector{T}) where T<:Real
-    # ll, lσ, lα = θ
-    # return RQIsoRaw{T}(exp(2.0*ll), exp(2.0*lσ), exp(lα))
-# end
-
-# get_params(rq::RQIsoRaw) = SVector{3}(log(rq.ℓ2)/2.0, log(rq.σ2)/2.0, log(rq.α))
 
 # delegate (I think there are macros that would do this automatically)
 num_params(ad::ADkernel) = num_params(raw(ad))
