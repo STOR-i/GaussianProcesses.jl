@@ -5,7 +5,7 @@ end
 
 @deprecate FixedKern FixedKernel
 
-get_params(k::FixedKernel) = get_params(k.kernel)[k.free]
+get_params(k::FixedKernel) = convert(Vector{Float64}, get_params(k.kernel)[k.free])
 get_param_names(k::FixedKernel) = get_param_names(k.kernel)[k.free]
 function set_params!(k::FixedKernel, hyp)
     if length(k.free) == 0
@@ -33,11 +33,10 @@ function fix(k::Kernel, par::Symbol)
 end
 
 function fix(k::FixedKernel, par::Symbol)
-    free = k.free
-    names = get_param_names(k)
-    tofix = findfirst(==(par), names)
-    tofix == nothing || deleteat!(free, tofix)
-    return FixedKernel(k.kernel, free)
+    free_old = k.free
+    names = get_param_names(k.kernel)
+    free_new = [f for f in free_old if names[f] != par]
+    return FixedKernel(k.kernel, free_new)
 end
 function fix(k::Kernel)
     return FixedKernel(k, Int[])
