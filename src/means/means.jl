@@ -29,3 +29,4 @@ include("mConst.jl")         # Constant mean function
 include("mLin.jl")           # Linear mean function
 include("mPoly.jl")          # Polynomial mean function
 include("composite_mean.jl") # Composite means
+include("mPeriodic.jl")
