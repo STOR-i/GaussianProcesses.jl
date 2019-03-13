@@ -1,4 +1,13 @@
-const MeanOrKernelOrLikelihood = Union{Mean,Kernel,Likelihood}
+mutable struct Scalar <: AbstractFloat
+    value::Float64
+    priors::Array
+end
+Scalar(value) = Scalar(value, [])
+get_params(s::Scalar) = [s.value]
+num_params(::Scalar) = 1
+Base.convert(::Type{T}, x::Scalar) where T <: Number = convert(T, x.value)
+
+const MeanOrKernelOrLikelihood = Union{Mean,Kernel,Likelihood,Scalar}
 const CompositeMeanOrKernel = Union{CompositeMean,CompositeKernel}
 
 ##########¤
