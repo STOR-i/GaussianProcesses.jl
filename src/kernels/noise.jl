@@ -26,7 +26,13 @@ Noise(lσ::T) where T = Noise{T}(exp(2 * lσ), [])
 cov(noise::Noise, sameloc::Bool) = sameloc ? noise.σ2 : zero(noise.σ2)
 cov(noise::Noise, x::AbstractVector, y::AbstractVector) = cov(noise, x ≈ y)
 @inline @inbounds function cov_ij(noise::Noise, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, dim::Int)
-    return cov(noise, all(X1[z,i] ≈ X2[z,j] for z in 1:dim))
+    @inbounds for z in 1:dim
+        if !(X1[z,i] ≈ X2[z,j])
+            return zero(noise.σ2)
+        end
+    end
+    return noise.σ2
+    # return cov(noise, all(X1[z,i] ≈ X2[z,j] for z in 1:dim)) # this is inefficient for some reason
 end
 @inline @inbounds function cov_ij(noise::Noise, X1::AbstractMatrix, X2::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int)
     return cov_ij(noise, X1, X2, i, j, dim)
