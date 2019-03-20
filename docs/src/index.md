@@ -25,3 +25,41 @@ or in the standard REPL
 julia> using Pkg
 julia> Pkg.add("GaussianProcesses")
 ```
+
+## Supported features
+
+1. Inference methods
+    * Exact methods based on linear algebra for Gaussian processes with a normal likelihood;
+    * Hamiltonian Monte Carlo for Gaussian processes with any other likelihood;
+2. Hyperparameters
+    * Optimization of the marginal likelihood for exact GPs;
+    * Posterior samples of the hyperparameters for likelihoods other than normal;
+    * Methods to obtain the cross-validation score and its derivative are also available;
+3. Kernels
+    * Basic kernels such as squared exponential (aka radial basis function), Matérn, etc.;
+    * Sum and product kernels;
+    * Masked kernels, to apply a kernel to a subset of input dimensions;
+    * Fixed kernels, to prevent optimization of certain kernel hyperparameters;
+    * Autodifferentation of user-implemented kernels (work in progress);
+4. Mean functions
+    * Basic mean functions, such as constant, linear, periodic, etc.;
+    * The parameters of the mean functions can be fitted by maximum likelihood for exact GPs;
+5. Easy access to Gaussian process methods
+    * Underlying methods like the covariances and their derivatives,
+
+## Features currently not implemented
+
+There are many features that we would love to add to this package.
+If you need one of these features and would be interested in contributing to the package,
+please get in touch or submit a pull request through GitHub.
+
+* Tuning of Hamiltonian Monte Carlo for efficient posterior draws;
+* Multivariate Gaussian processes, when the output is a vector, which encompasses
+  multi-task GPs, cokriging, multiclass classification.
+* Other MCMC methods for GPs
+    * slice sampler;
+* Approximation methods for large GPs:
+    * sparse GPs (subset of regressors, etc.);
+    * variational approximations;
+    * expectation propagation;
+    * Laplace approximations;
