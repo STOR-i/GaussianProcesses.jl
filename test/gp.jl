@@ -1,6 +1,7 @@
 module TestGP
 using GaussianProcesses, ScikitLearnBase
 using Test, Random
+using LinearAlgebra: diag
 
 Random.seed!(1)
 
@@ -20,11 +21,15 @@ Random.seed!(1)
     # Verify that predictive mean at input observations
     # are the same as the output observations
     @testset "Predictive mean at obs locations" begin
-        y_pred, sig = predict_y(gp, X)
+        y_pred, σ2 = predict_y(gp, X)
         @test maximum(abs, gp.y - y_pred) ≈ 0.0 atol=0.1
+        y_pred, pred_cov = predict_y(gp, X; full_cov=true)
+        @test maximum(abs, gp.y - y_pred) ≈ 0.0 atol=0.1
+        @test σ2 == diag(pred_cov)
     end
     @testset "Predictive mean at test locations" begin
         y_pred, sig = predict_y(gp, Xtest)
+        y_pred, sig = predict_y(gp, Xtest; full_cov=true)
     end
 
     # ScikitLearn interface test
