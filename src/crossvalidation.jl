@@ -16,10 +16,15 @@ end
 
 Leave-one-out cross-validated predictions. 
 Returns predictions of yᵢ given all other observations y₋ᵢ,
-as a vector of means and standard deviations.
+as a vector of means and variances.
 Using the notation from Rasmussen & Williams, see e.g. equation 5.12:
     σᵢ = 𝕍 (yᵢ | y₋ᵢ)^(1/2)
     μᵢ = 𝔼 (yᵢ | y₋ᵢ)
+
+The output is the same as fitting the GP on x₋ᵢ,y₋ᵢ,  and calling `predict_f`
+on xᵢ to obtain the LOO predictive mean and variance, repeated for each observation i.
+With GPs, this can thankfully be done analytically with a bit of linear algebra,
+which is what this function implements.
 """
 function predict_LOO(gp::GPE)
     # extract relevant bits from GPE object
@@ -33,6 +38,10 @@ end
     logp_LOO(gp::GPE)
 
 Leave-one-out log probability CV criterion.
+This is implemented by  summing the
+normal log-pdf of each observation 
+with predictive LOO mean and variance parameters
+obtained by the `predict_LOO` function.
 """
 function logp_LOO(gp::GPE)
     y = gp.y
@@ -48,8 +57,6 @@ end
 
 Derivative of leave-one-out CV criterion with respect to the kernel hyperparameters.
 See Rasmussen & Williams equations 5.13.
-
-TODO: mean and noise parameters also.
 """
 function dlogpdθ_LOO_kern!(∂logp∂θ::AbstractVector{<:Real}, invΣ::PDMat, kernel::Kernel, x::AbstractMatrix, y::AbstractVector, data::KernelData, alpha::AbstractVector)
     dim = num_params(kernel)
@@ -163,14 +170,20 @@ function predict_CVfold(Σ::AbstractPDMat, alpha::AbstractVector{<:Real}, y::Abs
     return μ, Σ
 end
 """
-    predict_CVfold(gp::GPE)
+    predict_CVfold(gp::GPE, folds::Folds)
 
-Leave-one-out cross-validated predictions. 
-Returns predictions of yᵢ given all other observations y₋ᵢ,
-as a vector of means and standard deviations.
+Cross-validated predictions for arbitrary folds. 
+A fold is a set of indices of the validation set.
+Returns predictions of y_V (validation set) given all other observations y_T (training set),
+as a vector of means and covariances.
 Using the notation from Rasmussen & Williams, see e.g. equation 5.12:
     σᵢ = 𝕍 (yᵢ | y₋ᵢ)^(1/2)
     μᵢ = 𝔼 (yᵢ | y₋ᵢ)
+
+The output is the same as fitting the GP on x_T,y_T,  and calling `predict_f`
+on x_V to obtain the LOO predictive mean and covariance, repeated for each fold V.
+With GPs, this can thankfully be done analytically with a bit of linear algebra,
+which is what this function implements.
 """
 function predict_CVfold(gp::GPE, folds::Folds)
     # extract relevant bits from GPE object
@@ -181,7 +194,7 @@ function predict_CVfold(gp::GPE, folds::Folds)
 end
 
 """
-    logp_CVfold(gp::GPE)
+    logp_CVfold(gp::GPE, folds::Folds)
 
 Leave-one-out log probability CV criterion.
 """
@@ -211,14 +224,6 @@ end
     return ∂logp∂θj
 end
 
-"""
-    dlogpdθ_CVfold_kern!(∂logp∂θ::AbstractVector{<:Real}, gp::GPE, folds::Folds)
-
-Derivative of leave-one-out CV criterion with respect to the kernel hyperparameters.
-See Rasmussen & Williams equations 5.13.
-
-TODO: mean and noise parameters also.
-"""
 function dlogpdθ_CVfold_kern!(∂logp∂θ::AbstractVector{<:Real}, invΣ::PDMat, kernel::Kernel, x::AbstractMatrix, y::AbstractVector, data::KernelData, alpha::AbstractVector, folds::Folds)
     nobs = length(y)
     dim = num_params(kernel)
@@ -260,6 +265,13 @@ function dlogpdσ2_CVfold(invΣ::PDMat, x::AbstractMatrix, y::AbstractVector, da
     return -∂logp∂σ2 / 2
 end
 
+"""
+    dlogpdθ_CVfold_kern!(∂logp∂θ::AbstractVector{<:Real}, gp::GPE, folds::Folds; 
+                         noise::Bool, domean::Bool, kern::Bool)
+
+Derivative of leave-one-out CV criterion with respect to the noise, mean and kernel hyperparameters.
+See Rasmussen & Williams equations 5.13.
+"""
 function dlogpdθ_CVfold(gp::GPE, folds::Folds; noise::Bool, domean::Bool, kern::Bool)
     Σ = gp.cK
     x, y = gp.x, gp.y
