@@ -25,6 +25,8 @@ The output is the same as fitting the GP on x₋ᵢ,y₋ᵢ,  and calling `predi
 on xᵢ to obtain the LOO predictive mean and variance, repeated for each observation i.
 With GPs, this can thankfully be done analytically with a bit of linear algebra,
 which is what this function implements.
+
+See also: [`predict_CVfold`](@ref), [`logp_LOO`](@ref)
 """
 function predict_LOO(gp::GPE)
     # extract relevant bits from GPE object
@@ -42,6 +44,8 @@ This is implemented by  summing the
 normal log-pdf of each observation 
 with predictive LOO mean and variance parameters
 obtained by the `predict_LOO` function.
+
+See also: [`logp_CVfold`](@ref), [`update_mll!`](@ref)
 """
 function logp_LOO(gp::GPE)
     y = gp.y
@@ -55,8 +59,10 @@ end
 """
     dlogpdθ_LOO_kern(gp::GPE)
 
-Derivative of leave-one-out CV criterion with respect to the kernel hyperparameters.
+Gradient of leave-one-out CV criterion with respect to the kernel hyperparameters.
 See Rasmussen & Williams equations 5.13.
+
+See also: [`logp_LOO`](@ref), [`dlogpdσ2_LOO`](@ref), [`dlogpdθ_LOO`](@ref)
 """
 function dlogpdθ_LOO_kern!(∂logp∂θ::AbstractVector{<:Real}, invΣ::PDMat, kernel::Kernel, x::AbstractMatrix, y::AbstractVector, data::KernelData, alpha::AbstractVector)
     dim = num_params(kernel)
@@ -96,6 +102,13 @@ function dlogpdθ_LOO_kern!(∂logp∂θ::AbstractVector{<:Real}, invΣ::PDMat, 
     return ∂logp∂θ
 end
 
+"""
+    dlogpdσ2_LOO(invΣ::PDMat, x::AbstractMatrix, y::AbstractVector, data::KernelData, alpha::AbstractVector)
+
+Derivative of leave-one-out CV criterion with respect to the logNoise parameter.
+
+See also: [`logp_LOO`](@ref), [`dlogpdθ_LOO_kern`](@ref), [`dlogpdθ_LOO`](@ref)
+"""
 function dlogpdσ2_LOO(invΣ::PDMat, x::AbstractMatrix, y::AbstractVector, data::KernelData, alpha::AbstractVector)
     nobs = length(y)
 
@@ -119,6 +132,13 @@ function dlogpdσ2_LOO(invΣ::PDMat, x::AbstractMatrix, y::AbstractVector, data:
     return -∂logp∂σ2 ./ 2
 end
 
+"""
+    dlogpdθ_LOO(gp::GPE; noise::Bool, domean::Bool, kern::Bool)
+
+Derivatives of the leave-one-out CV criterion.
+
+See also: [`logp_LOO`](@ref), [`dlogpdθ_LOO_kern`](@ref), [`dlogpdσ2_LOO`](@ref)
+"""
 function dlogpdθ_LOO(gp::GPE; noise::Bool, domean::Bool, kern::Bool)
     Σ = gp.cK
     x, y = gp.x, gp.y
@@ -169,6 +189,7 @@ function predict_CVfold(Σ::AbstractPDMat, alpha::AbstractVector{<:Real}, y::Abs
     end
     return μ, Σ
 end
+
 """
     predict_CVfold(gp::GPE, folds::Folds)
 
@@ -184,6 +205,8 @@ The output is the same as fitting the GP on x_T,y_T,  and calling `predict_f`
 on x_V to obtain the LOO predictive mean and covariance, repeated for each fold V.
 With GPs, this can thankfully be done analytically with a bit of linear algebra,
 which is what this function implements.
+
+See also: [`predict_LOO`](@ref)
 """
 function predict_CVfold(gp::GPE, folds::Folds)
     # extract relevant bits from GPE object
@@ -196,7 +219,9 @@ end
 """
     logp_CVfold(gp::GPE, folds::Folds)
 
-Leave-one-out log probability CV criterion.
+CV criterion for arbitrary fold.  A fold is a set of indices of the validation set.
+
+See also [`predict_CVfold`](@ref), [`logp_LOO`](@ref)
 """
 function logp_CVfold(gp::GPE, folds::Folds)
     y = gp.y
@@ -211,6 +236,17 @@ function logp_CVfold(gp::GPE, folds::Folds)
     return CV
 end
 
+"""
+    gradient_fold(invΣ, alpha, ZjΣinv, Zjα, V::AbstractVector{Int})
+
+Gradient with respect to the kernel hyperparameters of the CV criterion
+component for one validation fold:
+```math
+    \\nabla_{\\theta}\\left(\\log p (Y_V \\mid Y_T, \\theta) \\right)
+```
+where `Y_V` is the validation set and `Y_T` is the training set (all other observations)
+for this fold.
+"""
 @inline function gradient_fold(invΣ, alpha, ZjΣinv, Zjα, V::AbstractVector{Int})
     ∂logp∂θj = 0.0
     ΣVTinv = PDMats.PDMat(mat(invΣ)[V,V])
