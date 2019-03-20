@@ -334,7 +334,8 @@ returned instead of only variances.
 function predict_y(gp::GPE, x::AbstractMatrix; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
     if full_cov
-        return μ, σ2 + ScalMat(gp.nobs, exp(2*gp.logNoise))
+        npred = size(x, 2)
+        return μ, σ2 + ScalMat(npred, exp(2*gp.logNoise))
     else
         return μ, σ2 .+ exp(2*gp.logNoise)
     end
