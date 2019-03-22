@@ -1,5 +1,5 @@
 module TestOptim
-using GaussianProcesses, StatsFuns
+using GaussianProcesses, StatsFuns, Distributions
 using Test, Random
 
 Random.seed!(1)
@@ -34,8 +34,25 @@ Random.seed!(1)
             @test GaussianProcesses.get_params(kern)[1] == init_param
         end
 
+        @testset "priors" begin
+            gp = GPE(X, y, MeanConst(0.), SE(1.0, 1.0), noise)
+            init_params = GaussianProcesses.get_params(gp; domean=true, kern=true,
+                                                       noise=true)
+            optimize!(gp)
+            ml_params = GaussianProcesses.get_params(gp; domean=true, kern=true,
+                                                     noise=true)
+            priormeans = ml_params .- 2
+            set_priors!(gp.logNoise, [Normal(priormeans[1], 1)])
+            set_priors!(gp.mean, [Normal(priormeans[2], 1)])
+            set_priors!(gp.kernel, [Normal(priormeans[3], 1), Normal(priormeans[4], 1)])
+            optimize!(gp)
+            map_params = GaussianProcesses.get_params(gp; domean=true, kern=true,
+                                                      noise=true)
+            @test (&)((map_params .< ml_params)...)
+        end
+
         @testset "Keyword arguments" begin
-            gp = GPE(X, y, mean, kern, noise)
+            gp = GPE(X, y, MeanLin(zeros(d)), SE(1.0, 1.0), noise)
             init_params = GaussianProcesses.get_params(gp; domean=true, kern=true,
                                                        noise=true)
 
@@ -70,10 +87,10 @@ Random.seed!(1)
             kern_params = GaussianProcesses.get_params(gp; domean=false, kern=true,
                                                        noise=false)
             optimize!(gp, domean = false,
-                      kernbounds = [kern_params .- .01, kern_params .+ .01])
+                      kernbounds = [kern_params .- .1, kern_params .+ .1])
             new_kern_params = GaussianProcesses.get_params(gp; domean=false, kern=true,
                                                            noise=false)
-            @test (&)((@. kern_params - .01 <= new_kern_params <= kern_params + .01)...)
+            @test (&)((@. kern_params - .1 <= new_kern_params <= kern_params + .1)...)
             @test kern_params != new_kern_params
         end
     end
@@ -86,34 +103,36 @@ Random.seed!(1)
         # Just checks that it doesn't crash
         # and that the final mll is better that the initial value
         @testset "Basic" begin
-            gp = GPMC(X, y, mean, kern, lik)
+            gp = GPMC(X, y, MeanLin(zeros(d)), SE(1.0, 1.0), BernLik())
             init_target = gp.target
             optimize!(gp)
             @test gp.target > init_target
         end
 
         @testset "Keyword arguments" begin
-            gp = GPMC(X, y, mean, kern, lik)
+            gp = GPMC(X, y, MeanLin(zeros(d)), SE(1.0, 1.0), BernLik())
             init_params = GaussianProcesses.get_params(gp; domean=true, kern=true, lik=true)
 
             # Check mean fixed
             mean_params = GaussianProcesses.get_params(gp.mean)
+            kern_params = GaussianProcesses.get_params(gp.kernel)
             optimize!(gp; domean=false, kern=true, lik=true)
-            @test mean_params == GaussianProcesses.get_params(mean)
+            @test mean_params == GaussianProcesses.get_params(gp.mean)
+            @test kern_params != GaussianProcesses.get_params(gp.kernel)
 
             set_params!(gp, init_params; domean=true, kern=true, lik=true)
 
             # Check kern fixed
             kern_params = GaussianProcesses.get_params(gp.kernel)
             optimize!(gp; domean=true, kern=false, lik=true)
-            @test kern_params == GaussianProcesses.get_params(kern)
+            @test kern_params == GaussianProcesses.get_params(gp.kernel)
 
             set_params!(gp, init_params; domean=true, kern=true, lik=true)
 
             # Check lik fixed
             lik_params = GaussianProcesses.get_params(gp.lik)
             optimize!(gp; domean=true, kern=true, lik=false)
-            @test lik_params == GaussianProcesses.get_params(lik)
+            @test lik_params == GaussianProcesses.get_params(gp.lik)
 
             set_params!(gp, init_params; domean=true, kern=true, lik=true)
 

@@ -13,7 +13,7 @@ mutable struct GPE{X<:AbstractMatrix,Y<:AbstractVector,M<:Mean,K<:Kernel,P<:Abst
     "Kernel object"
     kernel::K
     "Log standard deviation of observation noise"
-    logNoise::Float64
+    logNoise::Scalar
 
     # Auxiliary data
     "Dimension of inputs"
@@ -38,7 +38,7 @@ mutable struct GPE{X<:AbstractMatrix,Y<:AbstractVector,M<:Mean,K<:Kernel,P<:Abst
     function GPE{X,Y,M,K,P,D}(x::X, y::Y, mean::M, kernel::K, logNoise::Float64, data::D, cK::P) where {X,Y,M,K,P,D}
         dim, nobs = size(x)
         length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        gp = new{X,Y,M,K,P,D}(x, y, mean, kernel, logNoise, dim, nobs, data, cK)
+        gp = new{X,Y,M,K,P,D}(x, y, mean, kernel, Scalar(logNoise), dim, nobs, data, cK)
         initialise_target!(gp)
     end
 end
@@ -58,7 +58,7 @@ assumed that the observations are noise free.
 - `logNoise::Float64`: Natural logarithm of the standard deviation for the observation
   noise. The default is -2.0, which is equivalent to assuming no observation noise.
 """
-function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData, cK::AbstractPDMat) 
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData, cK::AbstractPDMat)
     GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(cK),typeof(kerneldata)}(x, y, mean, kernel, logNoise, kerneldata, cK)
 end
 function alloc_cK(nobs)
@@ -85,7 +85,7 @@ GPE(x::AbstractVector, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::
 
 Construct a [`GPE`](@ref) object without observations.
 """
-function GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0) 
+function GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0)
     x = Array{Float64}(undef, 1, 0) # ElasticArrays don't like length(x) = 0.
     y = Array{Float64}(undef, 0)
     GPE(x, y, mean, kernel, logNoise)
@@ -269,8 +269,7 @@ of a Gaussian process `gp`.
 """
 function initialise_target!(gp::GPE)
     update_mll!(gp)
-        #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
-    gp.target = gp.mll   + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel)
+    gp.target = gp.mll + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel) + prior_logpdf(gp.logNoise)
     gp
 end
 
@@ -285,8 +284,7 @@ of a Gaussian process `gp`.
 """
 function update_target!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
     update_mll!(gp; noise=noise, domean=domean, kern=kern)
-    #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
-    gp.target = gp.mll  + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel)
+    gp.target = gp.mll  + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel) + prior_logpdf(gp.logNoise)
     gp
 end
 
@@ -396,7 +394,7 @@ Random.rand(gp::GPE, x::AbstractVector) = vec(rand(gp,x',1))
 
 function get_params(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
     params = Float64[]
-    if noise; push!(params, gp.logNoise); end
+    if noise; push!(params, gp.logNoise.value); end
     if domean
         append!(params, get_params(gp.mean))
     end
@@ -428,7 +426,7 @@ end
 appendnoisebounds!(lb, ub, gp::GPE, bounds) = appendbounds!(lb, ub, 1, bounds)
 appendnoisebounds!(lb, ub, gp, bounds) = Nothing
 appendlikbounds!(lb, ub, gp, bounds) = Nothing
-function bounds(gp::GPBase, noisebounds, meanbounds, kernbounds, likbounds; 
+function bounds(gp::GPBase, noisebounds, meanbounds, kernbounds, likbounds;
                 noise::Bool=true, domean::Bool=true, kern::Bool=true, lik::Bool=true)
     lb = Float64[]
     ub = Float64[]
@@ -446,7 +444,7 @@ function set_params!(gp::GPE, hyp::AbstractVector;
 
     i = 1
     if noise
-        gp.logNoise = hyp[1];
+        gp.logNoise.value = hyp[1];
         i+=1
     end
 
@@ -462,7 +460,9 @@ end
 
 function prior_gradlogpdf(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
     grad = Float64[]
-    if noise; push!(grad, 0.0); end # Noise does not have any priors
+    if noise
+        append!(grad, prior_gradlogpdf(gp.logNoise))
+    end
     if domean
         append!(grad, prior_gradlogpdf(gp.mean))
     end
