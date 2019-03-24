@@ -146,15 +146,15 @@ function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::Abstr
     inducing = covstrat.inducing
     Kuf = Ktrain.Kuf
     
-    Kxu = cov(kernel, xpred, inducing)
-    Kux = Matrix(Kxu') # annoying memory allocation
+    Kux = cov(kernel, inducing, xpred)
     
     meanx = mean(meanf, xpred)
     meanf = mean(meanf, xtrain)
     alpha_u = ΣQR_PD \ (Kuf * (ytrain-meanf))
-    mupred = meanx + exp(-2*logNoise) * Kxu * alpha_u
+    mupred = meanx + exp(-2*logNoise) * (Kux' * alpha_u)
     
-    Σpred = Kxu * (ΣQR_PD \ Kux)
+    Lck = PDMats.whiten(ΣQR_PD, Kux)
+    Σpred = Lck'Lck # Kux' * (ΣQR_PD \ Kux)
     LinearAlgebra.copytri!(Σpred, 'U')
     return mupred, Σpred
 end
