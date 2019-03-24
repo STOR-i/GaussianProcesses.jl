@@ -45,11 +45,10 @@ end
 @inline @inbounds function cov_ij(lin::LinIso, X1::AbstractMatrix, X2::AbstractMatrix, data::LinIsoData, i::Int, j::Int, dim::Int)
     return _cov(lin, data.XtX[i, j])
 end
-function cov(lin::LinIso, X::AbstractMatrix, data::LinIsoData)
-    K = _cov(lin, data.XtX)
-    return K
+@inline @inbounds function cov_ij(lin::LinIso, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, dim::Int)
+    return _cov(lin, dot(@view(X1[:,i]), @view(X2[:,j])))
 end
-function cov!(cK::AbstractMatrix, lin::LinIso, X::AbstractMatrix, data::LinIsoData)
+function cov!(cK::AbstractMatrix, lin::LinIso, X1::AbstractMatrix, X2::AbstractMatrix, data::LinIsoData)
     iℓ2 = 1/lin.ℓ2
     @inbounds @simd for I in eachindex(cK,data.XtX)
         cK[I] = data.XtX[I]*iℓ2
@@ -67,14 +66,14 @@ function set_params!(lin::LinIso, hyp::AbstractVector)
 end
 
 @inline dk_dll(lin::LinIso, xTy::Real) = -2 * _cov(lin,xTy)
-@inline function dKij_dθp(lin::LinIso, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(lin::LinIso, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
     if p==1
-        return dk_dll(lin, dotij(X,i,j,dim))
+        return dk_dll(lin, dotij(X1,X2,i,j,dim))
     else
         return NaN
     end
 end
-@inline function dKij_dθp(lin::LinIso, X::AbstractMatrix, data::LinIsoData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(lin::LinIso, X1::AbstractMatrix, X2::AbstractMatrix, data::LinIsoData, i::Int, j::Int, p::Int, dim::Int)
     if p==1
         return dk_dll(lin, data.XtX[i,j])
     else

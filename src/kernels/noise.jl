@@ -34,9 +34,6 @@ cov(noise::Noise, x::AbstractVector, y::AbstractVector) = cov(noise, x ≈ y)
     return noise.σ2
     # return cov(noise, all(X1[z,i] ≈ X2[z,j] for z in 1:dim)) # this is inefficient for some reason
 end
-@inline @inbounds function cov_ij(noise::Noise, X1::AbstractMatrix, X2::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int)
-    return cov_ij(noise, X1, X2, i, j, dim)
-end
 
 get_params(noise::Noise{T}) where T = T[log(noise.σ2) / 2]
 get_param_names(noise::Noise) = [:lσ]
@@ -47,10 +44,6 @@ function set_params!(noise::Noise, hyp::AbstractVector)
     noise.σ2 = exp(2 * hyp[1])
 end
 
-@inline dKij_dθp(noise::Noise, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int) =
+@inline dKij_dθp(noise::Noise, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int) =
     # 2 * cov(noise, view(X, :, i), view(X, :, j))
-    2 * cov_ij(noise, X, X, i, j, dim)
-
-@inline function dKij_dθp(noise::Noise, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
-    return dKij_dθp(noise, X, i, j, p, dim)
-end
+    2 * cov_ij(noise, X1, X2, i, j, dim)

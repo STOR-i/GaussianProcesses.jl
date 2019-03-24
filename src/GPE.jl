@@ -127,6 +127,7 @@ fit!(gp::GPE, x::AbstractVector, y::AbstractVector) = fit!(gp, x', y)
 #———————————————————————————————————————————————————————————
 #Fast memory allocation function
 
+LinearAlgebra.ldiv!(cK::PDMat, x) = ldiv!(cK.chol, x)
 """
     get_ααinvcKI!(ααinvcKI::Matrix{Float64}, cK::AbstractPDMat, α::Vector)
 
@@ -187,24 +188,29 @@ function update_mll!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tr
     gp
 end
 
-function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::KernelData, ααinvcKI::AbstractMatrix)
+"""
+    dmll_kern!((dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::KernelData, ααinvcKI::AbstractMatrix))
+
+Derivative of the marginal log likelihood log p(Y|θ) with respect to the kernel hyperparameters.
+"""
+function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData, ααinvcKI::AbstractMatrix, covstrat::CovarianceStrategy)
     dim, nobs = size(X)
     nparams = num_params(k)
     @assert nparams == length(dmll)
     dK_buffer = Vector{Float64}(undef, nparams)
     dmll[:] .= 0.0
     @inbounds for j in 1:nobs
+        # diagonal
+        dKij_dθ!(dK_buffer, k, X, X, data, j, j, dim, nparams)
+        for iparam in 1:nparams
+            dmll[iparam] += dK_buffer[iparam] * ααinvcKI[j, j] / 2.0
+        end
         # off-diagonal
         for i in 1:j-1
-            dKij_dθ!(dK_buffer, k, X, data, i, j, dim, nparams)
+            dKij_dθ!(dK_buffer, k, X, X, data, i, j, dim, nparams)
             @simd for iparam in 1:nparams
                 dmll[iparam] += dK_buffer[iparam] * ααinvcKI[i, j]
             end
-        end
-        # diagonal
-        dKij_dθ!(dK_buffer, k, X, data, j, j, dim, nparams)
-        for iparam in 1:nparams
-            dmll[iparam] += dK_buffer[iparam] * ααinvcKI[j, j] / 2.0
         end
     end
     return dmll
@@ -350,7 +356,7 @@ function Random.rand!(gp::GPE, xpred::AbstractMatrix, A::DenseMatrix)
     if gp.nobs == 0
         # Prior mean and covariance
         μ = mean(gp.mean, xpred);
-        Σraw = cov(gp.kernel, xpred);
+        Σraw = cov(gp.kernel, xpred, xpred);
         Σraw, chol = make_posdef!(Σraw)
         Σ = PDMat(Σraw, chol)
     else

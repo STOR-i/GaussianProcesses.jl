@@ -2,10 +2,10 @@
 abstract type MaternIso <: Isotropic{Euclidean} end
 abstract type MaternARD <: StationaryARD{WeightedEuclidean} end
 
-@inline function dKij_dθp(mat::MaternARD, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
-    r=distij(metric(mat),X,i,j,dim)
+@inline function dKij_dθp(mat::MaternARD, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
+    r=distij(metric(mat),X1, X2,i,j,dim)
     if p <= dim
-        wdiffp=dist2ijk(metric(mat),X,i,j,p)
+        wdiffp=dist2ijk(metric(mat),X1, X2,i,j,p)
         if wdiffp > 0
             return dk_dll(mat,r,wdiffp)
         else
@@ -17,8 +17,8 @@ abstract type MaternARD <: StationaryARD{WeightedEuclidean} end
         return NaN
     end
 end
-@inline function dKij_dθp(mat::MaternARD, X::AbstractMatrix, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
-    return dKij_dθp(mat,X,i,j,p,dim)
+@inline function dKij_dθp(mat::MaternARD, X1::AbstractMatrix, X2::AbstractMatrix, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
+    return dKij_dθp(mat,X1,X2,i,j,p,dim)
 end
 
 @inline function dk_dθp(mat::MaternIso, r::Real, p::Int)

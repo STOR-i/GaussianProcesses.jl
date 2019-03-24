@@ -66,40 +66,20 @@ end
 @inline cov(ad::ADkernel, r::Real) = cov(raw(ad), r)
 @inline cov(ad::ADkernel, x1::AbstractVector, x2::AbstractVector) = cov(raw(ad), x1, x2)
 @inline cov_ij(ad::ADkernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int) = cov_ij(raw(ad), X1, X2, data, i, j, dim)
-@inline cov_ij(ad::ADkernel, X1::AbstractMatrix, X2::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(raw(ad), X1, X2, i, j, dim)
 
 KernelData(ad::ADkernel, X1::AbstractMatrix, X2::AbstractMatrix) = KernelData(raw(ad), X1, X2)
 kernel_data_key(ad::ADkernel, X1::AbstractMatrix, X2::AbstractMatrix) = kernel_data_key(raw(ad), X1, X2)
 
-@inline function dKij_dθ!(dK::AbstractVector, ad::ADkernel, X::AbstractMatrix,
+@inline function dKij_dθ!(dK::AbstractVector, ad::ADkernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData,
                   i::Int, j::Int, dim::Int, npars::Int)
     seed!(ad)
-    k_eval = cov_ij(dual(ad), X, X, i, j, dim)
+    k_eval = cov_ij(dual(ad), X1, X2, data, i, j, dim)
     copyto!(dK, partials(k_eval))
     return dK
 end
-@inline function dKij_dθ!(dK::AbstractVector, ad::ADkernel, X::AbstractMatrix, data::EmptyData,
-                  i::Int, j::Int, dim::Int, npars::Int)
-    dKij_dθ!(dK, ad, X, i, j, dim, npars)
-end
-@inline function dKij_dθ!(dK::AbstractVector, ad::ADkernel, X::AbstractMatrix, data::KernelData,
-                  i::Int, j::Int, dim::Int, npars::Int)
+@inline function dKij_dθp(ad::ADkernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i::Int, j::Int, p::Int, dim::Int)
     seed!(ad)
-    k_eval = cov_ij(dual(ad), X, X, data, i, j, dim)
-    copyto!(dK, partials(k_eval))
-    return dK
-end
-@inline function dKij_dθp(ad::ADkernel, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
-    seed!(ad)
-    k_eval = cov_ij(dual(ad), X, X, i, j, dim)
-    return partials(k_eval)[p]
-end
-@inline function dKij_dθp(ad::ADkernel, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
-    dKij_dθp(ad, X, i, j, p, dim)
-end
-@inline function dKij_dθp(ad::ADkernel, X::AbstractMatrix, data::KernelData, i::Int, j::Int, p::Int, dim::Int)
-    seed!(ad)
-    k_eval = cov_ij(dual(ad), X, X, data, i, j, dim)
+    k_eval = cov_ij(dual(ad), X1, X2, data, i, j, dim)
     return partials(k_eval)[p]
 end
 

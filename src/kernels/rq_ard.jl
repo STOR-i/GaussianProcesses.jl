@@ -48,15 +48,16 @@ cov(rq::RQArd,r::Number) = rq.σ2*(1+0.5*r/rq.α)^(-rq.α)
     part = (1 + r / (2 * rq.α))
     return rq.σ2 * part^(-rq.α) * (r / (2 * part) - rq.α * log(part))
 end
-@inline function dKij_dθp(rq::RQArd, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(rq::RQArd, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
     if p <= dim
-        return dk_dll(rq, distij(metric(rq),X,i,j,dim), distijk(metric(rq),X,i,j,p))
+        return dk_dll(rq, distij(metric(rq),X1,X2,i,j,dim), distijk(metric(rq),X1,X2,i,j,p))
     elseif p==dim+1
-        return dk_dlσ(rq, distij(metric(rq),X,i,j,dim))
+        return dk_dlσ(rq, distij(metric(rq),X1,X2,i,j,dim))
     else
-        return dk_dlα(rq, distij(metric(rq),X,i,j,dim))
+        return dk_dlα(rq, distij(metric(rq),X1,X2,i,j,dim))
     end
 end
-@inline function dKij_dθp(rq::RQArd, X::AbstractMatrix, data::StationaryARDData, i::Int, j::Int, p::Int, dim::Int)
-    return dKij_dθp(rq,X,i,j,p,dim)
+@inline function dKij_dθp(rq::RQArd, X1::AbstractMatrix, X2::AbstractMatrix, data::StationaryARDData, 
+                          i::Int, j::Int, p::Int, dim::Int)
+    return dKij_dθp(rq,X1,X2,i,j,p,dim)
 end
