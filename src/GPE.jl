@@ -146,19 +146,19 @@ function get_ααinvcKI!(ααinvcKI::AbstractMatrix, cK::AbstractPDMat, α::Vect
         ααinvcKI[i,i] = -1.0
     end
     # `ldiv!(A, B)`: Compute A \ B in-place and overwriting B to store the result.
-    ldiv!(cK.chol, ααinvcKI)
+    ldiv!(cK, ααinvcKI)
     BLAS.ger!(1.0, α, α, ααinvcKI)
 end
 
 #———————————————————————————————————————————————————————————————-
 #Functions for calculating the log-target
 
-function update_cK!(covstrat::CovarianceStrategy, cK::AbstractPDMat, x::AbstractMatrix, kernel::Kernel, logNoise::Real, data::KernelData)
-    nobsv = size(x, 2)
+function update_cK!(cK::AbstractPDMat, x::AbstractMatrix, kernel::Kernel, logNoise::Real, data::KernelData, covstrat::CovarianceStrategy)
+    nobs = size(x, 2)
     Σbuffer = mat(cK)
-    cov!(Σbuffer, kernel, x, data)
+    cov!(Σbuffer, kernel, x, x, data)
     noise = exp(2*logNoise)+eps()
-    for i in 1:nobsv
+    for i in 1:nobs
         Σbuffer[i,i] += noise
     end
     Σbuffer, chol = make_posdef!(Σbuffer, cholfactors(cK))
@@ -171,7 +171,7 @@ end
 Update the covariance matrix and its Cholesky decomposition of Gaussian process `gp`.
 """
 function update_cK!(gp::GPE)
-    gp.cK = update_cK!(gp.covstrat, gp.cK, gp.x, gp.kernel, gp.logNoise, gp.data)
+    gp.cK = update_cK!(gp.cK, gp.x, gp.kernel, gp.logNoise, gp.data, gp.covstrat)
 end
 
 # modification of initialise_target! that reuses existing matrices to avoid
@@ -250,7 +250,7 @@ function update_dmll!(gp::GPE, ααinvcKI::AbstractMatrix;
     end
     if kern
         dmll_k = @view(gp.dmll[i:end])
-        dmll_kern!(dmll_k, gp.kernel, gp.x, gp.data, ααinvcKI)
+        dmll_kern!(dmll_k, gp.kernel, gp.x, gp.cK, gp.data, ααinvcKI, gp.covstrat)
     end
 end
 
