@@ -40,13 +40,19 @@ mutable struct GPE{X<:AbstractMatrix,Y<:AbstractVector,M<:Mean,K<:Kernel,CS<:Cov
     function GPE{X,Y,M,K,CS,D,P}(x::X, y::Y, mean::M, kernel::K, logNoise::Float64, covstrat::CS, data::D, cK::P) where {X,Y,M,K,CS,D,P}
         dim, nobs = size(x)
         length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        gp = new{X,Y,M,K,P,D}(x, y, mean, kernel, Scalar(logNoise), covstrat, dim, nobs, data, cK)
+        gp = new{X,Y,M,K,CS,D,P}(x, y, mean, kernel, Scalar(logNoise), covstrat, dim, nobs, data, cK)
+        initialise_target!(gp)
+    end
+    function GPE{X,Y,M,K,CS,D,P}(x::X, y::Y, mean::M, kernel::K, logNoise::Scalar, covstrat::CS, data::D, cK::P) where {X,Y,M,K,CS,D,P}
+        dim, nobs = size(x)
+        length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
+        gp = new{X,Y,M,K,CS,D,P}(x, y, mean, kernel, logNoise, covstrat, dim, nobs, data, cK)
         initialise_target!(gp)
     end
 end
 
-function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64, covstrat::CovarianceStrategy, kerneldata::KernelData, cK::AbstractPDMat)
-    GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(covstrat),typeof(kerneldata),typeof(cK)}(x, y, mean, kernel, logNoise, covstratkerneldata, cK)
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat, covstrat::CovarianceStrategy, kerneldata::KernelData, cK::AbstractPDMat)
+    GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(covstrat),typeof(kerneldata),typeof(cK)}(x, y, mean, kernel, logNoise, covstrat,kerneldata, cK)
 end
 function alloc_cK(nobs)
     # create placeholder PDMat
@@ -55,7 +61,7 @@ function alloc_cK(nobs)
     cK = PDMats.PDMat(m, Cholesky(chol, 'U', 0))
     return cK
 end
-function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData)
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat, kerneldata::KernelData)
     nobs = length(y)
     covstrat = FullCovariance()
     cK = alloc_cK(covstrat, nobs)
@@ -76,26 +82,26 @@ assumed that the observations are noise free.
 - `logNoise::Float64`: Natural logarithm of the standard deviation for the observation
   noise. The default is -2.0, which is equivalent to assuming no observation noise.
 """
-function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0)
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat = -2.0)
     kerneldata = KernelData(kernel, x, x)
     GPE(x, y, mean, kernel, logNoise, kerneldata)
 end
-GPE(x::AbstractVector, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0) =
+GPE(x::AbstractVector, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat = -2.0) =
     GPE(x', y, mean, kernel, logNoise)
 
 """
-    GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0)
+    GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::AbstractFloat = -2.0)
 
 Construct a [`GPE`](@ref) object without observations.
 """
-function GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0)
+function GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::AbstractFloat = -2.0)
     x = Array{Float64}(undef, 1, 0) # ElasticArrays don't like length(x) = 0.
     y = Array{Float64}(undef, 0)
     GPE(x, y, mean, kernel, logNoise)
 end
 
 """
-    GP(x, y, mean::Mean, kernel::Kernel[, logNoise::Float64=-2.0])
+    GP(x, y, mean::Mean, kernel::Kernel[, logNoise::AbstractFloat=-2.0])
 
 Fit a Gaussian process that is defined by its `mean`, its `kernel`, and the logarithm
 `logNoise` of the standard deviation of its observation noise to a set of training points
@@ -104,7 +110,7 @@ Fit a Gaussian process that is defined by its `mean`, its `kernel`, and the loga
 See also: [`GPE`](@ref)
 """
 GP(x::AbstractVecOrMat{Float64}, y::AbstractVector, mean::Mean, kernel::Kernel,
-   logNoise::Float64 = -2.0) = GPE(x, y, mean, kernel, logNoise)
+   logNoise::AbstractFloat = -2.0) = GPE(x, y, mean, kernel, logNoise)
 
 """
     fit!(gp::GPE{X,Y}, x::X, y::Y)
