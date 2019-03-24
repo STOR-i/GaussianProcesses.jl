@@ -84,11 +84,23 @@ function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, cK::Subs
     dmll[:] .= 0.0
     Kuf = cK.Kuf
     Kuu = cK.Kuu
-    ∂Kuu = similar(mat(Kuu))
+    ∂Kuu = Matrix{Float64}(undef, ninducing, ninducing)
     ∂Kfu = Matrix{Float64}(undef, nobs, ninducing)
+    term = Kuu \ Kuf # Kuu⁻¹Kuf appears in multiple places, so pre-compute
     for iparam in 1:nparams
         grad_slice!(∂Kuu, k, inducing, inducing, EmptyData(), iparam)
         grad_slice!(∂Kfu, k, X, inducing,        EmptyData(), iparam)
+        ∂R = ∂Kfu * term
+        @inbounds for i in 1:nobs
+            ∂R[i,i] *= 2
+            for j in 1:(i-1)
+                s = ∂R[i,j] + ∂R[j,i]
+                ∂R[i,j] = s
+                ∂R[j,i] = s
+            end
+        end
+        ∂R -= term' * ∂Kuu * term
+        dmll[iparam] = dot(ααinvcKI, ∂R)/2
     end
     return dmll
 end
