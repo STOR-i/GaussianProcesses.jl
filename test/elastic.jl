@@ -13,7 +13,7 @@ using Test, GaussianProcesses
             gp2 = ElasticGPE(x0, y0, m, k, -2.)
             append!(gp2, x[:, 1:7], y[1:7])
             append!(gp2, x[:, 8], y[8])
-            append!(gp2, x[:, 9:20], y[9:20])
+            append!(gp2, x[:, 9:nobs], y[9:nobs])
             @test gp1.cK.chol.U ≈ view(gp2.cK.chol).U
             xtest = rand(N, 2)
             mu1, sig1 = predict_y(gp1, xtest)
@@ -22,10 +22,15 @@ using Test, GaussianProcesses
             @test isapprox(sig1, sig2, atol = 1e-6)
             @test isapprox(gp1.mll, gp2.mll, atol = 1e-6)
             @test isapprox(gp1.alpha, gp2.alpha, atol = 1e-6)
-            optimize!(gp1)
-            optimize!(gp2)
-            @test isapprox(gp1.mll, gp2.mll, atol = 1e-6)
-            @test isapprox(gp1.alpha, gp2.alpha, atol = 1e-6)
+            GaussianProcesses.update_target_and_dtarget!(gp1)
+            GaussianProcesses.update_target_and_dtarget!(gp2)
+            @test gp1.mll ≈ gp2.mll          atol = 1e-6
+            @test gp1.alpha ≈ gp2.alpha      atol = 1e-6
+            @test gp1.dtarget ≈ gp2.dtarget  atol=1e-6
+            optimize!(gp1, f_tol=1e-12, x_tol=1e-12)
+            optimize!(gp2, f_tol=1e-12, x_tol=1e-12)
+            @test isapprox(gp1.mll, gp2.mll, atol = 1e-4)
+            @test isapprox(gp1.alpha, gp2.alpha, atol = 1e-4)
         end
     end
     gp = ElasticGPE(N, kernel = SEIso(0., 0.), capacity = 50)

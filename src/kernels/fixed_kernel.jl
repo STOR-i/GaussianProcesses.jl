@@ -58,26 +58,15 @@ function free(k::FixedKernel, par::Symbol)
     return FixedKernel(k.kernel, free)
 end
 
-function grad_slice!(dK::AbstractMatrix, k::FixedKernel, X::AbstractMatrix, data::KernelData, p::Int)
-    return grad_slice!(dK, k.kernel, X, data, k.free[p])
+function grad_slice!(dK::AbstractMatrix, k::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, p::Int)
+    return grad_slice!(dK, k.kernel, X1, X2, data, k.free[p])
 end
-function grad_slice!(dK::AbstractMatrix, k::FixedKernel, X::AbstractMatrix, data::EmptyData, p::Int)
-    return grad_slice!(dK, k.kernel, X, data, k.free[p])
-end
-@inline function dKij_dθp(fk::FixedKernel,X::AbstractMatrix,i::Int,j::Int,p::Int,dim::Int)
-    return dKij_dθp(fk.kernel, X, i, j, fk.free[p], dim)
-end
-@inline function dKij_dθp(fk::FixedKernel,X::AbstractMatrix,data::EmptyData,i::Int,j::Int,p::Int,dim::Int)
-    return dKij_dθp(fk, X, i, j, p, dim)
-end
-@inline function dKij_dθp(fk::FixedKernel,X::AbstractMatrix,data::KernelData,i::Int,j::Int,p::Int,dim::Int)
-    return dKij_dθp(fk.kernel, X, data, i, j, fk.free[p], dim)
+@inline function dKij_dθp(fk::FixedKernel,X1::AbstractMatrix, X2::AbstractMatrix,data::KernelData,i::Int,j::Int,p::Int,dim::Int)
+    return dKij_dθp(fk.kernel, X1, X2, data, i, j, fk.free[p], dim)
 end
 
 # delegate everything else to the wrapped kernel
-@inline cov_ij(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, dim::Int) = cov_ij(fk.kernel, X1, X2, i, j, dim)
 @inline cov_ij(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int) = cov_ij(fk.kernel, X1, X2, data, i, j, dim)
-@inline cov_ij(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int) = cov_ij(fk, X1, X2, i, j, dim)
 cov(fk::FixedKernel, x::AbstractVector, y::AbstractVector) = cov(fk.kernel, x, y)
 KernelData(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix) = KernelData(fk.kernel, X1, X2)
 kernel_data_key(fk::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix) = kernel_data_key(fk.kernel, X1, X2)

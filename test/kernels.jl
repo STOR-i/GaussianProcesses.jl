@@ -54,30 +54,32 @@ function testkernel(kern::Kernel)
         init_params = Vector(GaussianProcesses.get_params(kern))
         dK = zeros(nparams)
         i, j = 3, 5
-        dKij_dθ!(dK, kern, X, i, j, d, nparams)
+        dKij_dθ!(dK, kern, X, X, data, i, j, d, nparams)
         dK1 = copy(dK)
-        dKij_dθ!(dK, kern, X, data, i, j, d, nparams)
+        dKij_dθ!(dK, kern, X, X, EmptyData(), i, j, d, nparams)
         dK2 = copy(dK)
-        dKij_dθ!(dK, kern, X, EmptyData(), i, j, d, nparams)
-        dK3 = copy(dK)
         @test dK1 ≈ dK2
-        @test dK1 ≈ dK3
         for p in 1:nparams
-            @test dK[p] ≈ dKij_dθp(kern, X, i, j, p, d)
-            @test dK[p] ≈ dKij_dθp(kern, X, data, i, j, p, d)
-            @test dK[p] ≈ dKij_dθp(kern, X, EmptyData(), i, j, p, d)
+            @test dK[p] ≈ dKij_dθp(kern, X, X, data,        i, j, p, d)
+            @test dK[p] ≈ dKij_dθp(kern, X, X, EmptyData(), i, j, p, d)
+            try
+                dkp = dKij_dθp(kern, X, X, i, j, p, d)
+                @test dkp == dK[p]
+            catch
+                # that's OK too
+                continue
+            end
         end
-        # if nparams > 0
-            # numer_grad = Calculus.gradient(init_params) do params
-                # set_params!(kern, params)
-                # t = cov_ij(kern, X, X, i, j, d)
-                # set_params!(kern, init_params)
-                # t
-            # end
-            # theor_grad = dK
-            # @test numer_grad ≈ theor_grad rtol=1e-3 atol=1e-3
-            # end
-        # end
+        if nparams > 0
+            numer_grad = Calculus.gradient(init_params) do params
+                set_params!(kern, params)
+                t = cov_ij(kern, X, X, data, i, j, d)
+                set_params!(kern, init_params)
+                t
+            end
+            theor_grad = dK
+            @test numer_grad ≈ theor_grad rtol=1e-3 atol=1e-3
+        end
     end
 
     @testset "Gradient stack" begin
@@ -86,11 +88,11 @@ function testkernel(kern::Kernel)
         stack1 = Array{Float64}(undef, n, n, nparams)
         stack2 = Array{Float64}(undef, n, n, nparams)
 
-        GaussianProcesses.grad_stack!(stack1, kern, X, data)
+        GaussianProcesses.grad_stack!(stack1, kern, X, X, data)
         invoke(GaussianProcesses.grad_stack!,
-               Tuple{AbstractArray, Kernel, Matrix{Float64},
+               Tuple{AbstractArray, Kernel, Matrix{Float64}, Matrix{Float64},
                      EmptyData},
-               stack2, kern, X, EmptyData())
+               stack2, kern, X, X, EmptyData())
         @test stack1 ≈ stack2
 
         theor_grad = vec(sum(stack1; dims=[1,2]))

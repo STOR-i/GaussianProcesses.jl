@@ -44,10 +44,13 @@ end
 function cov!(cK::AbstractMatrix, poly::Poly, X::AbstractMatrix, data::LinIsoData)
     cK .= _cov(poly, data.XtX)
 end
+@inline @inbounds function cov_ij(poly::Poly, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, dim::Int)
+    return _cov(poly, dotij(X1, X2, i, j, dim))
+end
 @inline @inbounds function cov_ij(poly::Poly, X1::AbstractMatrix, X2::AbstractMatrix, data::LinIsoData, i::Int, j::Int, dim::Int)
     return _cov(poly, data.XtX[i, j])
 end
-cov(poly::Poly, X::AbstractMatrix, data::LinIsoData) = _cov(poly, data.XtX)
+cov(poly::Poly, X1::AbstractMatrix, X2::AbstractMatrix, data::LinIsoData) = _cov(poly, data.XtX)
 
 get_params(poly::Poly) = [log(poly.c), log(poly.σ2) / 2]
 get_param_names(poly::Poly) = [:lc, :lσ]
@@ -61,14 +64,14 @@ end
 
 @inline dk_dlc(poly::Poly, xTy::Real) = poly.c*poly.deg*poly.σ2*(poly.c+xTy).^(poly.deg-1)
 @inline dk_dlσ(poly::Poly, xTy::Real) = 2 * _cov(poly,xTy)
-@inline function dKij_dθp(poly::Poly, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(poly::Poly, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
     if p==1
-        return dk_dlc(poly, dotij(X,i,j,dim))
+        return dk_dlc(poly, dotij(X1,X2,i,j,dim))
     else
-        return dk_dlσ(poly, dotij(X,i,j,dim))
+        return dk_dlσ(poly, dotij(X1, X2,i,j,dim))
     end
 end
-@inline function dKij_dθp(poly::Poly, X::AbstractMatrix, data::LinIsoData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(poly::Poly, X1::AbstractMatrix, X2::AbstractMatrix, data::LinIsoData, i::Int, j::Int, p::Int, dim::Int)
     if p==1
         return dk_dlc(poly, data.XtX[i,j])
     else

@@ -92,7 +92,7 @@ Initialise the log-likelihood of Gaussian process `gp`.
 function initialise_ll!(gp::GPMC)
     # log p(Y|v,θ)
     gp.μ = mean(gp.mean,gp.x)
-    Σ = cov(gp.kernel, gp.x, gp.data)
+    Σ = cov(gp.kernel, gp.x, gp.x, gp.data)
     gp.cK = PDMat(Σ + 1e-6*I)
     F = unwhiten(gp.cK,gp.v) + gp.μ
     gp.ll = sum(log_dens(gp.lik,F,gp.y)) #Log-likelihood
@@ -107,7 +107,7 @@ Update the covariance matrix and its Cholesky decomposition of Gaussian process 
 function update_cK!(gp::GPMC)
     old_cK = gp.cK
     Σbuffer = old_cK.mat
-    cov!(Σbuffer, gp.kernel, gp.x, gp.data)
+    cov!(Σbuffer, gp.kernel, gp.x, gp.x, gp.data)
     for i in 1:gp.nobs
         Σbuffer[i,i] += 1e-6 # no logNoise for GPMC
     end
@@ -289,7 +289,7 @@ function Random.rand!(gp::GPMC, x::AbstractMatrix, A::DenseMatrix)
     if gp.nobs == 0
         # Prior mean and covariance
         μ = mean(gp.mean, x);
-        Σraw = cov(gp.kernel, x);
+        Σraw = cov(gp.kernel, x, x);
         # Add jitter to get stable covariance
         Σ, chol = make_posdef!(Σraw)
     else

@@ -4,13 +4,13 @@ distance(k::Stationary, x::AbstractVector, y::AbstractVector) = evaluate(metric(
 distance(k::Stationary, X::AbstractMatrix, data::EmptyData) = distance(k, X)
 distance(k::Isotropic, X::AbstractMatrix, data::IsotropicData) = data.R
 function distance(k::Stationary, X::AbstractMatrix)
-    nobsv = size(X, 2)
-    return distance!(Matrix{eltype(X)}(undef, nobsv, nobsv), metric(k), X)
+    nobs = size(X, 2)
+    return distance!(Matrix{eltype(X)}(undef, nobs, nobs), metric(k), X)
 end
 distance!(dist::AbstractMatrix, k::Stationary, X::AbstractMatrix) = distance!(dist, metric(k), X)
 function distance!(dist::AbstractMatrix, m::PreMetric, X::AbstractMatrix)
-    dim, nobsv = size(X)
-    @inbounds @simd for i in 1:nobsv
+    dim, nobs = size(X)
+    @inbounds @simd for i in 1:nobs
         dist[i,i] = 0.0
         for j in 1:i-1
             dist[i,j] = dist[j,i] = distij(m, X, i, j, dim)
