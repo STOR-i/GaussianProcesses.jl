@@ -38,6 +38,7 @@ end
 
 function cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData=EmptyData())
     dim, nobs = size(X)
+    (nobs,nobs) == size(cK) || throw(ArgumentError("cK has size $(size(cK)) and X has size $(size(X))"))
     @inbounds for j in 1:nobs
         cK[j,j] = cov_ij(k, X, X, data, j, j, dim)
         for i in 1:j-1
@@ -56,10 +57,13 @@ function cov!(cK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMat
     if X1 === X2
         return cov!(cK, k, X1, data)
     end
-    n1, n2 = size(X1, 2), size(X2, 2)
+    dim1, nobs1 = size(X1)
+    dim2, nobs2 = size(X2)
+    dim1==dim2 || throw(ArgumentError("X1 and X2 must have same dimension"))
     dim = size(X1, 1)
-    @inbounds for i in 1:n1
-        for j in 1:n2
+    (nobs1,nobs2) == size(cK) || throw(ArgumentError("cK has size $(size(cK)) X1 $(size(X1)) and X2 $(size(X2))"))
+    @inbounds for i in 1:nobs1
+        for j in 1:nobs2
             cK[i,j] = cov_ij(k, X1, X2, data, i, j, dim)
         end
     end
@@ -91,6 +95,7 @@ end
 
 function grad_slice!(dK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData, p::Int)
     dim, nobs = size(X)
+    (nobs,nobs) == size(dK) || throw(ArgumentError("dK has size $(size(dK)) and X has size $(size(X))"))
     @inbounds for j in 1:nobs
         dK[j,j] = dKij_dθp(k,X,X,data,j,j,p,dim)
         @simd for i in 1:(j-1)
@@ -104,9 +109,13 @@ function grad_slice!(dK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::Abst
     if X1 === X2
         return grad_slice!(dK, k, X1, data, p)
     end
-    dim = size(X1,1)
-    @inbounds for j in 1:size(X1, 2)
-        @simd for i in 1:size(X2, 2)
+    dim1, nobs1 = size(X1)
+    dim2, nobs2 = size(X2)
+    dim1==dim2 || throw(ArgumentError("X1 and X2 must have same dimension"))
+    (nobs1,nobs2) == size(dK) || throw(ArgumentError("dK has size $(size(dK)) X1 $(size(X1)) and X2 $(size(X2))"))
+    dim=dim1
+    @inbounds for i in 1:nobs1
+        @simd for j in 1:nobs2
             dK[i,j] = dKij_dθp(k,X1,X2,data,i,j,p,dim)
         end
     end
