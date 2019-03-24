@@ -16,7 +16,15 @@ Random.seed!(1)
     ntest = 5
     Xtest = randn(d, ntest)
 
+    @testset "GPE constructors" begin
+        gp = GP(X, y, mZero, kern)
+        gp = GPE(X, y, mZero, kern)
+        gp = GPE(X, y, mZero, kern, 1.2)
+        gp = GPE(X, y, mZero, kern, GaussianProcesses.Scalar(1.2))
+    end
+
     gp = GP(X, y, mZero, kern)
+
 
     # Verify that predictive mean at input observations
     # are the same as the output observations
