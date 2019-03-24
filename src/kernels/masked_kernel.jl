@@ -32,7 +32,11 @@ struct MaskedData{M1<:AbstractMatrix,M2<:AbstractMatrix,KD<:KernelData} <: Kerne
 end
 function KernelData(masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix)
     X1view = xview(masked,X1)
-    X2view = xview(masked,X2)
+    if X1 === X2
+        X2view = X1view
+    else
+        X2view = xview(masked,X2)
+    end
 	wrappeddata = KernelData(masked.kernel, X1view, X2view)
     return MaskedData(X1view, X2view, wrappeddata)
 end

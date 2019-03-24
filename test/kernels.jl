@@ -8,7 +8,7 @@ using GaussianProcesses: EmptyData, update_target_and_dtarget!,
 import Calculus: gradient
 
 Random.seed!(1)
-const d, n, n2 = 3, 10, 5
+const d, n, n2 = 3, 6, 3
 function testkernel(kern::Kernel)
     X = randn(d, n)
     X2 = randn(d, n2)
@@ -42,12 +42,16 @@ function testkernel(kern::Kernel)
         end
     end
 
+    data = GaussianProcesses.KernelData(kern, X, X)
+    data12 = GaussianProcesses.KernelData(kern, X, X2)
+
     @testset "Covariance" begin
         spec = cov(kern, X, X2)
         @test spec[i,j] ≈ cov(kern, Xi, X2j)
+        spec = cov(kern, X, X2, data12)
+        @test spec[i,j] ≈ cov(kern, Xi, X2j)
     end
 
-    data = GaussianProcesses.KernelData(kern, X, X)
 
     @testset "Gradient" begin
         nparams = GaussianProcesses.num_params(kern)
@@ -81,6 +85,33 @@ function testkernel(kern::Kernel)
             @test numer_grad ≈ theor_grad rtol=1e-3 atol=1e-3
         end
     end
+    @testset "Gradient stack X1 ≠ X2" begin
+        nparams = GaussianProcesses.num_params(kern)
+        init_params = Vector(GaussianProcesses.get_params(kern))
+        stack1 = Array{Float64}(undef, n, n2, nparams)
+        stack2 = Array{Float64}(undef, n, n2, nparams)
+
+        GaussianProcesses.grad_stack!(stack1, kern, X, X2, data12)
+
+        theor_grad = vec(sum(stack1; dims=[1,2]))
+        if nparams > 0
+            numer_grad = Calculus.gradient(init_params) do params
+                set_params!(kern, params)
+                t = sum(cov(kern, X, X2, data12))
+                set_params!(kern, init_params)
+                t
+            end
+            @test theor_grad ≈ numer_grad rtol=1e-2 atol=1e-2
+        end
+
+        GaussianProcesses.grad_stack!(stack2, kern, X, X2, EmptyData())
+        # invoke(GaussianProcesses.grad_stack!,
+               # Tuple{AbstractArray, Kernel, Matrix{Float64}, Matrix{Float64},
+                     # EmptyData},
+               # stack2, kern, X, X2, EmptyData())
+        @test stack1 ≈ stack2 rtol=1e-3 atol=1e-3
+    end
+
 
     @testset "Gradient stack" begin
         nparams = GaussianProcesses.num_params(kern)

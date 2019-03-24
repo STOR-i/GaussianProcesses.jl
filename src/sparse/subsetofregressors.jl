@@ -25,6 +25,9 @@ function \(a::SubsetOfRegsPDMat, x)
 end
 logdet(a::SubsetOfRegsPDMat) = logdet(a.ΣQR_PD) - logdet(a.Kuu) + 2*a.logNoise*size(a,1)
 
+function wrap_cK(cK::SubsetOfRegsPDMat, inducing, ΣQR_PD, Kuu, Kuf, logNoise::Scalar)
+    wrap_cK(cK, inducing, ΣQR_PD, Kuu, Kuf, logNoise.value)
+end
 function wrap_cK(cK::SubsetOfRegsPDMat, inducing, ΣQR_PD, Kuu, Kuf, logNoise)
     SubsetOfRegsPDMat(inducing, ΣQR_PD, Kuu, Kuf, logNoise)
 end
@@ -124,7 +127,7 @@ end
       = Kxu ΣQR⁻¹ Kux                               # simplifying
 """
 function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector, 
-                    kernel::Kernel, meanf::Mean, logNoise::Float64,
+                    kernel::Kernel, meanf::Mean, logNoise::Real,
                     alpha::AbstractVector,
                     covstrat::SubsetOfRegsStrategy, Ktrain::SubsetOfRegsPDMat)
     ΣQR_PD = Ktrain.ΣQR_PD
@@ -145,7 +148,7 @@ function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::Abstr
 end
 
 
-function SoR(x::AbstractMatrix, inducing::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64)
+function SoR(x::AbstractMatrix, inducing::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Real)
     nobs = length(y)
     covstrat = SubsetOfRegsStrategy(inducing)
     cK = alloc_cK(covstrat, nobs)
