@@ -199,7 +199,8 @@ end
 
 Derivative of the marginal log likelihood log p(Y|θ) with respect to the kernel hyperparameters.
 """
-function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData, ααinvcKI::AbstractMatrix, covstrat::CovarianceStrategy)
+function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::KernelData, 
+                    ααinvcKI::Matrix{Float64}, covstrat::CovarianceStrategy)
     dim, nobs = size(X)
     nparams = num_params(k)
     @assert nparams == length(dmll)
@@ -221,42 +222,72 @@ function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, cK::Abst
     end
     return dmll
 end
+
+""" AbstractGradientPrecompute types hold results of
+    pre-computations of kernel gradients.
+"""
+abstract type AbstractGradientPrecompute end
+
+struct FullCovariancePrecompute <: AbstractGradientPrecompute
+    ααinvcKI::Matrix{Float64}
+end
+function FullCovariancePrecompute(nobs::Int)
+    buffer = Matrix{Float64}(undef, nobs, nobs)
+    return FullCovariancePrecompute(buffer)
+end
+
+function init_precompute(covstrat::FullCovariance, X, y, k)
+    nobs = size(X, 2)
+    FullCovariancePrecompute(nobs)
+end
+init_precompute(gp::GPBase) = init_precompute(gp.covstrat, gp.x, gp.y, gp.kernel)
+    
+function precompute!(precomp::FullCovariancePrecompute, gp::GPBase) 
+    get_ααinvcKI!(precomp.ααinvcKI, gp.cK, gp.alpha)
+end
+function dmll_kern!(dmll::AbstractVector, gp::GPBase, precomp::FullCovariancePrecompute, covstrat::CovarianceStrategy)
+    return dmll_kern!(dmll, gp.kernel, gp.x, gp.data, precomp.ααinvcKI, covstrat)
+end
+function dmll_noise(gp::GPE, precomp::FullCovariancePrecompute, covstrat::CovarianceStrategy)
+    return exp(2 * gp.logNoise) * tr(precomp.ααinvcKI)
+end
+function dmll_mean!(dmll::AbstractVector, gp::GPBase, precomp::AbstractGradientPrecompute)
+    Mgrads = grad_stack(gp.mean, gp.x)
+    for j in 1:num_params(gp.mean)
+        dmll[j] = dot(Mgrads[:,j], gp.alpha)
+    end
+    return dmll
+end
+
 """
      update_dmll!(gp::GPE, ...)
 
 Update the gradient of the marginal log-likelihood of Gaussian process `gp`.
 """
-function update_dmll!(gp::GPE, ααinvcKI::AbstractMatrix;
+function update_dmll!(gp::GPE, precomp::AbstractGradientPrecompute;
     noise::Bool=true, # include gradient component for the logNoise term
     domean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
     )
-    size(ααinvcKI) == (gp.nobs, gp.nobs) || throw(ArgumentError(
-                @sprintf("Buffer for ααinvcKI should be a %dx%d matrix, not %dx%d",
-                         gp.nobs, gp.nobs,
-                         size(ααinvcKI,1), size(ααinvcKI,2))))
     n_mean_params = num_params(gp.mean)
     n_kern_params = num_params(gp.kernel)
     gp.dmll = Array{Float64}(undef, noise + domean * n_mean_params + kern * n_kern_params)
-
-    get_ααinvcKI!(ααinvcKI, gp.cK, gp.alpha)
+    precompute!(precomp, gp)
 
     i=1
     if noise
-        gp.dmll[i] = exp(2 * gp.logNoise) * tr(ααinvcKI)
+        gp.dmll[i] = dmll_noise(gp, precomp, gp.covstrat)
         i += 1
     end
 
     if domean && n_mean_params>0
-        Mgrads = grad_stack(gp.mean, gp.x)
-        for j in 1:n_mean_params
-            gp.dmll[i] = dot(Mgrads[:,j], gp.alpha)
-            i += 1
-        end
+        dmll_m = @view(gp.dmll[i:i+n_mean_params-1])
+        dmll_mean!(dmll_m, gp, precomp)
+        i += n_mean_params
     end
     if kern
         dmll_k = @view(gp.dmll[i:end])
-        dmll_kern!(dmll_k, gp.kernel, gp.x, gp.cK, gp.data, ααinvcKI, gp.covstrat)
+        dmll_kern!(dmll_k, gp, precomp, gp.covstrat)
     end
 end
 
@@ -266,11 +297,9 @@ end
 Update the gradient of the marginal log-likelihood of a Gaussian
 process `gp`.
 """
-function update_mll_and_dmll!(gp::GPE,
-        ααinvcKI::AbstractMatrix;
-        kwargs...)
+function update_mll_and_dmll!(gp::GPE, precomp::AbstractGradientPrecompute; kwargs...)
     update_mll!(gp; kwargs...)
-    update_dmll!(gp, ααinvcKI; kwargs...)
+    update_dmll!(gp, precomp; kwargs...)
 end
 
 """
@@ -303,8 +332,8 @@ function update_target!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool
     gp
 end
 
-function update_dtarget!(gp::GPE, Kgrad::AbstractMatrix, L_bar::AbstractMatrix; kwargs...)
-    update_dmll!(gp, L_bar; kwargs...)
+function update_dtarget!(gp::GPE, precomp::AbstractGradientPrecompute; kwargs...)
+    update_dmll!(gp, precomp; kwargs...)
     gp.dtarget = gp.dmll + prior_gradlogpdf(gp; kwargs...)
     gp
 end
@@ -318,15 +347,15 @@ Update the log-posterior
 ```
 of a Gaussian process `gp` and its derivative.
 """
-function update_target_and_dtarget!(gp::GPE, Kgrad::AbstractMatrix, L_bar::AbstractMatrix; kwargs...)
+function update_target_and_dtarget!(gp::GPE, precomp::AbstractGradientPrecompute; kwargs...)
     update_target!(gp; kwargs...)
-    update_dtarget!(gp, Kgrad, L_bar; kwargs...)
+    update_dtarget!(gp, precomp; kwargs...)
 end
 
 function update_target_and_dtarget!(gp::GPE; kwargs...)
-    ααinvcKI = Array{Float64}(undef, gp.nobs, gp.nobs)
+    precomp = init_precompute(gp)
     update_target!(gp; kwargs...)
-    update_dmll!(gp, ααinvcKI; kwargs...)
+    update_dmll!(gp, precomp; kwargs...)
     gp.dtarget = gp.dmll + prior_gradlogpdf(gp; kwargs...)
 end
 

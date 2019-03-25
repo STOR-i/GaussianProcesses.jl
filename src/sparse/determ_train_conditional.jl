@@ -5,6 +5,10 @@ struct DeterminTrainCondStrat{M<:AbstractMatrix} <: CovarianceStrategy
     inducing::M
 end
 SubsetOfRegsStrategy(dtc::DeterminTrainCondStrat) = SubsetOfRegsStrategy(dtc.inducing)
+function init_precompute(covstrat::DeterminTrainCondStrat, X, y, k)
+    SoR = SubsetOfRegsStrategy(covstrat)
+    return init_precompute(SoR, X, y, k)
+end
 
 function alloc_cK(covstrat::DeterminTrainCondStrat, nobs)
     SoR = SubsetOfRegsStrategy(covstrat)
@@ -15,9 +19,13 @@ function update_cK!(cK::SubsetOfRegsPDMat, x::AbstractMatrix, kernel::Kernel,
     SoR = SubsetOfRegsStrategy(covstrat)
     return update_cK!(cK, x, kernel, logNoise, data, SoR)
 end
-function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, cK::SubsetOfRegsPDMat, data::KernelData, ααinvcKI::AbstractMatrix, covstrat::DeterminTrainCondStrat)
+function dmll_kern!(dmll::AbstractVector, gp::GPBase, precomp::SoRPrecompute, covstrat::DeterminTrainCondStrat)
     SoR = SubsetOfRegsStrategy(covstrat)
-    return dmll_kern!(dmll, k, X, cK, data, ααinvcKI, SoR)
+    return dmll_kern!(dmll, gp, precomp, SoR)
+end
+function dmll_noise(gp::GPE, precomp::SoRPrecompute, covstrat::DeterminTrainCondStrat)
+    SoR = SubsetOfRegsStrategy(covstrat)
+    return dmll_noise(gp, precomp, SoR)
 end
 
 """

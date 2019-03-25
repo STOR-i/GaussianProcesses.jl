@@ -1,7 +1,7 @@
 # Main GaussianProcess type
 
 mutable struct GPMC{X<:AbstractMatrix,Y<:AbstractVector{<:Real},M<:Mean,K<:Kernel,L<:Likelihood,
-                    D<:KernelData} <: GPBase
+                    CS<:CovarianceStrategy, D<:KernelData} <: GPBase
     # Observation data
     "Input observations"
     x::X
@@ -15,6 +15,8 @@ mutable struct GPMC{X<:AbstractMatrix,Y<:AbstractVector{<:Real},M<:Mean,K<:Kerne
     kernel::K
     "Likelihood"
     lik::L
+    "Strategy for computing or approximating covariance matrices"
+    covstrat::CS
 
     # Auxiliary data
     "Dimension of inputs"
@@ -38,12 +40,11 @@ mutable struct GPMC{X<:AbstractMatrix,Y<:AbstractVector{<:Real},M<:Mean,K<:Kerne
     "Gradient of log-target (gradient of marginal log-likelihood + gradient of log priors)"
     dtarget::Vector{Float64}
 
-    function GPMC{X,Y,M,K,L}(x::X, y::Y, mean::M, kernel::K, lik::L) where {X,Y,M,K,L}
+    function GPMC{X,Y,M,K,L,CS,D}(x::X, y::Y, mean::M, kernel::K, lik::L, covstrat::CS, data::D) where {X,Y,M,K,L,CS,D}
         dim, nobs = size(x)
         length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        data = KernelData(kernel, x, x)
-        gp = new{X,Y,M,K,L,typeof(data)}(x, y, mean, kernel, lik, dim, nobs, data,
-                                         zeros(nobs))
+        gp = new{X,Y,M,K,L,CS,D}(x, y, mean, kernel, lik, covstrat, dim, nobs, 
+                                 data, zeros(nobs))
         initialise_target!(gp)
     end
 end
@@ -66,9 +67,12 @@ values are represented by centered (whitened) variables ``f(x) = m(x) + Lv`` whe
 - `kernel::Kernel`: Covariance function
 - `lik::Likelihood`: Likelihood function
 """
-GPMC(x::AbstractMatrix, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood) =
-    GPMC{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(lik)}(x, y, mean, kernel,
-                                                                      lik)
+function GPMC(x::AbstractMatrix, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood)
+    data = KernelData(kernel, x, x)
+    covstrat = FullCovariance()
+    return GPMC{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(lik),typeof(covstrat),typeof(data)}(
+                x, y, mean, kernel, lik, covstrat, data)
+end
 
 GPMC(x::AbstractVector, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood) =
     GPMC(x', y, mean, kernel, lik)
@@ -132,25 +136,68 @@ function update_ll!(gp::GPMC; process::Bool=true, lik::Bool=true, domean::Bool=t
     gp
 end
 
+function precompute!(precomp::FullCovariancePrecompute, gp::GPMC) 
+    get_ααinvcKI!(precomp.ααinvcKI, gp.cK, whiten(gp.cK, gp.v))
+end
+
+
+struct FullCovMCMCPrecompute <: AbstractGradientPrecompute
+    L_bar::Matrix{Float64}
+    Kgrad::Matrix{Float64}
+    dl_df::Vector{Float64}
+    f::Vector{Float64}
+end
+function FullCovMCMCPrecompute(nobs::Int)
+    buffer1 = Matrix{Float64}(undef, nobs, nobs)
+    buffer2 = Matrix{Float64}(undef, nobs, nobs)
+    buffer3 = Vector{Float64}(undef, nobs)
+    buffer4 = Vector{Float64}(undef, nobs)
+    return FullCovMCMCPrecompute(buffer1, buffer2, buffer3, buffer4)
+end
+init_precompute(gp::GPMC) = FullCovMCMCPrecompute(gp.nobs)
+    
+function precompute!(precomp::FullCovMCMCPrecompute, gp::GPBase) 
+    f = unwhiten(gp.cK, gp.v)  + gp.μ
+    dl_df = dlog_dens_df(gp.lik, f, gp.y)
+    precomp.dl_df[:] = dl_df
+    precomp.f[:] = f
+end
+function dll_kern!(dll::AbstractVector, L_bar::Matrix{Float64}, Kgrad::Matrix{Float64}, 
+                   dl_df::Vector{Float64}, v::Vector{Float64}, kernel::Kernel, cK::AbstractPDMat,
+                   x::AbstractMatrix{Float64}, data::KernelData, covstrat::CovarianceStrategy)
+    fill!(L_bar, 0)
+    BLAS.ger!(1.0, dl_df, v, L_bar)
+    tril!(L_bar)
+    # ToDo:
+    # the following two steps allocates memory
+    # and are fickle, reaching into the internal
+    # implementation of the cholesky decomposition
+    L = cK.chol.L.data
+    tril!(L)
+    #
+    chol_unblocked_rev!(L, L_bar)
+    for iparam in 1:num_params(kernel)
+        grad_slice!(Kgrad, kernel, x, data, iparam)
+        dll[iparam] = dot(Kgrad, L_bar)
+    end
+    return dll
+end
+function dll_kern!(dll::AbstractVector, gp::GPBase, precomp::FullCovMCMCPrecompute, covstrat::CovarianceStrategy)
+    return dll_kern!(dll, precomp.L_bar, precomp.Kgrad, precomp.dl_df, gp.v, gp.kernel,
+                     gp.cK, gp.x, gp.data, covstrat)
+end
+
 """
      update_dll!(gp::GPMC, ...)
 
 Update the gradient of the log-likelihood of Gaussian process `gp`.
 """
-function update_dll!(gp::GPMC, Kgrad::AbstractMatrix, L_bar::AbstractMatrix;
+function update_dll!(gp::GPMC, precomp::AbstractGradientPrecompute;
     process::Bool=true, # include gradient components for the process itself
     lik::Bool=true,  # include gradient components for the likelihood parameters
     domean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
     )
-    size(Kgrad) == (gp.nobs, gp.nobs) || throw(ArgumentError,
-    @sprintf("Buffer for Kgrad should be a %dx%d matrix, not %dx%d",
-             gp.nobs, gp.nobs,
-             size(Kgrad,1), size(Kgrad,2)))
-    size(L_bar) == (gp.nobs, gp.nobs) || throw(ArgumentError,
-    @sprintf("Buffer for L_bar should be a %dx%d matrix, not %dx%d",
-             gp.nobs, gp.nobs,
-             size(L_bar,1), size(L_bar,2)))
 
     n_lik_params = num_params(gp.lik)
     n_mean_params = num_params(gp.mean)
@@ -158,16 +205,15 @@ function update_dll!(gp::GPMC, Kgrad::AbstractMatrix, L_bar::AbstractMatrix;
 
     gp.dll = Array{Float64}(undef, process * gp.nobs + lik * n_lik_params +
                             domean * n_mean_params + kern * n_kern_params)
+    precompute!(precomp, gp)
 
-    Lv = unwhiten(gp.cK, gp.v)
-    dl_df = dlog_dens_df(gp.lik, Lv + gp.μ, gp.y)
     i = 1
     if process
-        mul!(view(gp.dll, i:i+gp.nobs-1), gp.cK.chol.U, dl_df)
+        mul!(view(gp.dll, i:i+gp.nobs-1), gp.cK.chol.U, precomp.dl_df)
         i += gp.nobs
     end
     if lik && n_lik_params > 0
-        Lgrads = dlog_dens_dθ(gp.lik, Lv + gp.μ, gp.y)
+        Lgrads = dlog_dens_dθ(gp.lik, precomp.f, gp.y)
         for j in 1:n_lik_params
             gp.dll[i] = sum(Lgrads[:,j])
             i += 1
@@ -176,35 +222,21 @@ function update_dll!(gp::GPMC, Kgrad::AbstractMatrix, L_bar::AbstractMatrix;
     if domean && n_mean_params > 0
         Mgrads = grad_stack(gp.mean, gp.x)
         for j in 1:n_mean_params
-            gp.dll[i] = dot(dl_df,Mgrads[:,j])
+            gp.dll[i] = dot(precomp.dl_df,Mgrads[:,j])
             i += 1
         end
     end
     if kern
-        fill!(L_bar, 0)
-        BLAS.ger!(1.0, dl_df, gp.v, L_bar)
-        tril!(L_bar)
-        # ToDo:
-        # the following two steps allocates memory
-        # and are fickle, reaching into the internal
-        # implementation of the cholesky decomposition
-        L = gp.cK.chol.L.data
-        tril!(L)
-        #
-        chol_unblocked_rev!(L, L_bar)
-        for iparam in 1:n_kern_params
-            grad_slice!(Kgrad, gp.kernel, gp.x, gp.data, iparam)
-            gp.dll[i] = dot(Kgrad, L_bar)
-            i+=1
-        end
+        dll_k = @view(gp.dll[i:end])
+        dll_kern!(dll_k, gp, precomp, gp.covstrat)
     end
 
     gp
 end
 
-function update_ll_and_dll!(gp::GPMC, Kgrad::AbstractMatrix, L_bar::AbstractMatrix; kwargs...)
+function update_ll_and_dll!(gp::GPMC, precomp::AbstractGradientPrecompute; kwargs...)
     update_ll!(gp; kwargs...)
-    update_dll!(gp, Kgrad, L_bar; kwargs...)
+    update_dll!(gp, precomp; kwargs...)
 end
 
 
@@ -240,8 +272,8 @@ function update_target!(gp::GPMC; process::Bool=true, lik::Bool=true, domean::Bo
     gp
 end
 
-function update_dtarget!(gp::GPMC, Kgrad::AbstractMatrix, L_bar::AbstractMatrix; kwargs...)
-    update_dll!(gp, Kgrad, L_bar; kwargs...)
+function update_dtarget!(gp::GPMC, precomp::AbstractGradientPrecompute; kwargs...)
+    update_dll!(gp, precomp; kwargs...)
     gp.dtarget = gp.dll + prior_gradlogpdf(gp; kwargs...)
     gp
 end
@@ -255,15 +287,14 @@ Update the log-posterior
 ```
 of a Gaussian process `gp` and its derivative.
 """
-function update_target_and_dtarget!(gp::GPMC, Kgrad::AbstractMatrix, L_bar::AbstractMatrix; kwargs...)
+function update_target_and_dtarget!(gp::GPMC, precomp::AbstractGradientPrecompute; kwargs...)
     update_target!(gp; kwargs...)
-    update_dtarget!(gp, Kgrad, L_bar; kwargs...)
+    update_dtarget!(gp, precomp; kwargs...)
 end
 
 function update_target_and_dtarget!(gp::GPMC; kwargs...)
-    Kgrad = Array{Float64}(undef, gp.nobs, gp.nobs)
-    L_bar = Array{Float64}(undef, gp.nobs, gp.nobs)
-    update_target_and_dtarget!(gp, Kgrad, L_bar; kwargs...)
+    precomp = init_precompute(gp)
+    update_target_and_dtarget!(gp, precomp; kwargs...)
 end
 
 
