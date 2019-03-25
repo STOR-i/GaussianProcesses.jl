@@ -1,8 +1,12 @@
 import Base.append!
 
-struct ElasticCov <: CovarianceStrategy
+struct ElasticCovStrat <: CovarianceStrategy
     capacity::Int
     stepsize::Int
+end
+function init_precompute(covstrat::ElasticCovStrat, X, y, k)
+    nobs = size(X, 2)
+    FullCovariancePrecompute(nobs)
 end
 
 append!(gp, x::AbstractVector, y::Float64) = append!(gp, reshape(x, :, 1), [y])
@@ -28,7 +32,7 @@ function ElasticGPE(dim; mean::Mean = MeanZero(), kernel = SE(0.0, 0.0),
     y = ElasticArray(Array{Float64}(undef, 0))
     ElasticGPE(x, y, mean, kernel, logNoise; kwargs...)
 end
-function alloc_cK(covstrat::ElasticCov, nobs)
+function alloc_cK(covstrat::ElasticCovStrat, nobs)
     # create placeholder PDMat
     m    = Matrix{Float64}(undef, nobs, nobs)
     chol = Matrix{Float64}(undef, nobs, nobs)
@@ -41,7 +45,7 @@ function ElasticGPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Ke
     data = ElasticKernelData(kernel, x, x, capacity=capacity, stepsize=stepsize)
     nobs = length(y)
     # create placeholder PDMat
-    covstrat = ElasticCov(capacity, stepsize)
+    covstrat = ElasticCovStrat(capacity, stepsize)
     cK = alloc_cK(covstrat, nobs)
     gp = GPE(ElasticArray(x), ElasticArray(y), mean, kernel, logNoise, covstrat, data, cK)
     initialise_target!(gp)

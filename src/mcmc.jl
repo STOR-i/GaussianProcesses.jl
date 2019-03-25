@@ -7,15 +7,14 @@ Gaussian process `gp`.
 function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64=0.1,
               Lmin::Int=5, Lmax::Int=15, lik::Bool=true, noise::Bool=true,
               domean::Bool=true, kern::Bool=true)
-    Kgrad = Array{Float64}(undef, gp.nobs, gp.nobs)
-    L_bar = Array{Float64}(undef, gp.nobs, gp.nobs)
+    precomp = init_precompute(gp)
     params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     count = 0
     function calc_target(gp::GPBase, θ::AbstractVector) #log-target and its gradient
         count += 1
         try
             set_params!(gp, θ; params_kwargs...)
-            update_target_and_dtarget!(gp, Kgrad, L_bar; params_kwargs...)
+            update_target_and_dtarget!(gp, precomp; params_kwargs...)
             return true
         catch err
             if !all(isfinite.(θ))
