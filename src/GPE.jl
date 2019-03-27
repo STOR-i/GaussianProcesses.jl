@@ -251,12 +251,15 @@ end
 function dmll_noise(gp::GPE, precomp::FullCovariancePrecompute, covstrat::CovarianceStrategy)
     return exp(2 * gp.logNoise) * tr(precomp.ααinvcKI)
 end
-function dmll_mean!(dmll::AbstractVector, gp::GPBase, precomp::AbstractGradientPrecompute)
-    Mgrads = grad_stack(gp.mean, gp.x)
-    for j in 1:num_params(gp.mean)
-        dmll[j] = dot(Mgrads[:,j], gp.alpha)
+function dmll_mean!(dmll::AbstractVector, meanf::Mean, x::AbstractMatrix, alpha::AbstractVector)
+    Mgrads = grad_stack(meanf, x)
+    for j in 1:num_params(meanf)
+        dmll[j] = dot(Mgrads[:,j], alpha)
     end
     return dmll
+end
+function dmll_mean!(dmll::AbstractVector, gp::GPBase, precomp::AbstractGradientPrecompute)
+    dmll_mean!(dmll, gp.mean, gp.x, gp.alpha)
 end
 
 """
