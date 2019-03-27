@@ -136,36 +136,8 @@ function update_ll!(gp::GPMC; process::Bool=true, lik::Bool=true, domean::Bool=t
     gp
 end
 
-function precompute!(precomp::FullCovariancePrecompute, gp::GPMC) 
-    get_ααinvcKI!(precomp.ααinvcKI, gp.cK, whiten(gp.cK, gp.v))
-end
-
-
-struct FullCovMCMCPrecompute <: AbstractGradientPrecompute
-    L_bar::Matrix{Float64}
-    Kgrad::Matrix{Float64}
-    dl_df::Vector{Float64}
-    f::Vector{Float64}
-end
-function FullCovMCMCPrecompute(nobs::Int)
-    buffer1 = Matrix{Float64}(undef, nobs, nobs)
-    buffer2 = Matrix{Float64}(undef, nobs, nobs)
-    buffer3 = Vector{Float64}(undef, nobs)
-    buffer4 = Vector{Float64}(undef, nobs)
-    return FullCovMCMCPrecompute(buffer1, buffer2, buffer3, buffer4)
-end
-init_precompute(gp::GPMC) = FullCovMCMCPrecompute(gp.nobs)
-    
-function precompute!(precomp::FullCovMCMCPrecompute, gp::GPBase) 
-    f = unwhiten(gp.cK, gp.v)  + gp.μ
-    dl_df = dlog_dens_df(gp.lik, f, gp.y)
-    precomp.dl_df[:] = dl_df
-    precomp.f[:] = f
-end
-function dll_kern!(dll::AbstractVector, L_bar::Matrix{Float64}, Kgrad::Matrix{Float64}, 
-                   dl_df::Vector{Float64}, v::Vector{Float64}, kernel::Kernel, cK::AbstractPDMat,
-                   x::AbstractMatrix{Float64}, data::KernelData, covstrat::CovarianceStrategy)
-    fill!(L_bar, 0)
+function get_L_bar!(L_bar::AbstractMatrix, dl_df::AbstractVector, v::AbstractVector, cK::PDMat)
+    fill!(L_bar, 0.0)
     BLAS.ger!(1.0, dl_df, v, L_bar)
     tril!(L_bar)
     # ToDo:
@@ -176,15 +148,42 @@ function dll_kern!(dll::AbstractVector, L_bar::Matrix{Float64}, Kgrad::Matrix{Fl
     tril!(L)
     #
     chol_unblocked_rev!(L, L_bar)
-    for iparam in 1:num_params(kernel)
-        grad_slice!(Kgrad, kernel, x, data, iparam)
-        dll[iparam] = dot(Kgrad, L_bar)
+    nobs = length(v)
+    @inbounds for i in 1:nobs
+        L_bar[i,i] *= 2
+        for j in 1:(i-1)
+            L_bar[j,i] = L_bar[i,j]
+        end
     end
-    return dll
+    return L_bar
+end
+
+struct FullCovMCMCPrecompute <: AbstractGradientPrecompute
+    L_bar::Matrix{Float64}
+    dl_df::Vector{Float64}
+    f::Vector{Float64}
+end
+function FullCovMCMCPrecompute(nobs::Int)
+    buffer1 = Matrix{Float64}(undef, nobs, nobs)
+    buffer2 = Vector{Float64}(undef, nobs)
+    buffer3 = Vector{Float64}(undef, nobs)
+    return FullCovMCMCPrecompute(buffer1, buffer2, buffer3)
+end
+init_precompute(gp::GPMC) = FullCovMCMCPrecompute(gp.nobs)
+    
+function precompute!(precomp::FullCovMCMCPrecompute, gp::GPBase) 
+    f = unwhiten(gp.cK, gp.v)  + gp.μ
+    dl_df = dlog_dens_df(gp.lik, f, gp.y)
+    precomp.dl_df[:] = dl_df
+    precomp.f[:] = f
 end
 function dll_kern!(dll::AbstractVector, gp::GPBase, precomp::FullCovMCMCPrecompute, covstrat::CovarianceStrategy)
-    return dll_kern!(dll, precomp.L_bar, precomp.Kgrad, precomp.dl_df, gp.v, gp.kernel,
-                     gp.cK, gp.x, gp.data, covstrat)
+    get_L_bar!(precomp.L_bar, precomp.dl_df, gp.v, gp.cK)
+    # in GPMC, L_bar plays the role of ααinvcKI
+    return dmll_kern!(dll, gp.kernel, gp.x, gp.data, precomp.L_bar, covstrat)
+end
+function dll_mean!(dll::AbstractVector, gp::GPBase, precomp::FullCovMCMCPrecompute)
+    dmll_mean!(dll, gp.mean, gp.x, precomp.dl_df)
 end
 
 """
@@ -219,12 +218,17 @@ function update_dll!(gp::GPMC, precomp::AbstractGradientPrecompute;
             i += 1
         end
     end
-    if domean && n_mean_params > 0
-        Mgrads = grad_stack(gp.mean, gp.x)
-        for j in 1:n_mean_params
-            gp.dll[i] = dot(precomp.dl_df,Mgrads[:,j])
-            i += 1
-        end
+    # if domean && n_mean_params > 0
+        # Mgrads = grad_stack(gp.mean, gp.x)
+        # for j in 1:n_mean_params
+            # gp.dll[i] = dot(precomp.dl_df,Mgrads[:,j])
+            # i += 1
+        # end
+    # end
+    if domean && n_mean_params>0
+        dll_m = @view(gp.dll[i:i+n_mean_params-1])
+        dll_mean!(dll_m, gp, precomp)
+        i += n_mean_params
     end
     if kern
         dll_k = @view(gp.dll[i:end])
