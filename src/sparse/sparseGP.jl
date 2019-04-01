@@ -13,3 +13,4 @@ end
 
 include("subsetofregressors.jl")
 include("determ_train_conditional.jl")
+include("fully_indep_train_conditional.jl")

@@ -114,6 +114,7 @@ function precompute!(precomp::SoRPrecompute, gp::GPBase)
 end
 function dmll_kern!(dmll::AbstractVector, gp::GPBase, precomp::SoRPrecompute, covstrat::SubsetOfRegsStrategy)
     return dmll_kern!(dmll, gp.kernel, gp.x, gp.cK, gp.data, gp.alpha, 
+                      gp.cK.Kuu, gp.cK.Kuf,
                       precomp.Kuu⁻¹Kuf, precomp.Kuu⁻¹KufΣ⁻¹y, precomp.Σ⁻¹Kfu,
                       precomp.∂Kuu, precomp.∂Kfu,
                       covstrat)
@@ -171,15 +172,13 @@ Also have pre-computed α = Σ⁻¹ y, so `V` can now be computed
 efficiency (O(nm²) I think…) by careful ordering of the matrix multiplication steps.
 
 """
-function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, cK::SubsetOfRegsPDMat, data::KernelData, 
-                    alpha::AbstractVector, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
+function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData, 
+                    alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
                     covstrat::SubsetOfRegsStrategy)
     dim, nobs = size(X)
     inducing = covstrat.inducing
     ninducing = size(inducing, 2)
     nparams = num_params(k)
-    Kuu = cK.Kuu
-    Kuf = cK.Kuf
     @assert nparams == length(dmll)
     dK_buffer = Vector{Float64}(undef, nparams)
     dmll[:] .= 0.0
