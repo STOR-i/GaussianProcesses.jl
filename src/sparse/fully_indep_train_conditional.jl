@@ -56,8 +56,7 @@ function wrap_cK(cK::FullyIndepPDMat, inducing, ΣQR_PD, Kuu, Kuf, Λ::Vector)
 end
 function LinearAlgebra.tr(a::FullyIndepPDMat)
     Lk = whiten(a.Kuu, a.Kuf)
-    # log(sum(a.Λ)) + dot(a.Kuf, a.Kuu \ a.Kuf) # TODO: there may be a shortcut here
-    return log(sum(a.Λ)) + dot(Lk, Lk)
+    return sum(a.Λ) + dot(Lk, Lk)
 end
 
 
@@ -85,7 +84,7 @@ function alloc_cK(covstrat::FullyIndepStrat, nobs)
         Λ)
     return cK_FITC
 end
-function update_cK!(cK::FullyIndepPDMat, X::AbstractMatrix, kernel::Kernel, 
+function update_cK!(cK::FullyIndepPDMat, X::AbstractMatrix, kernel::Kernel,
                     logNoise::Real, data::KernelData, covstrat::FullyIndepStrat)
     inducing = covstrat.inducing
     Kuu = cK.Kuu
@@ -100,10 +99,10 @@ function update_cK!(cK::FullyIndepPDMat, X::AbstractMatrix, kernel::Kernel,
     Kdiag = [cov_ij(kernel, X, X, data, i, i, dim) for i in 1:nobs]
     Qdiag = [invquad(Kuu_PD, Kuf[:,i]) for i in 1:nobs]
     Λ = exp(2*logNoise) .+ Kdiag.-Qdiag
-    
+
     ΣQR = (Kuf ./ Λ') * Kfu + Kuu
     LinearAlgebra.copytri!(ΣQR, 'U')
-    
+
     ΣQR, chol = make_posdef!(ΣQR, cholfactors(cK.ΣQR_PD))
     ΣQR_PD = wrap_cK(cK.ΣQR_PD, ΣQR, chol)
     return wrap_cK(cK, inducing, ΣQR_PD, Kuu_PD, Kuf, Λ)
@@ -117,15 +116,70 @@ function init_precompute(covstrat::FullyIndepStrat, X, y, k)
     SoR = SubsetOfRegsStrategy(covstrat)
     return init_precompute(SoR, X, y, k)
 end
-    
-function dmll_kern!(dmll::AbstractVector, gp::GPBase, precomp::SoRPrecompute, covstrat::FullyIndepStrat)
+
+"""
+dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData,
+                    alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
+                    covstrat::FullyIndepStrat)
+Derivative of the log likelihood under the Fully Independent Training Conditional (FITC) approximation.
+
+Helpful reference: Vanhatalo, Jarno, and Aki Vehtari.
+                   "Sparse log Gaussian processes via MCMC for spatial epidemiology."
+                   In Gaussian processes in practice, pp. 73-89. 2007.
+
+Generally, for a multivariate normal with zero mean
+    ∂logp(Y|θ) = 1/2 y' Σ⁻¹ ∂Σ Σ⁻¹ y - 1/2 tr(Σ⁻¹ ∂Σ)
+                    ╰───────────────╯     ╰──────────╯
+                           `V`                 `T`
+
+where Σ = Kff + σ²I.
+
+Notation: `f` is the observations, `u` is the inducing points.
+          ∂X stands for ∂X/∂θ, where θ is the kernel hyperparameters.
+
+In the case of the FITC approximation, we have
+    Σ = Λ + Qff
+    The second component gives
+    ∂(Qff) = ∂(Kfu Kuu⁻¹ Kuf)
+    which is used by the gradient function for the subset of regressors approximation,
+    and so I don't repeat it here.
+
+    the ith element of diag(Kff-Qff) is
+    Λi = Kii - Qii + σ²
+       = Kii - Kui' Kuu⁻¹ Kui + σ²
+    ∂Λi = ∂Kii - Kui' ∂(Kuu⁻¹) Kui - 2 ∂Kui' Kuu⁻¹ Kui
+        = ∂Kii + Kui' Kuu⁻¹ ∂(Kuu) Kuu⁻¹ Kui - 2 ∂Kui' Kuu⁻¹ Kui
+"""
+function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData,
+                    alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
+                    covstrat::FullyIndepStrat)
+    # first compute the SoR component
     SoR = SubsetOfRegsStrategy(covstrat)
-    cK = gp.cK
-    return dmll_kern!(dmll, gp.kernel, gp.x, cK, gp.data, gp.alpha, 
-                      cK.Kuu, cK.Kuf,
+    dmll_kern!(dmll, k, X, cK, data, alpha,
+               Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
+               SoR)
+    nparams = num_params(k)
+    dim, nobs = size(X)
+    inducing = covstrat.inducing
+    for iparam in 1:nparams
+        grad_slice!(∂Kuu, k, inducing, inducing, EmptyData(), iparam)
+        grad_slice!(∂Kfu, k, X, inducing,        EmptyData(), iparam)
+
+        ∂Λ = [(dKij_dθp(k, X, X, data, i, i, iparam, dim) # ∂Kii
+              + dot(Kuu⁻¹Kuf[:,i], ∂Kuu * Kuu⁻¹Kuf[:,i])  # Kui' Kuu⁻¹ ∂(Kuu) Kuu⁻¹ Kui
+              - 2 * dot(∂Kfu[i,:], Kuu⁻¹Kuf[:,i]))        # -2 ∂Kui' Kuu⁻¹ Kui
+              for i in 1:nobs]
+        dmll[iparam] += dot(alpha, ∂Λ .* alpha) / 2
+        dmll[iparam] -= tr(cK \ diagm(0 => ∂Λ)) / 2 # inefficient
+    end
+    return dmll
+end
+function dmll_kern!(dmll::AbstractVector, gp::GPBase, precomp::SoRPrecompute, covstrat::FullyIndepStrat)
+    return dmll_kern!(dmll, gp.kernel, gp.x, gp.cK, gp.data, gp.alpha,
+                      gp.cK.Kuu, gp.cK.Kuf,
                       precomp.Kuu⁻¹Kuf, precomp.Kuu⁻¹KufΣ⁻¹y, precomp.Σ⁻¹Kfu,
                       precomp.∂Kuu, precomp.∂Kfu,
-                      SoR)
+                      covstrat)
 end
 
 """
@@ -150,14 +204,14 @@ function dmll_noise(gp::GPE, precomp::SoRPrecompute, covstrat::FullyIndepStrat)
     Λ = cK.Λ
     Lk = whiten(cK.ΣQR_PD, cK.Kuf ./ Λ')
     return exp(2*gp.logNoise) * ( # Jacobian
-        dot(gp.alpha, gp.alpha) 
+        dot(gp.alpha, gp.alpha)
         - sum(1 ./ Λ)
         + dot(Lk, Lk)
         )
 end
 
 """
-predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector, 
+predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector,
                     kernel::Kernel, meanf::Mean, logNoise::Real,
                     alpha::AbstractVector,
                     covstrat::FullyIndepStrat, Ktrain::FullyIndepPDMat)
@@ -183,7 +237,7 @@ predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector
       = Kxu Kuu⁻¹ [ΣQR - Kuf Λ⁻¹ Kfu] ΣQR⁻¹ Kuf Λ⁻¹ y # factoring out common terms
       = Kxu Kuu⁻¹ [Kuu] ΣQR⁻¹ Kuf Λ⁻¹ y               # using definition of ΣQR
       = Kxu ΣQR⁻¹ Kuf Λ⁻¹ y                           # matches equation 16b
-    
+
     Similarly for the posterior predictive covariance:
     Σ = Σxx - Qxf (Qff + Λ)⁻¹ Qxf'
       = Σxx - Kxu ΣQR⁻¹ Kuf Λ⁻¹ Qxf'                # substituting result from μ
@@ -192,7 +246,7 @@ predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector
       = Σxx - Kxu Kuu⁻¹ Kux + Kxu ΣQR⁻¹ Kux         # expanding
       = Σxx - Qxx           + Kxu ΣQR⁻¹ Kux         # definition of Qxx
 """
-function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector, 
+function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector,
                     kernel::Kernel, meanf::Mean, logNoise::Real,
                     alpha::AbstractVector,
                     covstrat::FullyIndepStrat, Ktrain::FullyIndepPDMat)
@@ -200,14 +254,14 @@ function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::Abstr
     inducing = covstrat.inducing
     Kuf = Ktrain.Kuf
     Kuu = Ktrain.Kuu
-    
+
     Kux = cov(kernel, inducing, xpred)
-    
+
     meanx = mean(meanf, xpred)
     meanf = mean(meanf, xtrain)
     alpha_u = ΣQR_PD \ (Kuf * ((ytrain-meanf) ./ Ktrain.Λ) )
     mupred = meanx + (Kux' * alpha_u)
-    
+
     Lck = PDMats.whiten(ΣQR_PD, Kux)
     Σ_SoR = Lck'Lck # Kux' * (ΣQR_PD \ Kux)
     LinearAlgebra.copytri!(Σ_SoR, 'U')
