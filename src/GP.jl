@@ -24,7 +24,7 @@ end
     conditional distribution formulae.
 """
 function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector, 
-                   kernel::Kernel, meanf::Mean, logNoise::Real,
+                   kernel::Kernel, meanf::Mean,
                    alpha::AbstractVector,
                    covstrat::CovarianceStrategy, Ktrain::AbstractPDMat)
     crossdata = KernelData(kernel, xtrain, xpred)

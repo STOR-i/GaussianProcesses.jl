@@ -259,7 +259,7 @@ predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector
       = Σxx - Qxx           + Kxu ΣQR⁻¹ Kux         # definition of Qxx
 """
 function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector,
-                    kernel::Kernel, meanf::Mean, logNoise::Real,
+                    kernel::Kernel, meanf::Mean,
                     alpha::AbstractVector,
                     covstrat::FullyIndepStrat, Ktrain::FullyIndepPDMat)
     ΣQR_PD = Ktrain.ΣQR_PD

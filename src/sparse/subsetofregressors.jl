@@ -258,12 +258,13 @@ end
       = Kxu ΣQR⁻¹ Kux                               # simplifying
 """
 function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector, 
-                    kernel::Kernel, meanf::Mean, logNoise::Real,
+                    kernel::Kernel, meanf::Mean,
                     alpha::AbstractVector,
                     covstrat::SubsetOfRegsStrategy, Ktrain::SubsetOfRegsPDMat)
     ΣQR_PD = Ktrain.ΣQR_PD
     inducing = covstrat.inducing
     Kuf = Ktrain.Kuf
+    logNoise = Ktrain.logNoise
     
     Kux = cov(kernel, inducing, xpred)
     
