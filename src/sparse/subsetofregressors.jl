@@ -34,6 +34,15 @@ end
 function LinearAlgebra.tr(a::SubsetOfRegsPDMat)
     exp(2*a.logNoise)*size(a.Kuf,2) + dot(a.Kuf, a.Kuu \ a.Kuf) # TODO: there may be a shortcut here
 end
+function Base.Matrix(a::SubsetOfRegsPDMat)
+    Lk = whiten(a.Kuu, a.Kuf)
+    Σ = Lk'Lk
+    nobs = size(Σ,1)
+    for i in 1:nobs
+        Σ[i,i] += exp(2*a.logNoise)
+    end
+    return Σ
+end
 
 #========================================
  Subset of Regressors strategy
