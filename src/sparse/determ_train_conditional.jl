@@ -39,11 +39,11 @@ end
     functions for the Subset of Regressors approximation.
 """
 function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector, 
-                    kernel::Kernel, meanf::Mean, logNoise::Real,
+                    kernel::Kernel, meanf::Mean,
                     alpha::AbstractVector,
                     covstrat::DeterminTrainCondStrat, Ktrain::SubsetOfRegsPDMat)
     SoR = SubsetOfRegsStrategy(covstrat)
-    μ_SoR, Σ_SoR = predictMVN(xpred, xtrain, ytrain, kernel, meanf, logNoise, alpha, SoR, Ktrain)
+    μ_SoR, Σ_SoR = predictMVN(xpred, xtrain, ytrain, kernel, meanf, alpha, SoR, Ktrain)
     inducing = covstrat.inducing
     Kuu = Ktrain.Kuu
     
