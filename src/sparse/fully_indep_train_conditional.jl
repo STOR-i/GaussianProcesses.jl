@@ -41,6 +41,15 @@ end
                   = logdet(        ΣQR             ) - logdet(Kuu)   + logdet(Λ+σ²I)
 """
 logdet(a::FullyIndepPDMat) = logdet(a.ΣQR_PD) - logdet(a.Kuu) + sum(log.(a.Λ))
+function Base.Matrix(a::FullyIndepPDMat)
+    Lk = whiten(a.Kuu, a.Kuf)
+    Σ = Lk'Lk
+    nobs = size(Σ,1)
+    for i in 1:nobs
+        Σ[i,i] += a.Λ[i]
+    end
+    return Σ
+end
 
 function wrap_cK(cK::FullyIndepPDMat, inducing, ΣQR_PD, Kuu, Kuf, Λ::Vector)
     FullyIndepPDMat(inducing, ΣQR_PD, Kuu, Kuf, Λ)
