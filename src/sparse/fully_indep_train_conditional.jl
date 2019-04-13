@@ -54,6 +54,18 @@ end
 function wrap_cK(cK::FullyIndepPDMat, inducing, ΣQR_PD, Kuu, Kuf, Λ::Vector)
     FullyIndepPDMat(inducing, ΣQR_PD, Kuu, Kuf, Λ)
 end
+"""
+    tr(a::FullyIndepPDMat)
+
+    Trace of the FITC approximation to the covariance matrix:
+
+    tr(Σ) = tr(Kuf' Kuu⁻¹ Kuf + Λ)
+          = tr(Kuf' Kuu⁻¹ Kuf) + tr(Λ)
+          = tr(Kuf' Kuu^{-1/2) Kuu^{-1/2} Kuf) + tr(Λ)
+                              ╰──────────────╯
+                                 ≡  Lk
+          = dot(Lk, Lk) + sum(diag(Λ))
+"""
 function LinearAlgebra.tr(a::FullyIndepPDMat)
     Lk = whiten(a.Kuu, a.Kuf)
     return sum(a.Λ) + dot(Lk, Lk)
