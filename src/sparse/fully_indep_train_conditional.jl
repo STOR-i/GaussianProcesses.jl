@@ -1,16 +1,16 @@
-#========================================
+#=======================================,2)
  Fully Independent Training Conditional
 =========================================#
 
 """
     Positive Definite Matrix for Fully Independent Training Conditional approximation.
 """
-mutable struct FullyIndepPDMat{T,M<:AbstractMatrix,PD<:AbstractPDMat{T},M2<:AbstractMatrix{T}} <: SparsePDMat{T}
+mutable struct FullyIndepPDMat{T,M<:AbstractMatrix,PD<:AbstractPDMat{T},M2<:AbstractMatrix{T},DIAG<:Diagonal} <: SparsePDMat{T}
     inducing::M
     ΣQR_PD::PD
     Kuu::PD
     Kuf::M2
-    Λ::Vector{Float64}
+    Λ::DIAG
 end
 size(a::FullyIndepPDMat) = (size(a.Kuf,2), size(a.Kuf,2))
 size(a::FullyIndepPDMat, d::Int) = size(a.Kuf,2)
@@ -30,29 +30,44 @@ size(a::FullyIndepPDMat, d::Int) = size(a.Kuf,2)
             = Λ⁻¹ - Λ⁻² Kuf'(        ΣQR       )⁻¹ Kuf
 """
 function \(a::FullyIndepPDMat, x)
-    return x./a.Λ - (a.Kuf'*(a.ΣQR_PD \ (a.Kuf * x))) ./ a.Λ.^2
+    Lk = whiten(a.ΣQR_PD, a.Kuf)
+    return a.Λ \ (x .- Lk' * (Lk * (a.Λ \ x)))
 end
+
+function trinvA(a::AbstractPDMat, A)
+    @warn "This `trinvA` method is inefficient." maxlog=1
+    tr(a \ A) # fallback
+end
+function trinvA(a::FullyIndepPDMat, A::Diagonal)
+    Λ = a.Λ
+    Lk = whiten(a.ΣQR_PD, a.Kuf * inv(Λ))
+    return tr(Λ \ A) - dot(Lk, Lk * A)
+end
+
 """
     The matrix determinant lemma states that
         logdet(A+UWV') = logdet(W⁻¹ + V'A⁻¹U) + logdet(W) + logdet(A)
     So for
-        Σ ≈ Kuf' Kuu⁻¹ Kuf + (Λ+σ²I)
-        logdet(Σ) = logdet(Kuu + Kuf (Λ+σ²I)⁻¹ Kuf') + logdet(Kuu⁻¹) + logdet(Λ+σ²I)
-                  = logdet(        ΣQR             ) - logdet(Kuu)   + logdet(Λ+σ²I)
+        Σ ≈ Kuf' Kuu⁻¹ Kuf + Λ
+        logdet(Σ) = logdet(Kuu + Kuf Λ⁻¹ Kuf')       + logdet(Kuu⁻¹) + logdet(Λ)
+                  = logdet(        ΣQR             ) - logdet(Kuu)   + logdet(Λ)
 """
-logdet(a::FullyIndepPDMat) = logdet(a.ΣQR_PD) - logdet(a.Kuu) + sum(log.(a.Λ))
+logdet(a::FullyIndepPDMat) = logdet(a.ΣQR_PD) - logdet(a.Kuu) + logdet(a.Λ)#sum(log.(a.Λ))
 function Base.Matrix(a::FullyIndepPDMat)
     Lk = whiten(a.Kuu, a.Kuf)
-    Σ = Lk'Lk
+    Σ = Lk'Lk + a.Λ
     nobs = size(Σ,1)
-    for i in 1:nobs
-        Σ[i,i] += a.Λ[i]
-    end
+    # for i in 1:nobs
+        # Σ[i,i] += a.Λ[i]
+    # end
     return Σ
 end
 
-function wrap_cK(cK::FullyIndepPDMat, inducing, ΣQR_PD, Kuu, Kuf, Λ::Vector)
+function wrap_cK(cK::FullyIndepPDMat, inducing, ΣQR_PD, Kuu, Kuf, Λ::Diagonal)
     FullyIndepPDMat(inducing, ΣQR_PD, Kuu, Kuf, Λ)
+end
+function wrap_cK(cK::FullyIndepPDMat, inducing, ΣQR_PD, Kuu, Kuf, Λ::Vector)
+    FullyIndepPDMat(inducing, ΣQR_PD, Kuu, Kuf, Diagonal(Λ))
 end
 """
     tr(a::FullyIndepPDMat)
@@ -61,14 +76,14 @@ end
 
     tr(Σ) = tr(Kuf' Kuu⁻¹ Kuf + Λ)
           = tr(Kuf' Kuu⁻¹ Kuf) + tr(Λ)
-          = tr(Kuf' Kuu^{-1/2) Kuu^{-1/2} Kuf) + tr(Λ)
+          = tr(Kuf' Kuu^{-1/2} Kuu^{-1/2} Kuf) + tr(Λ)
                               ╰──────────────╯
                                  ≡  Lk
           = dot(Lk, Lk) + sum(diag(Λ))
 """
 function LinearAlgebra.tr(a::FullyIndepPDMat)
     Lk = whiten(a.Kuu, a.Kuf)
-    return sum(a.Λ) + dot(Lk, Lk)
+    return tr(a.Λ) + dot(Lk, Lk)
 end
 
 
@@ -86,7 +101,7 @@ function alloc_cK(covstrat::FullyIndepStrat, nobs)
     SoR = SubsetOfRegsStrategy(covstrat)
     cK_SoR = alloc_cK(SoR, nobs)
     # Additionally, we need to store the diagonal corrections.
-    Λ = Vector{Float64}(undef, nobs)
+    Λ = Diagonal(Vector{Float64}(undef, nobs))
 
     cK_FITC = FullyIndepPDMat(
         covstrat.inducing,
@@ -110,9 +125,9 @@ function update_cK!(cK::FullyIndepPDMat, X::AbstractMatrix, kernel::Kernel,
     dim, nobs = size(X)
     Kdiag = [cov_ij(kernel, X, X, data, i, i, dim) for i in 1:nobs]
     Qdiag = [invquad(Kuu_PD, Kuf[:,i]) for i in 1:nobs]
-    Λ = exp(2*logNoise) .+ Kdiag.-Qdiag
+    Λ = Diagonal(exp(2*logNoise) .+ Kdiag .- Qdiag)
 
-    ΣQR = (Kuf ./ Λ') * Kfu + Kuu
+    ΣQR = Kuf * (Λ \ Kfu) + Kuu
     LinearAlgebra.copytri!(ΣQR, 'U')
 
     ΣQR, chol = make_posdef!(ΣQR, cholfactors(cK.ΣQR_PD))
@@ -123,14 +138,14 @@ end
 #==========================================
   Log-likelihood gradients
 ===========================================#
-function init_precompute(covstrat::FullyIndepStrat, X, y, k)
+function init_precompute(covstrat::FullyIndepStrat, X, y, kernel)
     # here we can re-use the Subset of Regressors pre-computations
     SoR = SubsetOfRegsStrategy(covstrat)
-    return init_precompute(SoR, X, y, k)
+    return init_precompute(SoR, X, y, kernel)
 end
 
 """
-dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData,
+dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData,
                     alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
                     covstrat::FullyIndepStrat)
 Derivative of the log likelihood under the Fully Independent Training Conditional (FITC) approximation.
@@ -162,27 +177,36 @@ In the case of the FITC approximation, we have
     ∂Λi = ∂Kii - Kui' ∂(Kuu⁻¹) Kui - 2 ∂Kui' Kuu⁻¹ Kui
         = ∂Kii + Kui' Kuu⁻¹ ∂(Kuu) Kuu⁻¹ Kui - 2 ∂Kui' Kuu⁻¹ Kui
 """
-function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData,
+function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData,
                     alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
                     covstrat::FullyIndepStrat)
     # first compute the SoR component
     SoR = SubsetOfRegsStrategy(covstrat)
-    dmll_kern!(dmll, k, X, cK, data, alpha,
+    dmll_kern!(dmll, kernel, X, cK, data, alpha,
                Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
                SoR)
-    nparams = num_params(k)
+    nparams = num_params(kernel)
     dim, nobs = size(X)
     inducing = covstrat.inducing
     for iparam in 1:nparams
-        grad_slice!(∂Kuu, k, inducing, inducing, EmptyData(), iparam)
-        grad_slice!(∂Kfu, k, X, inducing,        EmptyData(), iparam)
+        grad_slice!(∂Kuu, kernel, inducing, inducing, EmptyData(), iparam)
+        grad_slice!(∂Kfu, kernel, X,        inducing, EmptyData(), iparam)
 
-        ∂Λ = [(dKij_dθp(k, X, X, data, i, i, iparam, dim) # ∂Kii
-              + dot(Kuu⁻¹Kuf[:,i], ∂Kuu * Kuu⁻¹Kuf[:,i])  # Kui' Kuu⁻¹ ∂(Kuu) Kuu⁻¹ Kui
-              - 2 * dot(∂Kfu[i,:], Kuu⁻¹Kuf[:,i]))        # -2 ∂Kui' Kuu⁻¹ Kui
-              for i in 1:nobs]
-        dmll[iparam] += dot(alpha, ∂Λ .* alpha) / 2
-        dmll[iparam] -= tr(cK \ diagm(0 => ∂Λ)) / 2 # inefficient
+        ∂Λ = Diagonal([
+               (dKij_dθp(kernel, X, X, data, i, i, iparam, dim) # ∂Kii
+                + dot(Kuu⁻¹Kuf[:,i], ∂Kuu * Kuu⁻¹Kuf[:,i])  # Kui' Kuu⁻¹ ∂(Kuu) Kuu⁻¹ Kui
+                - 2 * dot(∂Kfu[i,:], Kuu⁻¹Kuf[:,i]))        # -2 ∂Kui' Kuu⁻¹ Kui
+               for i in 1:nobs
+               ])
+        V = dot(alpha, ∂Λ * alpha)
+        T = trinvA(cK, ∂Λ)
+        # # FOR DEBUG ONLY
+        # Talt = tr(cK \ ∂Λ) # inefficient
+        # @show T, Talt
+        # @assert isapprox(T, Talt, atol=1e-5)
+        # # END DEBUG
+
+        dmll[iparam] += (V-T)/2
     end
     return dmll
 end
@@ -206,18 +230,23 @@ end
 We have:
     Σ⁻¹ = Λ⁻¹ - Λ⁻² Kuf'(        ΣQR       )⁻¹ Kuf
 Use the identity tr(A'A) = dot(A,A) to get:
-    Lk ≡ ΣQR^(-1/2) Kuf Λ⁻¹
-which gives
     tr(Σ⁻¹) = tr(Λ⁻¹) - dot(Lk, Lk) .
+where
+    Lk ≡ ΣQR^(-1/2) Kuf Λ⁻¹
 """
 function dmll_noise(gp::GPE, precomp::SoRPrecompute, covstrat::FullyIndepStrat)
     nobs = gp.nobs
     cK = gp.cK
     Λ = cK.Λ
-    Lk = whiten(cK.ΣQR_PD, cK.Kuf ./ Λ')
+    Lk = whiten(cK.ΣQR_PD, cK.Kuf) * inv(Λ)
+    # # DEBUG
+    # noiseT = sum(1 ./ Λ) - dot(Lk, Lk)
+    # Talt = tr(cK \ Matrix(1.0*I, nobs, nobs))
+    # @show noiseT, Talt # should be same
+    # # END DEBUG
     return exp(2*gp.logNoise) * ( # Jacobian
         dot(gp.alpha, gp.alpha)
-        - sum(1 ./ Λ)
+        - tr(inv(Λ)) # sum(1 ./ Λ)
         + dot(Lk, Lk)
         )
 end
@@ -271,7 +300,7 @@ function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::Abstr
 
     meanx = mean(meanf, xpred)
     meanf = mean(meanf, xtrain)
-    alpha_u = ΣQR_PD \ (Kuf * ((ytrain-meanf) ./ Ktrain.Λ) )
+    alpha_u = ΣQR_PD \ (Kuf * (Ktrain.Λ \ (ytrain-meanf)) )
     mupred = meanx + (Kux' * alpha_u)
 
     Lck = PDMats.whiten(ΣQR_PD, Kux)
