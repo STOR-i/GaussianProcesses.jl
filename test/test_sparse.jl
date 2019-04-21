@@ -64,7 +64,7 @@ module TestSparse
 
         μpred, Σpred = predict_f(gp_sparse, xtest; full_cov=true)
 
-        # see Quiñonero-Candela & Rasmussen 2005, eq. 15
+        # see Quiñonero-Candela & Rasmussen 2005, eq. 19 and 23
         Qfx = getQab(cK, kernel, xtrain, xtest)
         Kxx = cov(kernel, xtest)
 
