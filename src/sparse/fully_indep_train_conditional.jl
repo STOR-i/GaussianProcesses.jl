@@ -34,14 +34,36 @@ function \(a::FullyIndepPDMat, x)
     return a.Λ \ (x .- Lk' * (Lk * (a.Λ \ x)))
 end
 
-function trinvA(a::AbstractPDMat, A)
-    @warn "This `trinvA` method is inefficient." maxlog=1
-    tr(a \ A) # fallback
+"""
+    trinvAB(A::AbstractPDMat, B)
+
+    Computes tr(A⁻¹ B).
+"""
+function trinvAB(A::AbstractPDMat, B)
+    @warn "This `trinvAB` method is inefficient." maxlog=1
+    tr(A \ B) # fallback
 end
-function trinvA(a::FullyIndepPDMat, A::Diagonal)
-    Λ = a.Λ
-    Lk = whiten(a.ΣQR_PD, a.Kuf * inv(Λ))
-    return tr(Λ \ A) - dot(Lk, Lk * A)
+"""
+    trinvAB(A::FullyIndepPDMat, B::Diagonal)
+
+    Computes tr(A⁻¹ B) efficiently under the FITC approximation:
+        Σ ≈ Kuf' Kuu⁻¹ Kuf + Λ
+
+    Derivation:
+        tr(Σ⁻¹ B) = tr[ (Λ⁻¹ - Λ⁻² Kuf'(Kuu + Kuf Λ⁻¹ Kuf')⁻¹ Kuf) B ]
+                  = tr(Λ⁻¹ B) - tr( Λ⁻¹ Kuf' ΣQR⁻¹ Kuf Λ⁻¹ B )
+                  = tr(Λ⁻¹ B) - tr( Λ⁻¹ Kuf' ΣQR^(-1/2) ΣQR^(-1/2) Kuf Λ⁻¹ B )
+                                                        ╰────────────────╯
+                                                            ≡ L
+                  = tr(Λ⁻¹ B) - tr(L'*L*B)
+                  = tr(Λ⁻¹ B) - dot(L, L*B)
+
+    See also: [`\`](@ref).
+"""
+function trinvAB(A::FullyIndepPDMat, B::Diagonal)
+    Λ = A.Λ
+    L = whiten(A.ΣQR_PD, A.Kuf * inv(Λ))
+    return tr(Λ \ B) - dot(L, L * B)
 end
 
 """
@@ -199,7 +221,7 @@ function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK:
                for i in 1:nobs
                ])
         V = dot(alpha, ∂Λ * alpha)
-        T = trinvA(cK, ∂Λ)
+        T = trinvAB(cK, ∂Λ)
         # # FOR DEBUG ONLY
         # Talt = tr(cK \ ∂Λ) # inefficient
         # @show T, Talt
