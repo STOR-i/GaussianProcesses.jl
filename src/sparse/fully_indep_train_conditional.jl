@@ -41,7 +41,7 @@ end
 """
 function trinvAB(A::AbstractPDMat, B)
     @warn "This `trinvAB` method is inefficient." maxlog=1
-    tr(A \ B) # fallback
+    tr(A \ B)
 end
 """
     trinvAB(A::FullyIndepPDMat, B::Diagonal)
@@ -79,9 +79,6 @@ function Base.Matrix(a::FullyIndepPDMat)
     Lk = whiten(a.Kuu, a.Kuf)
     Σ = Lk'Lk + a.Λ
     nobs = size(Σ,1)
-    # for i in 1:nobs
-        # Σ[i,i] += a.Λ[i]
-    # end
     return Σ
 end
 
@@ -116,6 +113,7 @@ struct FullyIndepStrat{M<:AbstractMatrix} <: CovarianceStrategy
     inducing::M
 end
 SubsetOfRegsStrategy(fitc::FullyIndepStrat) = SubsetOfRegsStrategy(fitc.inducing)
+DeterminTrainCondStrat(fitc::FullyIndepStrat) = DeterminTrainCondStrat(fitc.inducing)
 
 function alloc_cK(covstrat::FullyIndepStrat, nobs)
     # The objects that need to be allocated are very similar
@@ -211,6 +209,7 @@ function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK:
     dim, nobs = size(X)
     inducing = covstrat.inducing
     for iparam in 1:nparams
+        # TODO: the grad_slice! calls here are redundant with the ones in the dmll_kern! call above
         grad_slice!(∂Kuu, kernel, inducing, inducing, EmptyData(), iparam)
         grad_slice!(∂Kfu, kernel, X,        inducing, EmptyData(), iparam)
 
@@ -273,6 +272,16 @@ function dmll_noise(gp::GPE, precomp::SoRPrecompute, covstrat::FullyIndepStrat)
         )
 end
 
+
+function get_alpha_u(Ktrain::FullyIndepPDMat, xtrain::AbstractMatrix, ytrain::AbstractVector, meanf::Mean)
+    ΣQR_PD = Ktrain.ΣQR_PD
+    Kuf = Ktrain.Kuf
+    meantrain = mean(meanf, xtrain)
+    Λ = Ktrain.Λ
+    alpha_u = ΣQR_PD \ (Kuf * (Λ \ (ytrain-meantrain)) )
+    return alpha_u
+end
+
 """
 predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector,
                     kernel::Kernel, meanf::Mean, logNoise::Real,
@@ -313,27 +322,9 @@ function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::Abstr
                     kernel::Kernel, meanf::Mean,
                     alpha::AbstractVector,
                     covstrat::FullyIndepStrat, Ktrain::FullyIndepPDMat)
-    ΣQR_PD = Ktrain.ΣQR_PD
-    inducing = covstrat.inducing
-    Kuf = Ktrain.Kuf
-    Kuu = Ktrain.Kuu
-
-    Kux = cov(kernel, inducing, xpred)
-
-    meanx = mean(meanf, xpred)
-    meanf = mean(meanf, xtrain)
-    alpha_u = ΣQR_PD \ (Kuf * (Ktrain.Λ \ (ytrain-meanf)) )
-    mupred = meanx + (Kux' * alpha_u)
-
-    Lck = PDMats.whiten(ΣQR_PD, Kux)
-    Σ_SoR = Lck'Lck # Kux' * (ΣQR_PD \ Kux)
-    LinearAlgebra.copytri!(Σ_SoR, 'U')
-
-    Qxx = PDMats.Xt_invA_X(Kuu, Kux)
-    Σxx = cov(kernel, xpred, xpred)
-
-    Σ_FITC = Σxx - Qxx + Σ_SoR
-    return mupred, Σ_FITC
+    DTC = DeterminTrainCondStrat(covstrat)
+    μ_DTC, Σ_DTC = predictMVN(xpred, xtrain, ytrain, kernel, meanf, alpha, DTC, Ktrain)
+    return μ_DTC, Σ_DTC
 end
 
 

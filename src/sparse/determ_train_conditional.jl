@@ -41,14 +41,13 @@ end
 function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector, 
                     kernel::Kernel, meanf::Mean,
                     alpha::AbstractVector,
-                    covstrat::DeterminTrainCondStrat, Ktrain::SubsetOfRegsPDMat)
+                    covstrat::DeterminTrainCondStrat, Ktrain::AbstractPDMat)
     SoR = SubsetOfRegsStrategy(covstrat)
     μ_SoR, Σ_SoR = predictMVN(xpred, xtrain, ytrain, kernel, meanf, alpha, SoR, Ktrain)
     inducing = covstrat.inducing
     Kuu = Ktrain.Kuu
     
-    Kux = cov(kernel, inducing, xpred) # Note: we've already computed this, but this way it looks cleaner
-    Qxx = PDMats.Xt_invA_X(Kuu, Kux)
+    Qxx = getQaa(Ktrain, kernel, xpred)
     Σxx = cov(kernel, xpred, xpred)
     
     Σ_DTC = Σxx - Qxx + Σ_SoR

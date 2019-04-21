@@ -11,6 +11,22 @@ mutable struct SubsetOfRegsPDMat{T,M<:AbstractMatrix,PD<:AbstractPDMat{T},M2<:Ab
     Kuf::M2
     logNoise::Float64
 end
+function getQab(cK::SparsePDMat, kernel::Kernel, Xa::AbstractMatrix, Xb::AbstractMatrix)
+    Kuu = cK.Kuu
+    inducing = cK.inducing
+    Kua = cov(kernel, inducing, Xa)
+    Kub = cov(kernel, inducing, Xb)
+    Lua = whiten!(Kuu, Kua)
+    Lub = whiten!(Kuu, Kub)
+    return Lua'Lub
+end
+function getQaa(cK::SparsePDMat, kernel::Kernel, Xa::AbstractMatrix)
+    Kuu = cK.Kuu
+    inducing = cK.inducing
+    Kua = cov(kernel, inducing, Xa)
+    Qaa = PDMats.Xt_invA_X(Kuu, Kua) # Kau Kuu⁻¹ Kua
+    return Qaa
+end
 size(a::SubsetOfRegsPDMat) = (size(a.Kuf,2), size(a.Kuf,2))
 size(a::SubsetOfRegsPDMat, d::Int) = size(a.Kuf,2)
 """
@@ -223,6 +239,20 @@ function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK:
 end
 
 """
+    alpha_u(Ktrain::SubsetOfRegsPDMat, xtrain::AbstractMatrix, ytrain::AbstractVector, m::Mean)
+
+    ΣQR⁻¹ Kuf Λ⁻¹ (y-μ)
+"""
+function get_alpha_u(Ktrain::SubsetOfRegsPDMat, xtrain::AbstractMatrix, ytrain::AbstractVector, meanf::Mean)
+    ΣQR_PD = Ktrain.ΣQR_PD
+    Kuf = Ktrain.Kuf
+    meantrain = mean(meanf, xtrain)
+    logNoise = Ktrain.logNoise
+    Λ = exp(2*logNoise)*I
+    alpha_u = ΣQR_PD \ (Kuf * (Λ \ (ytrain-meantrain)) )
+    return alpha_u
+end
+"""
     See Quiñonero-Candela and Rasmussen 2005, equations 16b.
     Some derivations can be found below that are not spelled out in the paper.
 
@@ -258,20 +288,17 @@ end
 function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector,
                     kernel::Kernel, meanf::Mean,
                     alpha::AbstractVector,
-                    covstrat::SubsetOfRegsStrategy, Ktrain::SubsetOfRegsPDMat)
+                    covstrat::SubsetOfRegsStrategy, Ktrain::AbstractPDMat)
     ΣQR_PD = Ktrain.ΣQR_PD
     inducing = covstrat.inducing
-    Kuf = Ktrain.Kuf
-    logNoise = Ktrain.logNoise
 
     Kux = cov(kernel, inducing, xpred)
 
     meanx = mean(meanf, xpred)
-    meanf = mean(meanf, xtrain)
-    alpha_u = ΣQR_PD \ (Kuf * (ytrain-meanf))
-    mupred = meanx + exp(-2*logNoise) * (Kux' * alpha_u)
+    alpha_u = get_alpha_u(Ktrain, xtrain, ytrain, meanf)
+    mupred = meanx + (Kux' * alpha_u)
 
-    Lck = PDMats.whiten(ΣQR_PD, Kux)
+    Lck = PDMats.whiten(ΣQR_PD, Kux) # ΣQR^(-1/2) Kux
     Σpred = Lck'Lck # Kux' * (ΣQR_PD \ Kux)
     LinearAlgebra.copytri!(Σpred, 'U')
     return mupred, Σpred

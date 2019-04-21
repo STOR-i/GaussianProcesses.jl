@@ -20,24 +20,26 @@ end
 #===============================
   Predictions
 ================================#
+function predictMVN!(Kxx, Kff, Kfx, mx, αf)
+    mu = mx + Kfx' * αf
+    Lck = whiten!(Kff, Kfx)
+    subtract_Lck!(Kxx, Lck)
+    return mu, Kxx
+end
+    
 """ Compute predictions using the standard multivariate normal 
     conditional distribution formulae.
 """
 function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector, 
-                   kernel::Kernel, meanf::Mean,
-                   alpha::AbstractVector,
+                   kernel::Kernel, meanf::Mean, alpha::AbstractVector,
                    covstrat::CovarianceStrategy, Ktrain::AbstractPDMat)
     crossdata = KernelData(kernel, xtrain, xpred)
     priordata = KernelData(kernel, xpred, xpred)
     Kcross = cov(kernel, xtrain, xpred, crossdata)
-    mu = mean(meanf, xpred) + Kcross'*alpha # Predictive mean
-    Lck = whiten!(Ktrain, Kcross)
-    Sigma_raw = cov(kernel, xpred, xpred, priordata)
-    subtract_Lck!(Sigma_raw, Lck)
+    Kpred = cov(kernel, xpred, xpred, priordata)
+    mx = mean(meanf, xpred)
+    mu, Sigma_raw = predictMVN!(Kpred, Ktrain, Kcross, mx, alpha)
     return mu, Sigma_raw
-    # Add jitter to get stable covariance
-    # m, chol = make_posdef!(Sigma_raw)
-    # return mu, PDMat(m, chol)
 end
 @inline function subtract_Lck!(Sigma_raw::AbstractArray{<:AbstractFloat}, Lck::AbstractArray{<:AbstractFloat})
     LinearAlgebra.BLAS.syrk!('U', 'T', -1.0, Lck, 1.0, Sigma_raw)

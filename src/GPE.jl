@@ -369,7 +369,7 @@ end
 
 predict_full(gp::GPE, xpred::AbstractMatrix) = predictMVN(xpred, gp.x, gp.y, gp.kernel, gp.mean, gp.alpha, gp.covstrat, gp.cK)
 """
-    predict_y(gp::GPE, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
+    predict_full(gp::GPE, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
 
 Return the predictive mean and variance of Gaussian Process `gp` at specfic points which
 are given as columns of matrix `x`. If `full_cov` is `true`, the full covariance matrix is
