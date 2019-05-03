@@ -288,19 +288,20 @@ function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK:
         V, T = 0.0, 0.0
         # ∂Λdense = zeros(nobs, nobs)
         for (pd,ind) in zip(Λ.blockPD,Λ.blockindices)
+            Kuu⁻¹Kui = Kuu⁻¹Kuf[:,ind]
             ∂Ki = similar(mat(pd))
             Kui, ∂Kiu = Kuf[:,ind], ∂Kfu[ind,:]
-            grad_slice!(∂Ki, kernel, X[:,ind], X[:,ind], EmptyData(), iparam)
-            ∂Λi = ∂Ki 
+            Xi = X[:,ind]
+            grad_slice!(∂Ki, kernel, Xi, Xi, EmptyData(), iparam)
             ∂Λi = (∂Ki
-                  + Kuu⁻¹Kuf[:,ind]' * ∂Kuu * Kuu⁻¹Kuf[:,ind]
-                  - 2 * ∂Kiu * Kuu⁻¹Kuf[:,ind])
+                  + Kuu⁻¹Kui' * ∂Kuu * Kuu⁻¹Kui
+                  - 2 * ∂Kiu * Kuu⁻¹Kui)
             V += dot(alpha[ind], ∂Λi*alpha[ind])
 
             # see trinvAB to understand next 3 lines
             ΣPDinvKiu = convert(Matrix{Float64}, whiten(cK.ΣQR_PD, Kui)')
             L = pd \ ΣPDinvKiu
-            T += tr(pd \ ∂Λi) - dot(L, ∂Λi*L)
+            T += trinvAB(pd, ∂Λi) - dot(L, ∂Λi*L)
             # ∂Λdense[ind,ind] = ∂Λi
         end
         # # FOR DEBUG ONLY
