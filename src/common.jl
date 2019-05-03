@@ -7,7 +7,17 @@ get_params(s::Scalar) = [s.value]
 num_params(::Scalar) = 1
 Base.convert(::Type{T}, x::Scalar) where T <: Number = convert(T, x.value)
 
-const MeanOrKernelOrLikelihood = Union{Mean,Kernel,Likelihood,Scalar}
+mutable struct VectorParam
+    value::Vector{Float64}
+    priors::Array
+end
+VectorParam(value) = VectorParam(value, [])
+get_params(v::VectorParam) = v.value
+num_params(v::VectorParam) = length(v.value)
+Base.length(v::VectorParam) = length(v.value)
+Base.convert(::Type{V}, x::VectorParam) where V <: AbstractVector{<:Real} = convert(V, x.value)
+
+const MeanOrKernelOrLikelihood = Union{Mean,Kernel,Likelihood,Scalar,VectorParam}
 const CompositeMeanOrKernel = Union{CompositeMean,CompositeKernel}
 
 ##########¤
