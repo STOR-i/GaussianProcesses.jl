@@ -1,6 +1,6 @@
 module TestSparse
     using GaussianProcesses
-    using GaussianProcesses: get_params, set_params!, update_mll!, update_mll_and_dmll!, init_precompute, predictMVN, FullCovariance, SoR, FITC, DTC, SubsetOfRegsStrategy, DeterminTrainCondStrat, FullyIndepStrat, getQaa, getQab, predictMVN!
+    using GaussianProcesses: get_params, set_params!, update_mll!, update_mll_and_dmll!, init_precompute, predictMVN, FullCovariance, SoR, FITC, DTC, FSA, SubsetOfRegsStrategy, DeterminTrainCondStrat, FullyIndepStrat, FullScaleApproxStrat, getQaa, getQab, predictMVN!
     using Test, Random
     using Distributions: Beta, Normal
     using StatsBase: sample
@@ -32,6 +32,9 @@ module TestSparse
     Random.seed!(1)
     Xu    = Matrix(sample(x, 10; replace=false)')
     xtest = Matrix(rand(Xdistr, ntest)'.*10)
+
+    inearest = [argmin(abs.(xi.-Xu[1,:])) for xi in x]
+    blockindices = [findall(isequal(i), inearest) for i in 1:size(Xu,2)]
 
     function test_pred(gp_sparse, cKPD::PDMat, covstrat::SubsetOfRegsStrategy)
         cK = gp_sparse.cK
@@ -69,6 +72,41 @@ module TestSparse
         Kxx = cov(kernel, xtest)
 
         μ_alt, Σ_alt = predictMVN!(Kxx, cKPD, Qfx, mx, alpha)
+        @test μ_alt ≈ μpred atol=1e-6
+        @test Σ_alt ≈ Σpred rtol=1e-3 # should this be better?
+    end
+    function test_pred(gp_sparse, cKPD::PDMat, covstrat::FullScaleApproxStrat)
+        cK = gp_sparse.cK
+        kernel = gp_sparse.kernel
+        meanf = gp_sparse.mean
+        mx = mean(meanf, xtest)
+        xtrain = gp_sparse.x
+        alpha = gp_sparse.alpha
+        σ2 = exp(2*gp_sparse.logNoise)
+
+        iprednearest = [argmin(abs.(xi.-Xu[1,:])) for xi in vec(xtest)]
+        blockindpred = [findall(isequal(i), iprednearest) 
+                        for i in 1:size(Xu,2)]
+        ;
+
+        μpred, Σpred = predict_f(gp_sparse, xtest, blockindpred; full_cov=true)
+
+        Qfx = getQab(cK, kernel, xtrain, xtest)
+        blockindtrain = blockindices
+        Λfx = let
+            nf, nx = size(xtrain, 2), size(xtest,2)
+            zeros(nf, nx)
+        end
+        for (predblock, trainblock) in zip(blockindpred, blockindtrain)
+            Xpredblock, Xtrainblock = xtest[:,predblock], xtrain[:,trainblock]
+            Kfx_block = cov(kernel, Xtrainblock, Xpredblock)
+            Qfx_block = getQab(cK, kernel, Xtrainblock, Xpredblock)
+            Λfx[trainblock,predblock] = Kfx_block - Qfx_block
+        end
+
+        Kxx = cov(kernel, xtest)
+
+        μ_alt, Σ_alt = predictMVN!(Kxx, cKPD, Qfx+Λfx, mx, alpha)
         @test μ_alt ≈ μpred atol=1e-6
         @test Σ_alt ≈ Σpred rtol=1e-3 # should this be better?
     end
@@ -117,6 +155,9 @@ module TestSparse
         end
         @testset "Fully Independent Training Conditionals" begin
             test_sparse(FITC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3706.716231927398)
+        end
+        @testset "Fully Independent Training Conditionals" begin
+            test_sparse(FSA(x', Xu, blockindices, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3705.8973027102716)
         end
     end
 end
