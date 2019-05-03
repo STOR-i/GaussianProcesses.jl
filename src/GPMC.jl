@@ -148,13 +148,6 @@ function get_L_bar!(L_bar::AbstractMatrix, dl_df::AbstractVector, v::AbstractVec
     tril!(L)
     #
     chol_unblocked_rev!(L, L_bar)
-    nobs = length(v)
-    @inbounds for i in 1:nobs
-        L_bar[i,i] *= 2
-        for j in 1:(i-1)
-            L_bar[j,i] = L_bar[i,j]
-        end
-    end
     return L_bar
 end
 
@@ -178,9 +171,14 @@ function precompute!(precomp::FullCovMCMCPrecompute, gp::GPBase)
     precomp.f[:] = f
 end
 function dll_kern!(dll::AbstractVector, gp::GPBase, precomp::FullCovMCMCPrecompute, covstrat::CovarianceStrategy)
-    get_L_bar!(precomp.L_bar, precomp.dl_df, gp.v, gp.cK)
+    L_bar = precomp.L_bar
+    get_L_bar!(L_bar, precomp.dl_df, gp.v, gp.cK)
+    nobs = gp.nobs
+    @inbounds for i in 1:nobs
+        L_bar[i,i] *= 2
+    end
     # in GPMC, L_bar plays the role of ααinvcKI
-    return dmll_kern!(dll, gp.kernel, gp.x, gp.data, precomp.L_bar, covstrat)
+    return dmll_kern!(dll, gp.kernel, gp.x, gp.data, L_bar, covstrat)
 end
 function dll_mean!(dll::AbstractVector, gp::GPBase, precomp::FullCovMCMCPrecompute)
     dmll_mean!(dll, gp.mean, gp.x, precomp.dl_df)

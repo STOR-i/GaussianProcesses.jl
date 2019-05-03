@@ -213,7 +213,7 @@ function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::Ke
             dmll[iparam] += dK_buffer[iparam] * ααinvcKI[j, j] / 2.0
         end
         # off-diagonal
-        for i in 1:j-1
+        for i in j+1:nobs
             dKij_dθ!(dK_buffer, k, X, X, data, i, j, dim, nparams)
             @simd for iparam in 1:nparams
                 dmll[iparam] += dK_buffer[iparam] * ααinvcKI[i, j]
