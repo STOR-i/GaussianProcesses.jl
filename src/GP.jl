@@ -60,8 +60,8 @@ function predict_f(gp::GPBase, x::AbstractMatrix; full_cov::Bool=false)
         return predict_full(gp, x)
     else
         ## Calculate prediction for each point independently
-            μ = Array{eltype(x)}(undef, size(x,2))
-            σ2 = similar(μ)
+        μ = Array{eltype(x)}(undef, size(x,2))
+        σ2 = similar(μ)
         for k in 1:size(x,2)
             m, sig = predict_full(gp, x[:,k:k])
             μ[k] = m[1]
@@ -72,9 +72,9 @@ function predict_f(gp::GPBase, x::AbstractMatrix; full_cov::Bool=false)
 end
 
 # 1D Case for prediction of process
-predict_f(gp::GPBase, x::AbstractVector; full_cov::Bool=false) = predict_f(gp, x'; full_cov=full_cov)
+predict_f(gp::GPBase, x::AbstractVector, args...; kwargs...) = predict_f(gp, x', args...; kwargs...)
 # 1D Case for prediction of observations
-predict_y(gp::GPBase, x::AbstractVector; full_cov::Bool=false) = predict_y(gp, x'; full_cov=full_cov)
+predict_y(gp::GPBase, x::AbstractVector, args...; kwargs...) = predict_y(gp, x', args...; kwargs...)
 @deprecate predict predict_y
 
 wrap_cK(cK::PDMat, Σbuffer, chol::Cholesky) = PDMat(Σbuffer, chol)

@@ -1,3 +1,5 @@
+import LinearAlgebra: tr, logdet
+
 abstract type SparsePDMat{T} <: AbstractPDMat{T} end
 abstract type SparseStrategy <: CovarianceStrategy end
 
@@ -14,3 +16,4 @@ end
 include("subsetofregressors.jl")
 include("determ_train_conditional.jl")
 include("fully_indep_train_conditional.jl")
+include("full_scale_approximation.jl")
