@@ -1,12 +1,47 @@
 using Distributions, GaussianProcesses, Random, LinearAlgebra, Bijectors, PDMats
+using GaussianProcesses: Mean, Kernel, KernelData
+include("vi.jl")
 
+
+#Simulate the data
+n = 20
+X = collect(range(-3,stop=3,length=n));
+f = 2*cos.(2*X);
+Y = [rand(Poisson(exp.(f[i]))) for i in 1:n];
+
+#GP set-up
+k = Matern(3/2, 0.0, 0.0)   # Matern 3/2 kernel
+l = PoisLik()
+m = MeanConst(0.2)
+
+gp = GP(X, vec(Y), m, k, l)
+
+set_priors!(gp.kernel,[Normal(-2.0,4.0),Normal(-2.0,4.0)])
+# set_priors!(gp.lik,[Weibull(1.5, 1)])
+set_priors!(gp.mean, [Normal(0, 2.0)])
+@time samples = vi(gp);
+
+
+"""
+"
+"
+" WIP ADVI code
+"
+"
+"
+"""
+
+
+# TODO: Switch likelihood to a Gaussian
 """
 Run Automatic Differentiation Variational Inference (ADVI) for a supplied GP with
 non-Gaussian likelihood function. Full details of the ADVI framework can be found
 in
 """
 advi = function(gp::GPBase, M::Int, threshold::Float64=0.01, iters::Int=100,
-    mc_samples::Int=100, iter_skip::Int=200, max_errors::Int=10)
+    mc_samples::Int=100, iter_skip::Int=200, max_errors::Int=10, seed::Int=12)
+    # Set seed
+    Random.seed!(seed)
     # Deepcopy of original GP for updating the target and likelihod while keeping the original GP in tact
     # gp_update = deepcopy(gp)
     pars = grab_params(gp)
@@ -33,10 +68,9 @@ advi = function(gp::GPBase, M::Int, threshold::Float64=0.01, iters::Int=100,
     s = 0
     delta = Inf
     nit = 1
-
+    mc_errors = 0
 #     while delta > threshold
     while nit < iters
-        mc_errors = 0
         println("")
         println("Iteration: ", nit)
         # Sample M η from a multivariate Gaussian
@@ -52,6 +86,7 @@ advi = function(gp::GPBase, M::Int, threshold::Float64=0.01, iters::Int=100,
         # Sample index values to be used for stochastically sampling (x, y) pairs
         # Compute the gradient of the ELBO w.r.t the variational mean parameter μ and the transformed variance ω
         stoch_idx = rand(1:nobs)
+        println(stoch_idx)
         x, y = gp.x[:, stoch_idx], gp.y[stoch_idx]
         ∇μ, ∇ω = elbo_grad(μ, ω, x, y, gp)
 
@@ -74,7 +109,7 @@ advi = function(gp::GPBase, M::Int, threshold::Float64=0.01, iters::Int=100,
         else
             mc_errors += 1
             if mc_errors > max_errors
-                throw(DomainError("Max number of errors exceeded."))
+                throw(DomainError("Please enter new seed."))
             end
         end
 
@@ -185,7 +220,7 @@ iterations, should one exist. This is equivalent to the Robbins-Monroe learning
 rate update equation.
 """
 # TODO: Expand above documentation
-updateρ = function(g, s, nit::Int, ηstep::Float64=0.1, τ::Float64=1.0, α::Float64=0.1, ϵ::Float64=1e-16)
+updateρ = function(g, s, nit::Int, ηstep::Float64=0.01, τ::Float64=1.0, α::Float64=0.1, ϵ::Float64=1e-16)
     # TODO: Implement some scale factor warm up
     if nit == 1
         s = g.^2
@@ -249,25 +284,3 @@ function calc_target(gp::GPBase, θ::AbstractVector) #log-target and its gradien
         end
     end
 end
-
-#Simulate the data
-Random.seed!(123)
-n = 20
-X = collect(range(-3,stop=3,length=n));
-f = 2*cos.(2*X);
-Y = [rand(Poisson(exp.(f[i]))) for i in 1:n];
-
-#GP set-up
-k = Matern(3/2,0.0,0.0)   # Matern 3/2 kernel
-l = PoisLik()
-m = MeanConst(0.2)
-
-gp = GP(X, vec(Y), m, k, l)
-
-set_priors!(gp.kernel,[Normal(-2.0,4.0),Normal(-2.0,4.0)])
-# set_priors!(gp.lik,[Weibull(1.5, 1)])
-set_priors!(gp.mean, [Normal(0, 2.0)])
-
-qμ, qω = advi(gp, 10, 2.0, 100)
-println(qμ)
-println(qω)
