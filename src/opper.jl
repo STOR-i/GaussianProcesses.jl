@@ -1,6 +1,6 @@
 using GaussianProcesses, RDatasets, LinearAlgebra, Statistics, PDMats, Optim, ForwardDiff, Plots
 import Distributions:Normal, Poisson
-import GaussianProcesses: predict_obs, get_params_kwargs, get_params, predict_f, update_ll_and_dll!, optimize!
+import GaussianProcesses: predict_obs, get_params_kwargs, get_params, predict_f, update_ll_and_dll!, optimize!, update_target_and_dtarget!
 using Random
 using Optim
 
@@ -83,8 +83,8 @@ function elbo_grad_q(gp::GPBase, Q::Approx)
     gν = gp.cK.mat*(Q.qμ - νbar) # TODO: Should this be a product of the application of the covariance function to ν-νbar?
     Σ = computeΣ(gp, Q)
     λ = Q.qΣ
-    # λbar = 
-    gλ = diag(0.5*(hadamard(Σ, Σ))) # Must multiply by λ-λbar
+    λbar = -gp.dll[1:gp.nobs] .* (Matrix(I, gp.nobs, gp.nobs)*1.0)
+    gλ = diag(0.5*(hadamard(Σ, Σ) .* (λ - λbar))) # Must multiply by λ-λbar
     return gν, gλ
 end
 
@@ -121,10 +121,10 @@ Carry out variational inference, as per Opper and Archambeau (2009) to compute t
 function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=false)
     # Initialise log-target and log-target's derivative
     mcmc(gp; nIter=1)
-    optimize!(gp)
-    Q = Approx(gp.v, Matrix(I, gp.nobs, gp.nobs)*1.0)
+    # optimize!(gp)
+    # Q = Approx(gp.v, Matrix(I, gp.nobs, gp.nobs)*1.0)
     # Initialise the varaitaional parameters
-#    Q = Approx(zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0)
+    Q = Approx(zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0)
     # Compute the initial ELBO objective between the intiialised Q and the GP
     λ = [zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0]
     
@@ -144,7 +144,6 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         _, varExp = predict_obs(gp.lik, Fmean, Fvar)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
         # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
         elbo_val = sum(varExp)-kl
-        println("ELBO: ", elbo_val)
         # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
         return sum(varExp) - kl
     end
@@ -156,10 +155,12 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
     global elbo_approx = Array{Float64}(undef, nits+1)
     elbo_approx[1] = init_elbo
 
+
     # Iteratively update variational parameters
     for i in 1:nits
-        buff = init_precompute(gp)
-        update_ll_and_dll!(gp, buff)
+        params_kwargs = get_params_kwargs(gp; domean=true, kern=true, noise=false, lik=true)
+        update_target_and_dtarget!(gp; params_kwargs...)        
+
         λ = [Q.qμ, Q.qΣ]
 
         # Compute the gradients of the variational objective function
@@ -174,7 +175,7 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         elbo_approx[i+1] = current_elbo
 
         if verbose
-            println("ELBO at Iteration ", i, ": ", current_elbo)
+            println("ELBO at Iteration ", i, ": ", current_elbo, "\n")
         end
     end
 
