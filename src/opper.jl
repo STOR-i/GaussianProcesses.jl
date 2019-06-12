@@ -104,7 +104,7 @@ Update the parameters of the variational approximation through gradient ascent
 """
 function updateQ!(Q::Approx, ∇μ, ∇Σ; α::Float64=0.01)
     Q.qμ += α*-∇μ
-    Q.qΣ += α*-∇Σ .* (Matrix(I, length(∇Σ), length(∇Σ)) *1.0)
+    Q.qΣ += α*-(∇Σ .* (Matrix(I, length(∇Σ), length(∇Σ)) *1.0))
 end
 
 
@@ -134,14 +134,17 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         kl = 0.5(dot(Q.qμ, Q.qμ) - logdet(Q.qΣ) + sum(diag(Q.qΣ).^2))
         @assert kl >= 0 "KL-divergence should be positive.\n"
         println("KL: ", kl)
+
+        # 
         μ = mean(gp.mean, gp.x)
-        Σ= cov(gp.kernel, gp.x, gp.data)    #kernel function
-        gp.cK = PDMat(Σ + 1e-6*I)
-        Fmean = unwhiten(gp.cK, Q.qμ) + μ      # K⁻¹q_μ
+        Σ=  cov(gp.kernel, gp.x, gp.data)    #kernel function
+        K = PDMat(Σ + 1e-6*I)
+        Fmean = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
 
         # Assuming a mean-field approximation
-        Fvar = diag(unwhiten(gp.cK, Q.qΣ))              # K⁻¹q_Σ
+        Fvar = diag(unwhiten(K, Q.qΣ))              # K⁻¹q_Σ
         _, varExp = predict_obs(gp.lik, Fmean, Fvar)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
+        
         # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
         elbo_val = sum(varExp)-kl
         # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
@@ -158,10 +161,9 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
 
     # Iteratively update variational parameters
     for i in 1:nits
+        # Run the following two lines as a proxy for computing gp.dll
         params_kwargs = get_params_kwargs(gp; domean=true, kern=true, noise=false, lik=true)
         update_target_and_dtarget!(gp; params_kwargs...)        
-
-        λ = [Q.qμ, Q.qΣ]
 
         # Compute the gradients of the variational objective function
         gradμ, gradΣ = elbo_grad_q(gp, Q)
