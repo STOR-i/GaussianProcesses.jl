@@ -41,14 +41,6 @@ function update_Q!(Q::Approx, params::Array)
 end
 
 
-# Possibly unnecessary function for optim
-function vector_hessian(f, x)
-       n = length(x)
-       out = ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
-       return reshape(out, n, n, n)
-   end
-
-
 # Compute the Hadamard product
 function hadamard(A::Matrix, B::Matrix)
     @assert size(A) == size(B)
@@ -74,6 +66,10 @@ function computeΣ(gp::GPBase, Q::Approx)
     return Σ
 end
 
+# Compute Σ crudely as per Opper and Archambeau
+function computeΣ(gp::GPBase, λ::Array)
+    return inv(inv(gp.cK.mat) .+ λ)
+end
 
 """
 Compute the gradient of the ELBO F w.r.t. the variational parameters μ and Σ, as per Equations (11) and (12) in Opper and Archambeau.
@@ -81,14 +77,15 @@ Compute the gradient of the ELBO F w.r.t. the variational parameters μ and Σ, 
 function elbo_grad_q(gp::GPBase, Q::Approx)
     νbar = -gp.dll[1:gp.nobs]
     gν = gp.cK.mat*(Q.qμ - νbar) # TODO: Should this be a product of the application of the covariance function to ν-νbar?
-    Σ = computeΣ(gp, Q)
+    Σ = computeΣ(gp, diag(Q.qΣ))
     λ = Q.qΣ
     λbar = -gp.dll[1:gp.nobs] .* (Matrix(I, gp.nobs, gp.nobs)*1.0)
-    gλ = diag(0.5*(hadamard(Σ, Σ) .* (λ - λbar))) # Must multiply by λ-λbar
+    gλ = diag(0.5*(hadamard(Σ, Σ) .* (λ - λbar))) 
     return gν, gλ
 end
 
 
+# Compute gradient of the ELBO w.r.t the GP's kernel parameters
 function elbo_grad_θ(gp::GPBase)
    # TODO: Can ν just equal νbar, as per Section 4?
    νbar = gp.dll[1:gp.nobs]
@@ -121,21 +118,48 @@ Carry out variational inference, as per Opper and Archambeau (2009) to compute t
 function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=false)
     # Initialise log-target and log-target's derivative
     mcmc(gp; nIter=1)
-    # optimize!(gp)
-    # Q = Approx(gp.v, Matrix(I, gp.nobs, gp.nobs)*1.0)
+    
+    # TODO: Remove globals
     # Initialise the varaitaional parameters
-    Q = Approx(zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0)
+    global Q = Approx(zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0)
     # Compute the initial ELBO objective between the intiialised Q and the GP
     λ = [zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0]
-    
+   
+    # Compute the ELBO function as per Opper and Archambeau EQ (9)
+    function elbo(gp, Q)
+        μ = mean(gp.mean, gp.x)
+        Σ=  cov(gp.kernel, gp.x, gp.data)    #kernel function
+        K = PDMat(Σ + 1e-6*I)
+        Fmean = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
 
-    function elbo(params)
+        # Assuming a mean-field approximation
+        Fvar = diag(unwhiten(K, Q.qΣ))              # K⁻¹q_Σ
+        _, varExp = predict_obs(gp.lik, Fmean, Fvar)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
+        
+        # Compute KL as per Opper and Archambeau eq (9)
+        global Σopper = computeΣ(gp, diag(Q.qΣ))
+        global Kinv = inv(K.mat)
+        kl = 0.5*tr(Σopper * Kinv) .+ 0.5(transpose(Q.qμ) * Kinv * Q.qμ) .- 0.5(logdet(Σopper)) 
+        
+        # @assert kl >= 0 "KL-divergence should be positive.\n"
+        println("KL: ", kl)
+
+    
+        # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
+        elbo_val = sum(varExp)-kl
+        
+        # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
+        return elbo_val
+    end
+    
+    # Compute the ELBO function as per GPFlow VGP._buill_ll(). Note, this is different from the _build_ll() in VGP_Opper of GPFlow
+    function elbo(Q)
         # Compute the prior KL e.g. KL(Q||P) s.t. P∼N(0, I)
         kl = 0.5(dot(Q.qμ, Q.qμ) - logdet(Q.qΣ) + sum(diag(Q.qΣ).^2))
         @assert kl >= 0 "KL-divergence should be positive.\n"
         println("KL: ", kl)
 
-        # 
+        # Following block computes K^{-1}q_{μ}
         μ = mean(gp.mean, gp.x)
         Σ=  cov(gp.kernel, gp.x, gp.data)    #kernel function
         K = PDMat(Σ + 1e-6*I)
@@ -150,12 +174,12 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
         return sum(varExp) - kl
     end
-    init_elbo = elbo(λ) # TODO: Change this λ
+    init_elbo = elbo(gp, Q) 
     if verbose
         println("Initial ELBO: ", init_elbo)
     end
     
-    global elbo_approx = Array{Float64}(undef, nits+1)
+    elbo_approx = Array{Float64}(undef, nits+1)
     elbo_approx[1] = init_elbo
 
 
@@ -170,10 +194,10 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
 
         # Update the variational parameters
         updateQ!(Q, gradμ, gradΣ)
-
+        println("Variational Mean: ", mean(Q.qμ))
         # Recalculate the ELBO
         λ = [Q.qμ, Q.qΣ]
-        current_elbo = elbo(λ)
+        current_elbo = elbo(gp, Q)
         elbo_approx[i+1] = current_elbo
 
         if verbose
@@ -190,7 +214,7 @@ end
 
 Random.seed!(123)
 
-n = 20
+n = 50
 X = collect(range(-3,stop=3,length=n));
 f = 2*cos.(2*X);
 Y = [rand(Poisson(exp.(f[i]))) for i in 1:n];
