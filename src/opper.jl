@@ -227,4 +227,31 @@ gp = GP(X, vec(Y), MeanZero(), k, l)
 set_priors!(gp.kernel,[Normal(-2.0,4.0),Normal(-2.0,4.0)])
 
 # mcmc(gp)
-vi(gp;nits=10, verbose=true, plot_elbo=true)
+vi(gp;nits=100, verbose=true, plot_elbo=true)
+
+
+samples = mcmc(gp; nIter=10000,ε=0.01);
+
+#Sample predicted values
+xtest = range(minimum(gp.x),stop=maximum(gp.x),length=50);
+ymean = [];
+fsamples = Array{Float64}(undef,size(samples,2), length(xtest));
+for i in 1:size(samples,2)
+    set_params!(gp,samples[:,i])
+    update_target!(gp)
+    push!(ymean, predict_y(gp,xtest)[1])
+    fsamples[i,:] = rand(gp, xtest)
+end
+
+using Plots
+#Predictive plots
+q10 = [quantile(fsamples[:,i], 0.1) for i in 1:length(xtest)]
+q50 = [quantile(fsamples[:,i], 0.5) for i in 1:length(xtest)]
+q90 = [quantile(fsamples[:,i], 0.9) for i in 1:length(xtest)]
+plot(xtest,exp.(q50),ribbon=(exp.(q10), exp.(q90)),leg=true, fmt=:png, label="quantiles")
+plot!(xtest,mean(ymean), label="posterior mean")
+xx = range(-3,stop=3,length=1000);
+f_xx = 2*cos.(2*xx);
+plot!(xx, exp.(f_xx), label="truth")
+scatter!(X,Y, label="data")
+
