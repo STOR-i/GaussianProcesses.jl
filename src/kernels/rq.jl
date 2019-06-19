@@ -12,4 +12,4 @@ Create Rational Quadratic kernel with length scale `exp.(ll)`, signal standard d
 See also [`RQIso`](@ref) and [`RQArd`](@ref).
 """
 RQ(ll::Real, lσ::Real, lα::Real) = RQIso(ll, lσ, lα)
-RQ(ll::Vector{Real}, lσ::Real, lα::Real) = RQArd(ll, lσ, lα)
+RQ(ll::Vector{<:Real}, lσ::Real, lα::Real) = RQArd(ll, lσ, lα)

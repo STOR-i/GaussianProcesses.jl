@@ -14,9 +14,9 @@ function map_column_pairs(f, X::AbstractMatrix, Y::AbstractMatrix)
 end
 
 function map_column_pairs(f, X::AbstractMatrix)
-    dim, nobsv = size(X)
-    D = Array{eltype(X)}(undef, nobsv, nobsv)
-    for i in 1:nobsv
+    dim, nobs = size(X)
+    D = Array{eltype(X)}(undef, nobs, nobs)
+    for i in 1:nobs
         for j in 1:i
             @inbounds D[i,j] = f(X[:,i], X[:,j])
             if i != j; @inbounds D[j,i] = D[i,j]; end;
@@ -45,12 +45,12 @@ function map_column_pairs!(D::AbstractMatrix, f, X::AbstractMatrix, Y::AbstractM
 end
 
 function map_column_pairs!(D::AbstractMatrix, f, X::AbstractMatrix)
-    dim, nobsv = size(X)
-    size(D,1) == nobsv || throw(ArgumentError(@sprintf("D has %d rows, while X has %d columns (should be same)",
-                                                       size(D,1), nobsv)))
-    size(D,2) == nobsv || throw(ArgumentError(@sprintf("D has %d columns, while X has %d columns (should be same)",
-                                                       size(D,2), nobsv)))
-    @inbounds for i in 1:nobsv
+    dim, nobs = size(X)
+    size(D,1) == nobs || throw(ArgumentError(@sprintf("D has %d rows, while X has %d columns (should be same)",
+                                                       size(D,1), nobs)))
+    size(D,2) == nobs || throw(ArgumentError(@sprintf("D has %d columns, while X has %d columns (should be same)",
+                                                       size(D,2), nobs)))
+    @inbounds for i in 1:nobs
         for j in 1:i
             D[i,j] = f(view(X,:,i), view(X,:,j))
             if i != j; D[j,i] = D[i,j]; end;

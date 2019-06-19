@@ -33,7 +33,7 @@ end
 
 
 get_params(mPoly::MeanPoly) = vec(mPoly.β)
-get_param_names(mPoly::MeanPoly) = [:β]
+get_param_names(mPoly::MeanPoly) = get_param_names(vec(mPoly.β), :β)
 num_params(mPoly::MeanPoly) = length(mPoly.β)
 
 function set_params!(mPoly::MeanPoly, hyp::AbstractVector)

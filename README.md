@@ -10,6 +10,20 @@ A Gaussian Processes package for Julia.
 
 This package is still under development. If you have any suggestions to improve the package, or if you've noticed a bug, then please post an [issue](https://github.com/STOR-i/GaussianProcesses.jl/issues/new) for us and we'll get to it as quickly as we can. Pull requests are also welcome.
 
+
+## Citing GaussianProcesses.jl
+
+To cite GaussianProcesses.jl, please reference the [arXiv paper](https://arxiv.org/abs/1812.09064). Sample Bibtex is given below:
+
+```
+@article{gaussianprocesses.jl,
+  title={GaussianProcesses. jl: A Nonparametric Bayes package for the Julia Language},
+  author={Fairbrother, Jamie and Nemeth, Christopher and Rischard, Maxime and Brea, Johanni},
+  journal={arXiv preprint arXiv:1812.09064},
+  year={2018}
+}
+```
+
 ## Introduction
 
 Gaussian processes are a family of stochastic processes which provide a flexible nonparametric tool for modelling data. A Gaussian Process places a prior over functions, and can be described as an infinite dimensional generalisation of a multivariate Normal distribution. Moreover, the joint distribution of any finite collection of points is a multivariate Normal. This process can be fully characterised by its mean and covariance functions, where the mean of any point in the process is described by the *mean function* and the covariance between any two observations is specified by the *kernel*. Given a set of observed real-valued points over a space, the Gaussian Process is used to make inference on the values at the remaining points in the space.
@@ -21,6 +35,7 @@ For an extensive review of Gaussian Processes there is an excellent book [Gaussi
 GaussianProcesses.jl requires Julia version 0.7 or above. To install GaussianProcesses.jl run the following command inside a Julia session:
 
 ```julia
+julia> using Pkg
 julia> Pkg.add("GaussianProcesses")
 ```
 ## Functionality
@@ -70,6 +85,8 @@ search: GP GPE GPMC GPBase gperm log1p getpid getproperty MissingException
 
   See also: GPMC
 ```
+
+Alternatively, [online documentation](http://stor-i.github.io/GaussianProcesses.jl/latest/index.html) and is under development
 
 ## Notebooks
 

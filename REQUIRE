@@ -10,5 +10,5 @@ RecipesBase 0.6
 FastGaussQuadrature 0.3.1
 StatsFuns 0.7.0
 SpecialFunctions 0.7.0
-StaticArrays 0.6
+StaticArrays 0.6 0.10
 ForwardDiff

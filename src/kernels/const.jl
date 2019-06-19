@@ -36,16 +36,9 @@ function cov(cons::Const, x::AbstractVector, y::AbstractVector)
 end
 
 @inline dk_dlσ(cons::Const) = 2.0*cov(cons)
-@inline function dKij_dθp(cons::Const, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(cons::Const, X1, X2, i::Int, j::Int, p::Int, dim::Int)
     if p == 1
         return dk_dlσ(cons)
-    else
-        return NaN
-    end
-end
-@inline function dKij_dθp(cons::Const, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
-    if p == 1
-        return dKij_dθp(cons, X, i, j, p, dim)
     else
         return NaN
     end

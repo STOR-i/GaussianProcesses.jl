@@ -6,11 +6,13 @@ using StatsFuns, SpecialFunctions
 
 using LinearAlgebra, Printf, Random, Statistics
 import Statistics: mean, cov
+import Base: size
+import PDMats: dim, Matrix, diag, pdadd!, *, \, inv, logdet, eigmax, eigmin, whiten!, unwhiten!, quad, quad!, invquad, invquad!, X_A_Xt, Xt_A_X, X_invA_Xt, Xt_invA_X
 
 # Functions that should be available to package
 # users should be explicitly exported here
 export GPBase, GP, GPE, GPMC, ElasticGPE, predict_f, predict_y, Kernel, Likelihood, CompositeKernel, SumKernel, ProdKernel, Masked, FixedKernel, fix, Noise, Const, SE, SEIso, SEArd, Periodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Matern, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, #kernel functions
-    MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, #mean functions
+    MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, MeanPeriodic, #mean functions
     GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
     mcmc, optimize!,                                           #inference functions
     set_priors!,set_params!, update_target!, autodiff
@@ -35,7 +37,9 @@ include("GPEelastic.jl")
 include("GPMC.jl")
 include("mcmc.jl")
 include("optimize.jl")
+include("crossvalidation.jl")
 include("plot.jl")
+include("sparse/sparseGP.jl")
 
 # ScikitLearnBase, which is a skeleton package.
 include("ScikitLearn.jl")

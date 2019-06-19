@@ -20,6 +20,7 @@ function Masked(kern::Kernel, active_dims::AbstractVector)
     K = typeof(kern)
     return Masked{K,dim}(kern, SVector{dim, Int}(active_dims))
 end
+xview(masked::Masked, X::AbstractMatrix) = view(X, masked.active_dims, :)
 
 ################
 ## KernelData ##
@@ -30,8 +31,12 @@ struct MaskedData{M1<:AbstractMatrix,M2<:AbstractMatrix,KD<:KernelData} <: Kerne
     wrappeddata::KD
 end
 function KernelData(masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix)
-    X1view = view(X1,masked.active_dims,:)
-    X2view = view(X2,masked.active_dims,:)
+    X1view = xview(masked,X1)
+    if X1 === X2
+        X2view = X1view
+    else
+        X2view = xview(masked,X2)
+    end
 	wrappeddata = KernelData(masked.kernel, X1view, X2view)
     return MaskedData(X1view, X2view, wrappeddata)
 end
@@ -39,38 +44,26 @@ end
 @inline @inbounds function cov_ij(masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, data::MaskedData, i::Int, j::Int, dim::Int)
     return cov_ij(masked.kernel, data.X1view, data.X2view, data.wrappeddata, i, j, num_dims(masked))
 end
-@inline @inbounds function cov_ij(masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, dim::Int)
-    return cov_ij(masked.kernel, @view(X1[masked.active_dims, :]), @view(X2[masked.active_dims, :]), i, j, num_dims(masked))
-end
-@inline @inbounds function cov_ij(masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, data::EmptyData, i::Int, j::Int, dim::Int)
-    return cov_ij(masked, X1, X2, i, j, dim)
+@inline @inbounds function cov_ij(masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int)
+    return cov_ij(masked.kernel, xview(masked,X1), xview(masked,X2), data, i, j, num_dims(masked))
 end
 
-@inline function dKij_dθp(masked::Masked, X::AbstractMatrix, data::MaskedData, i::Int, j::Int, p::Int, dim::Int)
-    return dKij_dθp(masked.kernel, data.X1view, data.wrappeddata, i, j, p, num_dims(masked))
+@inline function dKij_dθp(masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, data::MaskedData, i::Int, j::Int, p::Int, dim::Int)
+    return dKij_dθp(masked.kernel, data.X1view, data.X2view, data.wrappeddata, i, j, p, num_dims(masked))
 end
-@inline function dKij_dθp(masked::Masked, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
-    return dKij_dθp(masked.kernel, @view(X[masked.active_dims, :]), i, j, p, num_dims(masked))
+@inline function dKij_dθp(masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i::Int, j::Int, p::Int, dim::Int)
+    return dKij_dθp(masked.kernel, xview(masked,X1), xview(masked,X2), data, i, j, p, num_dims(masked))
 end
-@inline function dKij_dθp(masked::Masked, X::AbstractMatrix, data::EmptyData, i::Int, j::Int, p::Int, dim::Int)
-    return dKij_dθp(masked, X, i, j, p, dim)
+@inline @inbounds function dKij_dθ!(dK::AbstractVector, masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int, npars::Int)
+    X1view, X2view = xview(masked,X1), xview(masked,X2)
+    return dKij_dθ!(dK, masked.kernel, X1view, X2view, data, i, j, num_dims(masked), npars)
 end
-@inline @inbounds function dKij_dθ!(dK::AbstractVector, masked::Masked, X::AbstractMatrix, i::Int, j::Int, dim::Int, npars::Int)
-    Xview = view(X,masked.active_dims,:)
-    return dKij_dθ!(dK, masked.kernel, Xview, i, j, num_dims(masked), npars)
-end
-@inline @inbounds function dKij_dθ!(dK::AbstractVector, masked::Masked, X::AbstractMatrix, data::MaskedData, i::Int, j::Int, dim::Int, npars::Int)
-    return dKij_dθ!(dK, masked.kernel, data.X1view, data.wrappeddata, i, j, num_dims(masked), npars)
+@inline @inbounds function dKij_dθ!(dK::AbstractVector, masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, data::MaskedData, i::Int, j::Int, dim::Int, npars::Int)
+    return dKij_dθ!(dK, masked.kernel, data.X1view, data.X2view, data.wrappeddata, i, j, num_dims(masked), npars)
 end
 
-function cov(masked::Masked, x1::AbstractMatrix, x2::AbstractMatrix)
-    return cov(masked.kernel, view(x1,masked.active_dims,:), view(x2,masked.active_dims,:))
-end
-function cov(masked::Masked, x1::AbstractVector, x2::AbstractVector)
-    return cov(masked.kernel, view(x1,masked.active_dims), view(x2,masked.active_dims))
-end
 function kernel_data_key(masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix)
-    k = kernel_data_key(masked.kernel, view(X1,masked.active_dims,:), view(X2,masked.active_dims,:))
+    k = kernel_data_key(masked.kernel, xview(masked,X1), xview(masked,X2))
     return @sprintf("%s_active=%s", k, masked.active_dims)
 end
 
@@ -79,15 +72,18 @@ get_param_names(masked::Masked) = get_param_names(masked.kernel)
 num_params(masked::Masked) = num_params(masked.kernel)
 set_params!(masked::Masked, hyp) = set_params!(masked.kernel, hyp)
 
-# with EmptyData
-function cov(masked::Masked, X::AbstractMatrix, data::EmptyData)
-    return cov(masked.kernel, view(X,masked.active_dims,:), data)
+function cov(masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, data::MaskedData)
+    return cov(masked.kernel, data.X1view, data.X2view, data.wrappeddata)
 end
-function cov!(s::AbstractMatrix, masked::Masked, X::AbstractMatrix, data::EmptyData)
-    return cov!(s, masked.kernel, view(X,masked.active_dims,:), data)
+function cov!(s::AbstractMatrix, masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, data::MaskedData)
+    return cov!(s, masked.kernel, data.X1view, data.X2view, data.wrappeddata)
 end
-function grad_slice!(dK::AbstractMatrix, masked::Masked, X::AbstractMatrix, data::EmptyData, iparam::Int)
-    return grad_slice!(dK, masked.kernel, view(X,masked.active_dims,:), data, iparam)
+function grad_slice!(dK::AbstractMatrix, masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, data::MaskedData, iparam::Int)
+    return grad_slice!(dK, masked.kernel, data.X1view, data.X2view, data.wrappeddata, iparam)
+end
+
+function cov(masked::Masked, x1::AbstractVector, x2::AbstractVector)
+    return cov(masked.kernel, view(x1,masked.active_dims), view(x2,masked.active_dims))
 end
 
 # priors

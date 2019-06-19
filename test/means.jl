@@ -13,6 +13,7 @@ Random.seed!(1)
              MeanConst(3.0),
              MeanLin(rand(d)),
              MeanPoly(rand(d, D)),
+             MeanPeriodic(randn(d), randn(d), randn(d)),
              MeanConst(3.0) * MeanLin(rand(d)),
              MeanLin(rand(d)) + MeanPoly(rand(d, D))]
 
@@ -46,7 +47,7 @@ Random.seed!(1)
                     set_params!(m, params)
                     mean(m, Xi)
                 end
-                @test theor_grad ≈ num_grad rtol=1e-6
+                @test theor_grad ≈ num_grad rtol=1e-5 atol=1e-5
             end
         end
     end

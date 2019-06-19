@@ -8,4 +8,6 @@ module TestGaussianProcesses
 @time include("gpmc.jl")
 @time include("elastic.jl")
 @time include("memory.jl")
+@time include("test_crossvalidation.jl")
+@time include("test_sparse.jl")
 end

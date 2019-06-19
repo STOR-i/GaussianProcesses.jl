@@ -50,18 +50,25 @@ function cov(lin::LinArd, X::AbstractMatrix)
     LinearAlgebra.copytri!(K, 'U')
     return K
 end
-function cov!(cK::AbstractMatrix, lin::LinArd, X::AbstractMatrix, data::LinArdData)
-    dim, nobs = size(X)
-    fill!(cK, 0)
+# function cov!(cK::AbstractMatrix, lin::LinArd, X::AbstractMatrix, data::LinArdData)
+    # dim, nobs = size(X)
+    # fill!(cK, 0)
+    # for d in 1:dim
+        # LinearAlgebra.axpy!(1/lin.ℓ[d]^2, view(data.XtX_d,1:nobs, 1:nobs ,d), cK)
+    # end
+    # return cK
+# end
+# function cov(lin::LinArd, X::AbstractMatrix, data::LinArdData)
+    # nobs = size(X,2)
+    # K = Array{eltype(X)}(undef, nobs, nobs)
+    # cov!(K, lin, X, data)
+# end
+@inline @inbounds function cov_ij(lin::LinArd, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, dim::Int)
+    ck = 0.0
     for d in 1:dim
-        LinearAlgebra.axpy!(1/lin.ℓ[d]^2, view(data.XtX_d,1:nobs, 1:nobs ,d), cK)
+        ck += dotijp(X1,X2,i,j,d) * 1/lin.ℓ[d]^2
     end
-    return cK
-end
-function cov(lin::LinArd, X::AbstractMatrix, data::LinArdData)
-    nobs = size(X,2)
-    K = Array{eltype(X)}(undef, nobs, nobs)
-    cov!(K, lin, X, data)
+    return ck
 end
 @inline @inbounds function cov_ij(lin::LinArd, X1::AbstractMatrix, X2::AbstractMatrix, data::LinArdData, i::Int, j::Int, dim::Int)
     ck = 0.0
@@ -80,14 +87,14 @@ function set_params!(lin::LinArd, hyp::AbstractVector)
 end
 
 @inline dk_dll(lin::LinArd, xy::Real, d::Int) = -2 * xy / lin.ℓ[d]^2
-@inline function dKij_dθp(lin::LinArd, X::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(lin::LinArd, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, p::Int, dim::Int)
     if p<=dim
-        return dk_dll(lin, dotijp(X,i,j,p), p)
+        return dk_dll(lin, dotijp(X1,X2,i,j,p), p)
     else
         return NaN
     end
 end
-@inline function dKij_dθp(lin::LinArd, X::AbstractMatrix, data::LinArdData, i::Int, j::Int, p::Int, dim::Int)
+@inline function dKij_dθp(lin::LinArd, X1::AbstractMatrix, X2::AbstractMatrix, data::LinArdData, i::Int, j::Int, p::Int, dim::Int)
     if p <= dim
         return dk_dll(lin, data.XtX_d[i,j,p],p)
     else

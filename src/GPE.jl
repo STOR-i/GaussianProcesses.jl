@@ -1,6 +1,6 @@
 # Main GaussianProcess type
 
-mutable struct GPE{X<:AbstractMatrix,Y<:AbstractVector,M<:Mean,K<:Kernel,P<:AbstractPDMat,D<:KernelData} <: GPBase
+mutable struct GPE{X<:AbstractMatrix,Y<:AbstractVector,M<:Mean,K<:Kernel,CS<:CovarianceStrategy,D<:KernelData,P<:AbstractPDMat} <: GPBase
     # Observation data
     "Input observations"
     x::X
@@ -13,7 +13,9 @@ mutable struct GPE{X<:AbstractMatrix,Y<:AbstractVector,M<:Mean,K<:Kernel,P<:Abst
     "Kernel object"
     kernel::K
     "Log standard deviation of observation noise"
-    logNoise::Float64
+    logNoise::Scalar
+    "Strategy for computing or approximating covariance matrices"
+    covstrat::CS
 
     # Auxiliary data
     "Dimension of inputs"
@@ -35,14 +37,36 @@ mutable struct GPE{X<:AbstractMatrix,Y<:AbstractVector,M<:Mean,K<:Kernel,P<:Abst
     "Gradient of log-target (gradient of marginal log-likelihood + gradient of log priors)"
     dtarget::Vector{Float64}
 
-    function GPE{X,Y,M,K,P,D}(x::X, y::Y, mean::M, kernel::K, logNoise::Float64, data::D, cK::P) where {X,Y,M,K,P,D}
+    function GPE{X,Y,M,K,CS,D,P}(x::X, y::Y, mean::M, kernel::K, logNoise::Float64, covstrat::CS, data::D, cK::P) where {X,Y,M,K,CS,D,P}
         dim, nobs = size(x)
         length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        gp = new{X,Y,M,K,P,D}(x, y, mean, kernel, logNoise, dim, nobs, data, cK)
+        gp = new{X,Y,M,K,CS,D,P}(x, y, mean, kernel, Scalar(logNoise), covstrat, dim, nobs, data, cK)
+        initialise_target!(gp)
+    end
+    function GPE{X,Y,M,K,CS,D,P}(x::X, y::Y, mean::M, kernel::K, logNoise::Scalar, covstrat::CS, data::D, cK::P) where {X,Y,M,K,CS,D,P}
+        dim, nobs = size(x)
+        length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
+        gp = new{X,Y,M,K,CS,D,P}(x, y, mean, kernel, logNoise, covstrat, dim, nobs, data, cK)
         initialise_target!(gp)
     end
 end
 
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat, covstrat::CovarianceStrategy, kerneldata::KernelData, cK::AbstractPDMat)
+    GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(covstrat),typeof(kerneldata),typeof(cK)}(x, y, mean, kernel, logNoise, covstrat,kerneldata, cK)
+end
+function alloc_cK(nobs)
+    # create placeholder PDMat
+    m = Matrix{Float64}(undef, nobs, nobs)
+    chol = Matrix{Float64}(undef, nobs, nobs)
+    cK = PDMats.PDMat(m, Cholesky(chol, 'U', 0))
+    return cK
+end
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat, kerneldata::KernelData)
+    nobs = length(y)
+    covstrat = FullCovariance()
+    cK = alloc_cK(covstrat, nobs)
+    GPE(x, y, mean, kernel, logNoise, covstrat, kerneldata, cK)
+end
 """
     GPE(x, y, mean, kernel[, logNoise])
 
@@ -58,41 +82,26 @@ assumed that the observations are noise free.
 - `logNoise::Float64`: Natural logarithm of the standard deviation for the observation
   noise. The default is -2.0, which is equivalent to assuming no observation noise.
 """
-function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData, cK::AbstractPDMat) 
-    GPE{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(cK),typeof(kerneldata)}(x, y, mean, kernel, logNoise, kerneldata, cK)
-end
-function alloc_cK(nobs)
-    # create placeholder PDMat
-    m = Matrix{Float64}(undef, nobs, nobs)
-    chol = Matrix{Float64}(undef, nobs, nobs)
-    cK = PDMats.PDMat(m, Cholesky(chol, 'U', 0))
-    return cK
-end
-function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64, kerneldata::KernelData)
-    nobs = length(y)
-    cK = alloc_cK(nobs)
-    GPE(x, y, mean, kernel, logNoise, kerneldata, cK)
-end
-function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0)
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat = -2.0)
     kerneldata = KernelData(kernel, x, x)
     GPE(x, y, mean, kernel, logNoise, kerneldata)
 end
-GPE(x::AbstractVector, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Float64 = -2.0) =
+GPE(x::AbstractVector, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat = -2.0) =
     GPE(x', y, mean, kernel, logNoise)
 
 """
-    GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0)
+    GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::AbstractFloat = -2.0)
 
 Construct a [`GPE`](@ref) object without observations.
 """
-function GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::Float64 = -2.0) 
+function GPE(; mean::Mean = MeanZero(), kernel::Kernel = SE(0.0, 0.0), logNoise::AbstractFloat = -2.0)
     x = Array{Float64}(undef, 1, 0) # ElasticArrays don't like length(x) = 0.
     y = Array{Float64}(undef, 0)
     GPE(x, y, mean, kernel, logNoise)
 end
 
 """
-    GP(x, y, mean::Mean, kernel::Kernel[, logNoise::Float64=-2.0])
+    GP(x, y, mean::Mean, kernel::Kernel[, logNoise::AbstractFloat=-2.0])
 
 Fit a Gaussian process that is defined by its `mean`, its `kernel`, and the logarithm
 `logNoise` of the standard deviation of its observation noise to a set of training points
@@ -101,7 +110,7 @@ Fit a Gaussian process that is defined by its `mean`, its `kernel`, and the loga
 See also: [`GPE`](@ref)
 """
 GP(x::AbstractVecOrMat{Float64}, y::AbstractVector, mean::Mean, kernel::Kernel,
-   logNoise::Float64 = -2.0) = GPE(x, y, mean, kernel, logNoise)
+   logNoise::AbstractFloat = -2.0) = GPE(x, y, mean, kernel, logNoise)
 
 """
     fit!(gp::GPE{X,Y}, x::X, y::Y)
@@ -114,7 +123,7 @@ function fit!(gp::GPE{X,Y}, x::X, y::Y) where {X,Y}
     gp.x = x
     gp.y = y
     gp.data = KernelData(gp.kernel, x, x)
-    gp.cK = alloc_cK(length(y))
+    gp.cK = alloc_cK(gp.covstrat, length(y))
     gp.dim, gp.nobs = size(x)
     initialise_target!(gp)
 end
@@ -124,6 +133,7 @@ fit!(gp::GPE, x::AbstractVector, y::AbstractVector) = fit!(gp, x', y)
 #———————————————————————————————————————————————————————————
 #Fast memory allocation function
 
+LinearAlgebra.ldiv!(cK::PDMat, x) = ldiv!(cK.chol, x)
 """
     get_ααinvcKI!(ααinvcKI::Matrix{Float64}, cK::AbstractPDMat, α::Vector)
 
@@ -142,12 +152,24 @@ function get_ααinvcKI!(ααinvcKI::AbstractMatrix, cK::AbstractPDMat, α::Vect
         ααinvcKI[i,i] = -1.0
     end
     # `ldiv!(A, B)`: Compute A \ B in-place and overwriting B to store the result.
-    ldiv!(cK.chol, ααinvcKI)
+    ldiv!(cK, ααinvcKI)
     BLAS.ger!(1.0, α, α, ααinvcKI)
 end
 
 #———————————————————————————————————————————————————————————————-
 #Functions for calculating the log-target
+
+function update_cK!(cK::AbstractPDMat, x::AbstractMatrix, kernel::Kernel, logNoise::Real, data::KernelData, covstrat::CovarianceStrategy)
+    nobs = size(x, 2)
+    Σbuffer = mat(cK)
+    cov!(Σbuffer, kernel, x, x, data)
+    noise = exp(2*logNoise)+eps()
+    for i in 1:nobs
+        Σbuffer[i,i] += noise
+    end
+    Σbuffer, chol = make_posdef!(Σbuffer, cholfactors(cK))
+    return wrap_cK(cK, Σbuffer, chol)
+end
 
 """
     update_cK!(gp::GPE)
@@ -155,19 +177,7 @@ end
 Update the covariance matrix and its Cholesky decomposition of Gaussian process `gp`.
 """
 function update_cK!(gp::GPE)
-    old_cK = gp.cK
-    Σbuffer = mat(old_cK)
-    cov!(Σbuffer, gp.kernel, gp.x, gp.data)
-    noise = exp(2*gp.logNoise)+eps()
-    for i in 1:gp.nobs
-        Σbuffer[i,i] += noise
-    end
-    Σbuffer, chol = make_posdef!(Σbuffer, cholfactors(old_cK))
-    gp.cK = wrap_cK(gp.cK, Σbuffer, chol)
-    # copyto!(chol_buffer, Σbuffer)
-    # chol = cholesky!(Symmetric(chol_buffer))
-    # gp.cK = wrap_cK(gp.cK, Σbuffer, chol)
-    # gp.cK = new_cK
+    gp.cK = update_cK!(gp.cK, gp.x, gp.kernel, gp.logNoise, gp.data, gp.covstrat)
 end
 
 # modification of initialise_target! that reuses existing matrices to avoid
@@ -184,64 +194,103 @@ function update_mll!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tr
     gp
 end
 
-function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::KernelData, ααinvcKI::AbstractMatrix)
+"""
+    dmll_kern!((dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::KernelData, ααinvcKI::AbstractMatrix))
+
+Derivative of the marginal log likelihood log p(Y|θ) with respect to the kernel hyperparameters.
+"""
+function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::KernelData, 
+                    ααinvcKI::Matrix{Float64}, covstrat::CovarianceStrategy)
     dim, nobs = size(X)
     nparams = num_params(k)
     @assert nparams == length(dmll)
     dK_buffer = Vector{Float64}(undef, nparams)
     dmll[:] .= 0.0
     @inbounds for j in 1:nobs
+        # diagonal
+        dKij_dθ!(dK_buffer, k, X, X, data, j, j, dim, nparams)
+        for iparam in 1:nparams
+            dmll[iparam] += dK_buffer[iparam] * ααinvcKI[j, j] / 2.0
+        end
         # off-diagonal
-        for i in 1:j-1
-            dKij_dθ!(dK_buffer, k, X, data, i, j, dim, nparams)
+        for i in j+1:nobs
+            dKij_dθ!(dK_buffer, k, X, X, data, i, j, dim, nparams)
             @simd for iparam in 1:nparams
                 dmll[iparam] += dK_buffer[iparam] * ααinvcKI[i, j]
             end
         end
-        # diagonal
-        dKij_dθ!(dK_buffer, k, X, data, j, j, dim, nparams)
-        for iparam in 1:nparams
-            dmll[iparam] += dK_buffer[iparam] * ααinvcKI[j, j] / 2.0
-        end
     end
     return dmll
 end
+
+""" AbstractGradientPrecompute types hold results of
+    pre-computations of kernel gradients.
+"""
+abstract type AbstractGradientPrecompute end
+
+struct FullCovariancePrecompute <: AbstractGradientPrecompute
+    ααinvcKI::Matrix{Float64}
+end
+function FullCovariancePrecompute(nobs::Int)
+    buffer = Matrix{Float64}(undef, nobs, nobs)
+    return FullCovariancePrecompute(buffer)
+end
+
+function init_precompute(covstrat::FullCovariance, X, y, k)
+    nobs = size(X, 2)
+    FullCovariancePrecompute(nobs)
+end
+init_precompute(gp::GPBase) = init_precompute(gp.covstrat, gp.x, gp.y, gp.kernel)
+    
+function precompute!(precomp::FullCovariancePrecompute, gp::GPBase) 
+    get_ααinvcKI!(precomp.ααinvcKI, gp.cK, gp.alpha)
+end
+function dmll_kern!(dmll::AbstractVector, gp::GPBase, precomp::FullCovariancePrecompute, covstrat::CovarianceStrategy)
+    return dmll_kern!(dmll, gp.kernel, gp.x, gp.data, precomp.ααinvcKI, covstrat)
+end
+function dmll_noise(gp::GPE, precomp::FullCovariancePrecompute, covstrat::CovarianceStrategy)
+    return exp(2 * gp.logNoise) * tr(precomp.ααinvcKI)
+end
+function dmll_mean!(dmll::AbstractVector, meanf::Mean, x::AbstractMatrix, alpha::AbstractVector)
+    Mgrads = grad_stack(meanf, x)
+    for j in 1:num_params(meanf)
+        dmll[j] = dot(Mgrads[:,j], alpha)
+    end
+    return dmll
+end
+function dmll_mean!(dmll::AbstractVector, gp::GPBase, precomp::AbstractGradientPrecompute)
+    dmll_mean!(dmll, gp.mean, gp.x, gp.alpha)
+end
+
 """
      update_dmll!(gp::GPE, ...)
 
 Update the gradient of the marginal log-likelihood of Gaussian process `gp`.
 """
-function update_dmll!(gp::GPE, ααinvcKI::AbstractMatrix;
+function update_dmll!(gp::GPE, precomp::AbstractGradientPrecompute;
     noise::Bool=true, # include gradient component for the logNoise term
     domean::Bool=true, # include gradient components for the mean parameters
     kern::Bool=true, # include gradient components for the spatial kernel parameters
     )
-    size(ααinvcKI) == (gp.nobs, gp.nobs) || throw(ArgumentError(
-                @sprintf("Buffer for ααinvcKI should be a %dx%d matrix, not %dx%d",
-                         gp.nobs, gp.nobs,
-                         size(ααinvcKI,1), size(ααinvcKI,2))))
     n_mean_params = num_params(gp.mean)
     n_kern_params = num_params(gp.kernel)
     gp.dmll = Array{Float64}(undef, noise + domean * n_mean_params + kern * n_kern_params)
-
-    get_ααinvcKI!(ααinvcKI, gp.cK, gp.alpha)
+    precompute!(precomp, gp)
 
     i=1
     if noise
-        gp.dmll[i] = exp(2 * gp.logNoise) * tr(ααinvcKI)
+        gp.dmll[i] = dmll_noise(gp, precomp, gp.covstrat)
         i += 1
     end
 
     if domean && n_mean_params>0
-        Mgrads = grad_stack(gp.mean, gp.x)
-        for j in 1:n_mean_params
-            gp.dmll[i] = dot(Mgrads[:,j], gp.alpha)
-            i += 1
-        end
+        dmll_m = @view(gp.dmll[i:i+n_mean_params-1])
+        dmll_mean!(dmll_m, gp, precomp)
+        i += n_mean_params
     end
     if kern
         dmll_k = @view(gp.dmll[i:end])
-        dmll_kern!(dmll_k, gp.kernel, gp.x, gp.data, ααinvcKI)
+        dmll_kern!(dmll_k, gp, precomp, gp.covstrat)
     end
 end
 
@@ -251,11 +300,9 @@ end
 Update the gradient of the marginal log-likelihood of a Gaussian
 process `gp`.
 """
-function update_mll_and_dmll!(gp::GPE,
-        ααinvcKI::AbstractMatrix;
-        kwargs...)
+function update_mll_and_dmll!(gp::GPE, precomp::AbstractGradientPrecompute; kwargs...)
     update_mll!(gp; kwargs...)
-    update_dmll!(gp, ααinvcKI; kwargs...)
+    update_dmll!(gp, precomp; kwargs...)
 end
 
 """
@@ -269,8 +316,7 @@ of a Gaussian process `gp`.
 """
 function initialise_target!(gp::GPE)
     update_mll!(gp)
-        #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
-    gp.target = gp.mll   + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel)
+    gp.target = gp.mll + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel) + prior_logpdf(gp.logNoise)
     gp
 end
 
@@ -285,13 +331,12 @@ of a Gaussian process `gp`.
 """
 function update_target!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
     update_mll!(gp; noise=noise, domean=domean, kern=kern)
-    #HOW TO SET-UP A PRIOR FOR THE LOGNOISE?
-    gp.target = gp.mll  + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel)
+    gp.target = gp.mll  + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel) + prior_logpdf(gp.logNoise)
     gp
 end
 
-function update_dtarget!(gp::GPE, Kgrad::AbstractMatrix, L_bar::AbstractMatrix; kwargs...)
-    update_dmll!(gp, L_bar; kwargs...)
+function update_dtarget!(gp::GPE, precomp::AbstractGradientPrecompute; kwargs...)
+    update_dmll!(gp, precomp; kwargs...)
     gp.dtarget = gp.dmll + prior_gradlogpdf(gp; kwargs...)
     gp
 end
@@ -305,15 +350,15 @@ Update the log-posterior
 ```
 of a Gaussian process `gp` and its derivative.
 """
-function update_target_and_dtarget!(gp::GPE, Kgrad::AbstractMatrix, L_bar::AbstractMatrix; kwargs...)
+function update_target_and_dtarget!(gp::GPE, precomp::AbstractGradientPrecompute; kwargs...)
     update_target!(gp; kwargs...)
-    update_dtarget!(gp, Kgrad, L_bar; kwargs...)
+    update_dtarget!(gp, precomp; kwargs...)
 end
 
 function update_target_and_dtarget!(gp::GPE; kwargs...)
-    ααinvcKI = Array{Float64}(undef, gp.nobs, gp.nobs)
+    precomp = init_precompute(gp)
     update_target!(gp; kwargs...)
-    update_dmll!(gp, ααinvcKI; kwargs...)
+    update_dmll!(gp, precomp; kwargs...)
     gp.dtarget = gp.dmll + prior_gradlogpdf(gp; kwargs...)
 end
 
@@ -322,8 +367,9 @@ end
 # Predict observations #
 #——————————————————————#
 
+predict_full(gp::GPE, xpred::AbstractMatrix) = predictMVN(xpred, gp.x, gp.y, gp.kernel, gp.mean, gp.alpha, gp.covstrat, gp.cK)
 """
-    predict_y(gp::GPE, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
+    predict_full(gp::GPE, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
 
 Return the predictive mean and variance of Gaussian Process `gp` at specfic points which
 are given as columns of matrix `x`. If `full_cov` is `true`, the full covariance matrix is
@@ -332,52 +378,30 @@ returned instead of only variances.
 function predict_y(gp::GPE, x::AbstractMatrix; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
     if full_cov
-        return μ, σ2 + ScalMat(gp.nobs, exp(2*gp.logNoise))
+        npred = size(x, 2)
+        return μ, σ2 + ScalMat(npred, exp(2*gp.logNoise))
     else
         return μ, σ2 .+ exp(2*gp.logNoise)
     end
 end
 
-# 1D Case for predictions
-predict_y(gp::GPE, x::AbstractVector; full_cov::Bool=false) = predict_y(gp, x'; full_cov=full_cov)
-
-@deprecate predict predict_y
-
-## compute predictions
-function _predict(gp::GPE, x::AbstractMatrix)
-    crossdata = KernelData(gp.kernel, gp.x, x)
-    priordata = KernelData(gp.kernel, x, x)
-    cK = cov(gp.kernel, gp.x, x, crossdata)
-    mu = mean(gp.mean, x) + cK'*gp.alpha        # Predictive mean
-    Lck = whiten!(gp.cK, cK)
-    Sigma_raw = cov(gp.kernel, x, x, priordata)
-    subtract_Lck!(Sigma_raw, Lck)
-    # Add jitter to get stable covariance
-    m, chol = make_posdef!(Sigma_raw)
-    return mu, PDMat(m, chol)
-end
-@inline function subtract_Lck!(Sigma_raw::AbstractArray{<:AbstractFloat}, Lck::AbstractArray{<:AbstractFloat})
-    LinearAlgebra.BLAS.syrk!('U', 'T', -1.0, Lck, 1.0, Sigma_raw)
-    LinearAlgebra.copytri!(Sigma_raw, 'U')
-end
-@inline subtract_Lck!(Sigma_raw, Lck) = Sigma_raw .-= Lck'Lck
-
-
 #———————————————————————————————————————————————————————————
 # Sample from the GPE
-function Random.rand!(gp::GPE, x::AbstractMatrix, A::DenseMatrix)
-    nobs = size(x,2)
+function Random.rand!(gp::GPE, xpred::AbstractMatrix, A::DenseMatrix)
+    nobs = size(xpred,2)
     n_sample = size(A,2)
 
     if gp.nobs == 0
         # Prior mean and covariance
-        μ = mean(gp.mean, x);
-        Σraw = cov(gp.kernel, x);
+        μ = mean(gp.mean, xpred);
+        Σraw = cov(gp.kernel, xpred, xpred);
         Σraw, chol = make_posdef!(Σraw)
         Σ = PDMat(Σraw, chol)
     else
         # Posterior mean and covariance
-        μ, Σ = predict_f(gp, x; full_cov=true)
+        μ, Σraw = predict_f(gp, xpred; full_cov=true)
+        Σraw, chol = make_posdef!(Σraw)
+        Σ = PDMat(Σraw, chol)
     end
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end
@@ -396,7 +420,7 @@ Random.rand(gp::GPE, x::AbstractVector) = vec(rand(gp,x',1))
 
 function get_params(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
     params = Float64[]
-    if noise; push!(params, gp.logNoise); end
+    if noise; push!(params, gp.logNoise.value); end
     if domean
         append!(params, get_params(gp.mean))
     end
@@ -428,7 +452,7 @@ end
 appendnoisebounds!(lb, ub, gp::GPE, bounds) = appendbounds!(lb, ub, 1, bounds)
 appendnoisebounds!(lb, ub, gp, bounds) = Nothing
 appendlikbounds!(lb, ub, gp, bounds) = Nothing
-function bounds(gp::GPBase, noisebounds, meanbounds, kernbounds, likbounds; 
+function bounds(gp::GPBase, noisebounds, meanbounds, kernbounds, likbounds;
                 noise::Bool=true, domean::Bool=true, kern::Bool=true, lik::Bool=true)
     lb = Float64[]
     ub = Float64[]
@@ -446,7 +470,7 @@ function set_params!(gp::GPE, hyp::AbstractVector;
 
     i = 1
     if noise
-        gp.logNoise = hyp[1];
+        gp.logNoise.value = hyp[1];
         i+=1
     end
 
@@ -462,7 +486,9 @@ end
 
 function prior_gradlogpdf(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
     grad = Float64[]
-    if noise; push!(grad, 0.0); end # Noise does not have any priors
+    if noise
+        append!(grad, prior_gradlogpdf(gp.logNoise))
+    end
     if domean
         append!(grad, prior_gradlogpdf(gp.mean))
     end

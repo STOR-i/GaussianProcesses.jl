@@ -8,7 +8,7 @@ using GaussianProcesses: EmptyData, update_target_and_dtarget!,
 import Calculus: gradient
 
 Random.seed!(1)
-const d, n, n2 = 3, 10, 5
+const d, n, n2 = 3, 6, 3
 function testkernel(kern::Kernel)
     X = randn(d, n)
     X2 = randn(d, n2)
@@ -42,43 +42,76 @@ function testkernel(kern::Kernel)
         end
     end
 
+    data = GaussianProcesses.KernelData(kern, X, X)
+    data12 = GaussianProcesses.KernelData(kern, X, X2)
+
     @testset "Covariance" begin
         spec = cov(kern, X, X2)
         @test spec[i,j] ≈ cov(kern, Xi, X2j)
+        spec = cov(kern, X, X2, data12)
+        @test spec[i,j] ≈ cov(kern, Xi, X2j)
     end
 
-    data = GaussianProcesses.KernelData(kern, X, X)
 
     @testset "Gradient" begin
         nparams = GaussianProcesses.num_params(kern)
         init_params = Vector(GaussianProcesses.get_params(kern))
         dK = zeros(nparams)
         i, j = 3, 5
-        dKij_dθ!(dK, kern, X, i, j, d, nparams)
+        dKij_dθ!(dK, kern, X, X, data, i, j, d, nparams)
         dK1 = copy(dK)
-        dKij_dθ!(dK, kern, X, data, i, j, d, nparams)
+        dKij_dθ!(dK, kern, X, X, EmptyData(), i, j, d, nparams)
         dK2 = copy(dK)
-        dKij_dθ!(dK, kern, X, EmptyData(), i, j, d, nparams)
-        dK3 = copy(dK)
         @test dK1 ≈ dK2
-        @test dK1 ≈ dK3
         for p in 1:nparams
-            @test dK[p] ≈ dKij_dθp(kern, X, i, j, p, d)
-            @test dK[p] ≈ dKij_dθp(kern, X, data, i, j, p, d)
-            @test dK[p] ≈ dKij_dθp(kern, X, EmptyData(), i, j, p, d)
+            @test dK[p] ≈ dKij_dθp(kern, X, X, data,        i, j, p, d)
+            @test dK[p] ≈ dKij_dθp(kern, X, X, EmptyData(), i, j, p, d)
+            try
+                dkp = dKij_dθp(kern, X, X, i, j, p, d)
+                @test dkp == dK[p]
+            catch
+                # that's OK too
+                continue
+            end
         end
-        # if nparams > 0
-            # numer_grad = Calculus.gradient(init_params) do params
-                # set_params!(kern, params)
-                # t = cov_ij(kern, X, X, i, j, d)
-                # set_params!(kern, init_params)
-                # t
-            # end
-            # theor_grad = dK
-            # @test numer_grad ≈ theor_grad rtol=1e-3 atol=1e-3
-            # end
-        # end
+        if nparams > 0
+            numer_grad = Calculus.gradient(init_params) do params
+                set_params!(kern, params)
+                t = cov_ij(kern, X, X, data, i, j, d)
+                set_params!(kern, init_params)
+                t
+            end
+            theor_grad = dK
+            @test numer_grad ≈ theor_grad rtol=1e-3 atol=1e-3
+        end
     end
+    @testset "Gradient stack X1 ≠ X2" begin
+        nparams = GaussianProcesses.num_params(kern)
+        init_params = Vector(GaussianProcesses.get_params(kern))
+        stack1 = Array{Float64}(undef, n, n2, nparams)
+        stack2 = Array{Float64}(undef, n, n2, nparams)
+
+        GaussianProcesses.grad_stack!(stack1, kern, X, X2, data12)
+
+        theor_grad = vec(sum(stack1; dims=[1,2]))
+        if nparams > 0
+            numer_grad = Calculus.gradient(init_params) do params
+                set_params!(kern, params)
+                t = sum(cov(kern, X, X2, data12))
+                set_params!(kern, init_params)
+                t
+            end
+            @test theor_grad ≈ numer_grad rtol=1e-2 atol=1e-2
+        end
+
+        GaussianProcesses.grad_stack!(stack2, kern, X, X2, EmptyData())
+        # invoke(GaussianProcesses.grad_stack!,
+               # Tuple{AbstractArray, Kernel, Matrix{Float64}, Matrix{Float64},
+                     # EmptyData},
+               # stack2, kern, X, X2, EmptyData())
+        @test stack1 ≈ stack2 rtol=1e-3 atol=1e-3
+    end
+
 
     @testset "Gradient stack" begin
         nparams = GaussianProcesses.num_params(kern)
@@ -86,11 +119,11 @@ function testkernel(kern::Kernel)
         stack1 = Array{Float64}(undef, n, n, nparams)
         stack2 = Array{Float64}(undef, n, n, nparams)
 
-        GaussianProcesses.grad_stack!(stack1, kern, X, data)
+        GaussianProcesses.grad_stack!(stack1, kern, X, X, data)
         invoke(GaussianProcesses.grad_stack!,
-               Tuple{AbstractArray, Kernel, Matrix{Float64},
+               Tuple{AbstractArray, Kernel, Matrix{Float64}, Matrix{Float64},
                      EmptyData},
-               stack2, kern, X, EmptyData())
+               stack2, kern, X, X, EmptyData())
         @test stack1 ≈ stack2
 
         theor_grad = vec(sum(stack1; dims=[1,2]))
@@ -139,6 +172,29 @@ function testkernel(kern::Kernel)
         numer_grad = Calculus.gradient(f, z)
         @test autodiff_grad ≈ numer_grad rtol = 1e-3 atol = 1e-3
     end
+end
+
+@testset "kernel shortcuts" begin
+    x1 = [0.1, 0.2]
+    x2 = [1.1, 1.0]
+
+    for pairs in [
+                  (SEIso(1.0, 1.2), SE(1.0, 1.2)),
+                  (SEArd([1.0, 1.5], 1.3), SE([1.0, 1.5], 1.3)),
+                  (RQIso(1.0, 1.2, 0.5), RQ(1.0, 1.2, 0.5)),
+                  (RQArd([1.0, 1.5], 1.3, 0.5), RQ([1.0, 1.5], 1.3, 0.5)),
+                  (Matern(1/2, 1.0, 1.2), Mat12Iso(1.0, 1.2)),
+                  (Matern(3/2, 1.0, 1.2), Mat32Iso(1.0, 1.2)),
+                  (Matern(5/2, 1.0, 1.2), Mat52Iso(1.0, 1.2)),
+                  (Matern(1/2, [1.0, 1.5], 1.2), Mat12Ard([1.0, 1.5], 1.2)),
+                  (Matern(3/2, [1.0, 1.5], 1.2), Mat32Ard([1.0, 1.5], 1.2)),
+                  (Matern(5/2, [1.0, 1.5], 1.2), Mat52Ard([1.0, 1.5], 1.2)),
+                  (Lin(1.0), LinIso(1.0)),
+                  (Lin([1.0, 1.5]), LinArd([1.0, 1.5])),
+                 ]
+        @test cov(pairs[1], x1, x2) == cov(pairs[2], x1, x2)
+    end
+
 end
 
 @testset "Kernels" begin
