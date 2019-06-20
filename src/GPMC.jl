@@ -314,35 +314,10 @@ function predict_y(gp::GPMC, x::AbstractMatrix; full_cov::Bool=false)
 end
 
 
-# Sample from functions from the GP
-function Random.rand!(gp::GPMC, x::AbstractMatrix, A::DenseMatrix)
-    nobs = size(x,2)
-    n_sample = size(A,2)
-
-    if gp.nobs == 0
-        # Prior mean and covariance
-        μ = mean(gp.mean, x);
-        Σraw = cov(gp.kernel, x, x);
-        # Add jitter to get stable covariance
-        Σ, chol = make_posdef!(Σraw)
-    else
-        # Posterior mean and covariance
-        μ, Σ = predict_f(gp, x; full_cov=true)
-    end
-    return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
-end
-
-Random.rand(gp::GPMC, x::AbstractMatrix, n::Int) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n))
-
-# Sample from 1D GP
-Random.rand(gp::GPMC, x::AbstractVector, n::Int) = rand(gp, x', n)
-
-# Generate only one sample from the GP and returns a vector
-Random.rand(gp::GPMC, x::AbstractMatrix) = vec(rand(gp,x,1))
-Random.rand(gp::GPMC, x::AbstractVector) = vec(rand(gp,x',1))
 
 appendlikbounds!(lb, ub, gp::GPMC, bounds) = appendbounds!(lb, ub, num_params(gp.lik), bounds)
 
+#Function to extract current parameter values
 function get_params(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     params = Float64[]
     append!(params, gp.v)
@@ -358,6 +333,7 @@ function get_params(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true
     return params
 end
 
+#Return the number of parameters in the GP
 function num_params(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     n = length(gp.v)
     lik && (n += num_params(gp.lik))

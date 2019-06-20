@@ -226,8 +226,7 @@ l = PoisLik()             # Poisson likelihood
 gp = GP(X, vec(Y), MeanZero(), k, l)
 set_priors!(gp.kernel,[Normal(-2.0,4.0),Normal(-2.0,4.0)])
 
-# mcmc(gp)
-vi(gp;nits=100, verbose=true, plot_elbo=true)
+#vi(gp;nits=100, verbose=true, plot_elbo=true)
 
 
 samples = mcmc(gp; nIter=10000,ε=0.01);
@@ -243,7 +242,7 @@ for i in 1:size(samples,2)
     fsamples[i,:] = rand(gp, xtest)
 end
 
-using Plots
+using Plots, Distributions
 #Predictive plots
 q10 = [quantile(fsamples[:,i], 0.1) for i in 1:length(xtest)]
 q50 = [quantile(fsamples[:,i], 0.5) for i in 1:length(xtest)]

@@ -385,35 +385,6 @@ function predict_y(gp::GPE, x::AbstractMatrix; full_cov::Bool=false)
     end
 end
 
-#———————————————————————————————————————————————————————————
-# Sample from the GPE
-function Random.rand!(gp::GPE, xpred::AbstractMatrix, A::DenseMatrix)
-    nobs = size(xpred,2)
-    n_sample = size(A,2)
-
-    if gp.nobs == 0
-        # Prior mean and covariance
-        μ = mean(gp.mean, xpred);
-        Σraw = cov(gp.kernel, xpred, xpred);
-        Σraw, chol = make_posdef!(Σraw)
-        Σ = PDMat(Σraw, chol)
-    else
-        # Posterior mean and covariance
-        μ, Σraw = predict_f(gp, xpred; full_cov=true)
-        Σraw, chol = make_posdef!(Σraw)
-        Σ = PDMat(Σraw, chol)
-    end
-    return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
-end
-
-Random.rand(gp::GPE, x::AbstractMatrix, n::Int) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n))
-
-# Sample from 1D GPE
-Random.rand(gp::GPE, x::AbstractVector, n::Int) = rand(gp, x', n)
-
-# Generate only one sample from the GPE and returns a vector
-Random.rand(gp::GPE, x::AbstractMatrix) = vec(rand(gp,x,1))
-Random.rand(gp::GPE, x::AbstractVector) = vec(rand(gp,x',1))
 
 #—————————————————————————————————————————————————————–
 #Functions for setting and calling the parameters of the GP object
