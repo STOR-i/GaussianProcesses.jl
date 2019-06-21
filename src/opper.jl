@@ -101,7 +101,7 @@ Update the parameters of the variational approximation through gradient ascent
 """
 function updateQ!(Q::Approx, ∇μ, ∇Σ; α::Float64=0.01)
     Q.qμ += α*-∇μ
-    Q.qΣ += α*-(∇Σ .* (Matrix(I, length(∇Σ), length(∇Σ)) *1.0))
+    Q.qΣ += α*-(∇Σ .* (Matrix(I, length(∇Σ), length(∇Σ)) *1.0)) #need to stop parameters becoming negative
 end
 
 
@@ -134,12 +134,13 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
 
         # Assuming a mean-field approximation
         Fvar = diag(unwhiten(K, Q.qΣ))              # K⁻¹q_Σ
-        _, varExp = predict_obs(gp.lik, Fmean, Fvar)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
+        #THIS predict_obs IS LIKELY CAUSING THE ERROR
+        varMean, varExp = predict_obs(gp.lik, Fmean, Fvar)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
         
         # Compute KL as per Opper and Archambeau eq (9)
         global Σopper = computeΣ(gp, diag(Q.qΣ))
         global Kinv = inv(K.mat)
-        kl = 0.5*tr(Σopper * Kinv) .+ 0.5(transpose(Q.qμ) * Kinv * Q.qμ) .- 0.5(logdet(Σopper)) 
+        kl = 0.5*tr(Σopper * Kinv) .+ 0.5(transpose(Q.qμ) * Kinv * Q.qμ) .+ 0.5(logdet(K.mat)-logdet(Σopper)) #I've made a change to the logdet that I need to check
         
         # @assert kl >= 0 "KL-divergence should be positive.\n"
         println("KL: ", kl)
@@ -249,8 +250,12 @@ q50 = [quantile(fsamples[:,i], 0.5) for i in 1:length(xtest)]
 q90 = [quantile(fsamples[:,i], 0.9) for i in 1:length(xtest)]
 plot(xtest,exp.(q50),ribbon=(exp.(q10), exp.(q90)),leg=true, fmt=:png, label="quantiles")
 plot!(xtest,mean(ymean), label="posterior mean")
+plot!(xtest,visamps,label="VI approx")
 xx = range(-3,stop=3,length=1000);
 f_xx = 2*cos.(2*xx);
 plot!(xx, exp.(f_xx), label="truth")
 scatter!(X,Y, label="data")
 
+
+
+visamps=  rand(gp, xtest)
