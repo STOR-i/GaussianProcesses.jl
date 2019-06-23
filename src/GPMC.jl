@@ -49,6 +49,12 @@ mutable struct GPMC{X<:AbstractMatrix,Y<:AbstractVector{<:Real},M<:Mean,K<:Kerne
     end
 end
 
+function GPMC(x::AbstractMatrix, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood, covstrat::CovarianceStrategy)
+    data = KernelData(kernel, x, x, covstrat)
+    return GPMC{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(lik),typeof(covstrat),typeof(data)}(
+                x, y, mean, kernel, lik, covstrat, data)
+end
+
 """
     GPMC(x, y, mean, kernel, lik)
 
@@ -68,10 +74,8 @@ values are represented by centered (whitened) variables ``f(x) = m(x) + Lv`` whe
 - `lik::Likelihood`: Likelihood function
 """
 function GPMC(x::AbstractMatrix, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood)
-    data = KernelData(kernel, x, x)
     covstrat = FullCovariance()
-    return GPMC{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(lik),typeof(covstrat),typeof(data)}(
-                x, y, mean, kernel, lik, covstrat, data)
+    return GPMC(x, y, mean, kernel, lik, covstrat)
 end
 
 GPMC(x::AbstractVector, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood) =

@@ -169,7 +169,7 @@ end
 """
     Fully Independent Training Conditional (FSA) covariance strategy.
 """
-struct FullScaleApproxStrat{M<:AbstractMatrix, V<:BlockIndices} <: CovarianceStrategy
+struct FullScaleApproxStrat{M<:AbstractMatrix, V<:BlockIndices} <: SparseStrategy
     inducing::M
     blockindices::V
 end
@@ -193,7 +193,7 @@ function alloc_cK(covstrat::FullScaleApproxStrat, nobs)
     return cK_fsa
 end
 function update_cK!(cK::FullScalePDMat, X::AbstractMatrix, kernel::Kernel,
-                    logNoise::Real, data::KernelData, covstrat::FullScaleApproxStrat)
+                    logNoise::Real, kerneldata::KernelData, covstrat::FullScaleApproxStrat)
     inducing = covstrat.inducing
     blockindices = covstrat.blockindices
 
@@ -237,8 +237,8 @@ function init_precompute(covstrat::FullScaleApproxStrat, X, y, kernel)
 end
 
 """
-dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData,
-                    alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
+dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK::AbstractPDMat, kerneldata::KernelData,
+                    alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kuf,
                     covstrat::FullScaleApproxStrat)
 Derivative of the log likelihood under the Fully Independent Training Conditional (fsa) approximation.
 
@@ -269,13 +269,14 @@ In the case of the FSA approximation, we have
     ∂Λi = ∂Ki - Kui' ∂(Kuu⁻¹) Kui - 2 ∂Kui' Kuu⁻¹ Kui
         = ∂Ki + Kui' Kuu⁻¹ ∂(Kuu) Kuu⁻¹ Kui - 2 ∂Kui' Kuu⁻¹ Kui
 """
-function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData,
-                    alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
+function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, 
+                    cK::AbstractPDMat, kerneldata::SparseKernelData,
+                    alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kuf,
                     covstrat::FullScaleApproxStrat)
     # first compute the SoR component
     SoR = SubsetOfRegsStrategy(covstrat)
-    dmll_kern!(dmll, kernel, X, cK, data, alpha,
-               Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
+    dmll_kern!(dmll, kernel, X, cK, kerneldata, alpha,
+               Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kuf,
                SoR)
     nparams = num_params(kernel)
     dim, nobs = size(X)
@@ -283,19 +284,19 @@ function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK:
     Λ = cK.Λ
     for iparam in 1:nparams
         # TODO: the grad_slice! calls here are redundant with the ones in the dmll_kern! call above
-        grad_slice!(∂Kuu, kernel, inducing, inducing, EmptyData(), iparam)
-        grad_slice!(∂Kfu, kernel, X,        inducing, EmptyData(), iparam)
+        grad_slice!(∂Kuu, kernel, inducing, inducing, kerneldata.Kuu, iparam)
+        grad_slice!(∂Kuf, kernel, inducing, X       , kerneldata.Kux1, iparam)
         V, T = 0.0, 0.0
         # ∂Λdense = zeros(nobs, nobs)
         for (pd,ind) in zip(Λ.blockPD,Λ.blockindices)
             Kuu⁻¹Kui = Kuu⁻¹Kuf[:,ind]
             ∂Ki = similar(mat(pd))
-            Kui, ∂Kiu = Kuf[:,ind], ∂Kfu[ind,:]
+            Kui, ∂Kui = Kuf[:,ind], ∂Kuf[:,ind]
             Xi = X[:,ind]
             grad_slice!(∂Ki, kernel, Xi, Xi, EmptyData(), iparam)
             ∂Λi = (∂Ki
                   + Kuu⁻¹Kui' * ∂Kuu * Kuu⁻¹Kui
-                  - 2 * ∂Kiu * Kuu⁻¹Kui)
+                  - 2 * ∂Kui' * Kuu⁻¹Kui)
             V += dot(alpha[ind], ∂Λi*alpha[ind])
 
             # see trinvAB to understand next 3 lines
@@ -318,7 +319,7 @@ function dmll_kern!(dmll::AbstractVector, gp::GPBase, precomp::SoRPrecompute, co
     return dmll_kern!(dmll, gp.kernel, gp.x, gp.cK, gp.data, gp.alpha,
                       gp.cK.Kuu, gp.cK.Kuf,
                       precomp.Kuu⁻¹Kuf, precomp.Kuu⁻¹KufΣ⁻¹y, precomp.Σ⁻¹Kfu,
-                      precomp.∂Kuu, precomp.∂Kfu,
+                      precomp.∂Kuu, precomp.∂Kuf,
                       covstrat)
 end
 
@@ -422,8 +423,10 @@ function predictMVN(xpred::AbstractMatrix, blockindpred::BlockIndices,
     Λxf = zeros(nx, nf)
     for (predblock, trainblock) in zip(blockindpred, blockindtrain)
         Xpredblock, Xtrainblock = xpred[:,predblock], xtrain[:,trainblock]
-        Kxf_block = cov(kernel, Xpredblock, Xtrainblock)
-        Qxf_block = getQab(Ktrain, kernel, Xpredblock, Xtrainblock)
+        sparseblockdata = SparseKernelData(kernel, inducing, Xpredblock, Xtrainblock)
+        denseblockdata = KernelData(kernel, Xpredblock, Xtrainblock)
+        Kxf_block = cov(kernel, Xpredblock, Xtrainblock, denseblockdata)
+        Qxf_block = getQab(Ktrain, kernel, Xpredblock, Xtrainblock, sparseblockdata)
         Λxf[predblock,trainblock] = Kxf_block - Qxf_block
     end
 
@@ -431,7 +434,8 @@ function predictMVN(xpred::AbstractMatrix, blockindpred::BlockIndices,
     alpha_u = get_alpha_u(Ktrain, xtrain, ytrain, meanf)
     mupred = meanx + (Kux' * alpha_u) + Λxf * alpha
 
-    Qxf = getQab(Ktrain, kernel, xpred, xtrain)
+    sparsedata = SparseKernelData(kernel, inducing, xpred, xtrain)
+    Qxf = getQab(Ktrain, kernel, xpred, xtrain, sparsedata)
     ΛplusQxf = Qxf + Λxf
     Σxx = cov(kernel, xpred, xpred)
     Σ_FSA = Σxx - ΛplusQxf * (Ktrain \ ΛplusQxf')
@@ -471,8 +475,6 @@ predict_full(gp::GPE, xpred::AbstractMatrix, blockindpred::BlockIndices) = predi
 
 function FSA(x::AbstractMatrix, inducing::AbstractMatrix, blockindices::BlockIndices, 
              y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Real)
-    nobs = length(y)
     covstrat = FullScaleApproxStrat(inducing, blockindices)
-    cK = alloc_cK(covstrat, nobs)
-    GPE(x, y, mean, kernel, logNoise, covstrat, EmptyData(), cK)
+    GPE(x, y, mean, kernel, logNoise, covstrat)
 end

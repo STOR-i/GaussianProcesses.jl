@@ -13,6 +13,7 @@ function get_ααinvcKI!(ααinvcKI::AbstractMatrix, cK::SparsePDMat, α::Vector
     BLAS.ger!(1.0, α, α, ααinvcKI)
 end
 
+include("sparsekerneldata.jl")
 include("subsetofregressors.jl")
 include("determ_train_conditional.jl")
 include("fully_indep_train_conditional.jl")

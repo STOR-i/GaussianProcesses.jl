@@ -1,7 +1,7 @@
 """
     Deterministic Training Conditional (DTC) covariance strategy.
 """
-struct DeterminTrainCondStrat{M<:AbstractMatrix} <: CovarianceStrategy
+struct DeterminTrainCondStrat{M<:AbstractMatrix} <: SparseStrategy
     inducing::M
 end
 SubsetOfRegsStrategy(dtc::DeterminTrainCondStrat) = SubsetOfRegsStrategy(dtc.inducing)
@@ -47,8 +47,10 @@ function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::Abstr
     inducing = covstrat.inducing
     Kuu = Ktrain.Kuu
     
-    Qxx = getQaa(Ktrain, kernel, xpred)
-    Σxx = cov(kernel, xpred, xpred)
+    sparsedata = SparseKernelData(kernel, inducing, xpred, xpred)
+    Qxx = getQaa(Ktrain, kernel, xpred, sparsedata)
+    densedata = KernelData(kernel, xpred, xpred)
+    Σxx = cov(kernel, xpred, xpred, densedata)
     
     Σ_DTC = Σxx - Qxx + Σ_SoR
     LinearAlgebra.copytri!(Σ_DTC, 'U')
@@ -56,9 +58,7 @@ function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::Abstr
 end
 
 function DTC(x::AbstractMatrix, inducing::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Real)
-    nobs = length(y)
     covstrat = DeterminTrainCondStrat(inducing)
-    cK = alloc_cK(covstrat, nobs)
-    GPE(x, y, mean, kernel, logNoise, covstrat, EmptyData(), cK)
+    GPE(x, y, mean, kernel, logNoise, covstrat)
 end
 

@@ -9,6 +9,8 @@ abstract type GPBase end
 """
 abstract type CovarianceStrategy end
 struct FullCovariance <: CovarianceStrategy end
+KernelData(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, covstrat::CovarianceStrategy) = EmptyData()
+KernelData(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, covstrat::FullCovariance) = KernelData(k, X1, X2)
 function alloc_cK(covstrat::CovarianceStrategy, nobs)
     # create placeholder PDMat
     m = Matrix{Float64}(undef, nobs, nobs)
@@ -33,8 +35,8 @@ end
 function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector, 
                    kernel::Kernel, meanf::Mean, alpha::AbstractVector,
                    covstrat::CovarianceStrategy, Ktrain::AbstractPDMat)
-    crossdata = KernelData(kernel, xtrain, xpred)
-    priordata = KernelData(kernel, xpred, xpred)
+    crossdata = KernelData(kernel, xtrain, xpred, covstrat)
+    priordata = KernelData(kernel, xpred, xpred, covstrat)
     Kcross = cov(kernel, xtrain, xpred, crossdata)
     Kpred = cov(kernel, xpred, xpred, priordata)
     mx = mean(meanf, xpred)

@@ -11,21 +11,31 @@ mutable struct SubsetOfRegsPDMat{T,M<:AbstractMatrix,PD<:AbstractPDMat{T},M2<:Ab
     Kuf::M2
     logNoise::Float64
 end
-function getQab(cK::SparsePDMat, kernel::Kernel, Xa::AbstractMatrix, Xb::AbstractMatrix)
+function getQab(cK::SparsePDMat, kernel::Kernel, Xa::AbstractMatrix, Xb::AbstractMatrix, kerneldata::SparseKernelData)
     Kuu = cK.Kuu
     inducing = cK.inducing
-    Kua = cov(kernel, inducing, Xa)
-    Kub = cov(kernel, inducing, Xb)
+    Kua = cov(kernel, inducing, Xa, kerneldata.Kux1)
+    Kub = cov(kernel, inducing, Xb, kerneldata.Kux2)
     Lua = whiten!(Kuu, Kua)
     Lub = whiten!(Kuu, Kub)
     return Lua'Lub
 end
-function getQaa(cK::SparsePDMat, kernel::Kernel, Xa::AbstractMatrix)
+function getQab(cK::SparsePDMat, kernel::Kernel, Xa::AbstractMatrix, Xb::AbstractMatrix)
+    inducing = cK.inducing
+    kdata = SparseKernelData(kernel, inducing, Xa, Xb)
+    return getQab(cK, kernel, Xa, Xb, kdata)
+end
+function getQaa(cK::SparsePDMat, kernel::Kernel, Xa::AbstractMatrix, kerneldata::SparseKernelData)
     Kuu = cK.Kuu
     inducing = cK.inducing
-    Kua = cov(kernel, inducing, Xa)
+    Kua = cov(kernel, inducing, Xa, kerneldata.Kux1)
     Qaa = PDMats.Xt_invA_X(Kuu, Kua) # Kau Kuu⁻¹ Kua
     return Qaa
+end
+function getQaa(cK::SparsePDMat, kernel::Kernel, Xa::AbstractMatrix)
+    inducing = cK.inducing
+    kdata = SparseKernelData(kernel, inducing, Xa, Xa)
+    return getQaa(cK, kernel, Xa, kdata)
 end
 size(a::SubsetOfRegsPDMat) = (size(a.Kuf,2), size(a.Kuf,2))
 size(a::SubsetOfRegsPDMat, d::Int) = size(a.Kuf,2)
@@ -64,7 +74,7 @@ end
  Subset of Regressors strategy
 =========================================#
 
-struct SubsetOfRegsStrategy{M<:AbstractMatrix} <: CovarianceStrategy
+struct SubsetOfRegsStrategy{M<:AbstractMatrix} <: SparseStrategy
     inducing::M
 end
 
@@ -83,14 +93,14 @@ function alloc_cK(covstrat::SubsetOfRegsStrategy, nobs)
     return cK
 end
 function update_cK!(cK::SubsetOfRegsPDMat, x::AbstractMatrix, kernel::Kernel,
-                    logNoise::Real, data::KernelData, covstrat::SubsetOfRegsStrategy)
+                    logNoise::Real, kerneldata::SparseKernelData, covstrat::SubsetOfRegsStrategy)
     inducing = covstrat.inducing
     Kuu = cK.Kuu
     Kuubuffer = mat(Kuu)
-    cov!(Kuubuffer, kernel, inducing)
+    cov!(Kuubuffer, kernel, inducing, kerneldata.Kuu)
     Kuubuffer, chol = make_posdef!(Kuubuffer, cholfactors(cK.Kuu))
     Kuu_PD = wrap_cK(cK.Kuu, Kuubuffer, chol)
-    Kuf = cov!(cK.Kuf, kernel, inducing, x)
+    Kuf = cov!(cK.Kuf, kernel, inducing, x, kerneldata.Kux1)
     Kfu = Kuf'
 
     ΣQR = exp(-2*logNoise) * Kuf * Kfu + Kuu
@@ -109,15 +119,15 @@ struct SoRPrecompute <: AbstractGradientPrecompute
     Kuu⁻¹KufΣ⁻¹y::Vector{Float64}
     Σ⁻¹Kfu::Matrix{Float64}
     ∂Kuu::Matrix{Float64} # buffer
-    ∂Kfu::Matrix{Float64} # buffer
+    ∂Kuf::Matrix{Float64} # buffer
 end
 function SoRPrecompute(nobs::Int, ninducing::Int)
     Kuu⁻¹Kuf = Matrix{Float64}(undef, ninducing, nobs)
     Kuu⁻¹KufΣ⁻¹y =  Vector{Float64}(undef, ninducing)
     Σ⁻¹Kfu = Matrix{Float64}(undef, nobs, ninducing)
     ∂Kuu = Matrix{Float64}(undef, ninducing, ninducing)
-    ∂Kfu = Matrix{Float64}(undef, nobs, ninducing)
-    return SoRPrecompute(Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu)
+    ∂Kuf = Matrix{Float64}(undef, ninducing, nobs)
+    return SoRPrecompute(Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kuf)
 end
 
 function init_precompute(covstrat::SubsetOfRegsStrategy, X, y, kernel)
@@ -141,7 +151,7 @@ function dmll_kern!(dmll::AbstractVector, gp::GPBase, precomp::SoRPrecompute, co
     return dmll_kern!(dmll, gp.kernel, gp.x, gp.cK, gp.data, gp.alpha,
                       gp.cK.Kuu, gp.cK.Kuf,
                       precomp.Kuu⁻¹Kuf, precomp.Kuu⁻¹KufΣ⁻¹y, precomp.Σ⁻¹Kfu,
-                      precomp.∂Kuu, precomp.∂Kfu,
+                      precomp.∂Kuu, precomp.∂Kuf,
                       covstrat)
 end
 """
@@ -168,7 +178,7 @@ function dmll_noise(gp::GPE, precomp::SoRPrecompute, covstrat::SubsetOfRegsStrat
 end
 
 """
-    dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK::SubsetOfRegsPDMat, data::KernelData, ααinvcKI::AbstractMatrix, covstrat::SubsetOfRegsStrategy)
+    dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK::SubsetOfRegsPDMat, kerneldata::KernelData, ααinvcKI::AbstractMatrix, covstrat::SubsetOfRegsStrategy)
 
 Derivative of the log likelihood under the Subset of Regressors (SoR) approximation.
 
@@ -202,8 +212,8 @@ tr(Σ⁻¹ ∂Σ) = 2 tr(Σ⁻¹ ∂(Kfu) Kuu⁻¹ Kuf) + tr(Σ⁻¹ Kfu ∂(Kuu
            = 2 dot((Σ⁻¹ ∂(Kfu))', Kuu⁻¹ Kuf) - dot((Σ⁻¹ Kfu)', Kuu⁻¹ ∂Kuu Kuu⁻¹ Kuf)
 which again is computed in O(nm²).
 """
-function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData,
-                    alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
+function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK::AbstractPDMat, kerneldata::SparseKernelData,
+                    alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kuf,
                     covstrat::SubsetOfRegsStrategy)
     dim, nobs = size(X)
     inducing = covstrat.inducing
@@ -213,16 +223,16 @@ function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK:
     dK_buffer = Vector{Float64}(undef, nparams)
     dmll[:] .= 0.0
     for iparam in 1:nparams
-        grad_slice!(∂Kuu, kernel, inducing, inducing, EmptyData(), iparam)
-        grad_slice!(∂Kfu, kernel, X, inducing,        EmptyData(), iparam)
-        V =  2 * dot(alpha, ∂Kfu * (Kuu⁻¹KufΣ⁻¹y))    # = 2 y' Σ⁻¹ ∂Kfu Kuu⁻¹ Kuf Σ⁻¹y
+        grad_slice!(∂Kuu, kernel, inducing, inducing, kerneldata.Kuu, iparam)
+        grad_slice!(∂Kuf, kernel, inducing, X       , kerneldata.Kux1, iparam)
+        V =  2 * dot(alpha, ∂Kuf' * (Kuu⁻¹KufΣ⁻¹y))    # = 2 y' Σ⁻¹ ∂Kuf Kuu⁻¹ Kuf Σ⁻¹y
         V -= dot(Kuu⁻¹KufΣ⁻¹y, ∂Kuu * (Kuu⁻¹KufΣ⁻¹y)) # = y' Σ⁻¹ Kfu ∂(Kuu⁻¹) Kuf Σ⁻¹ y
 
-        T = 2 * dot(cK \ ∂Kfu, Kuu⁻¹Kuf')              # = 2 tr(Kuu⁻¹ Kuf Σ⁻¹ ∂Kfu)
+        T = 2 * dot(cK \ ∂Kuf', Kuu⁻¹Kuf')              # = 2 tr(Kuu⁻¹ Kuf Σ⁻¹ ∂Kuf')
         T -=    dot(Σ⁻¹Kfu',  (Kuu \ ∂Kuu) * Kuu⁻¹Kuf) # = tr(Kuu⁻¹ Kuf Σ⁻¹ Kfu Kuu⁻¹ ∂Kuu)
 
         # # BELOW FOR DEBUG ONLY
-        # ∂Σ = ∂Kfu * Kuu⁻¹Kuf
+        # ∂Σ = ∂Kuf' * Kuu⁻¹Kuf
         # ∂Σ += ∂Σ'
         # ∂Σ -= Kuu⁻¹Kuf' * ∂Kuu * Kuu⁻¹Kuf
         # Valt = alpha'*∂Σ*alpha
@@ -291,8 +301,9 @@ function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::Abstr
                     covstrat::SubsetOfRegsStrategy, Ktrain::AbstractPDMat)
     ΣQR_PD = Ktrain.ΣQR_PD
     inducing = covstrat.inducing
+    Kuxdata = KernelData(kernel, inducing, xpred)
 
-    Kux = cov(kernel, inducing, xpred)
+    Kux = cov(kernel, inducing, xpred, Kuxdata)
 
     meanx = mean(meanf, xpred)
     alpha_u = get_alpha_u(Ktrain, xtrain, ytrain, meanf)
@@ -306,9 +317,7 @@ end
 
 
 function SoR(x::AbstractMatrix, inducing::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Real)
-    nobs = length(y)
     covstrat = SubsetOfRegsStrategy(inducing)
-    cK = alloc_cK(covstrat, nobs)
-    GPE(x, y, mean, kernel, logNoise, covstrat, EmptyData(), cK)
+    GPE(x, y, mean, kernel, logNoise, covstrat)
 end
 

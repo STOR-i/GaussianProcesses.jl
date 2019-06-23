@@ -61,11 +61,18 @@ function alloc_cK(nobs)
     cK = PDMats.PDMat(m, Cholesky(chol, 'U', 0))
     return cK
 end
-function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat, kerneldata::KernelData)
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat, covstrat::CovarianceStrategy, kerneldata::KernelData)
     nobs = length(y)
-    covstrat = FullCovariance()
     cK = alloc_cK(covstrat, nobs)
     GPE(x, y, mean, kernel, logNoise, covstrat, kerneldata, cK)
+end
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat, covstrat::CovarianceStrategy)
+    kerneldata = KernelData(kernel, x, x, covstrat)
+    GPE(x, y, mean, kernel, logNoise, covstrat, kerneldata)
+end
+function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat, kerneldata::KernelData)
+    covstrat = FullCovariance()
+    GPE(x, y, mean, kernel, logNoise, covstrat, kerneldata)
 end
 """
     GPE(x, y, mean, kernel[, logNoise])
@@ -83,8 +90,8 @@ assumed that the observations are noise free.
   noise. The default is -2.0, which is equivalent to assuming no observation noise.
 """
 function GPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat = -2.0)
-    kerneldata = KernelData(kernel, x, x)
-    GPE(x, y, mean, kernel, logNoise, kerneldata)
+    covstrat = FullCovariance()
+    GPE(x, y, mean, kernel, logNoise, covstrat)
 end
 GPE(x::AbstractVector, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::AbstractFloat = -2.0) =
     GPE(x', y, mean, kernel, logNoise)
@@ -122,7 +129,7 @@ function fit!(gp::GPE{X,Y}, x::X, y::Y) where {X,Y}
     length(y) == size(x,2) || throw(ArgumentError("Input and output observations must have consistent dimensions."))
     gp.x = x
     gp.y = y
-    gp.data = KernelData(gp.kernel, x, x)
+    gp.data = KernelData(gp.kernel, x, x, gp.covstrat)
     gp.cK = alloc_cK(gp.covstrat, length(y))
     gp.dim, gp.nobs = size(x)
     initialise_target!(gp)

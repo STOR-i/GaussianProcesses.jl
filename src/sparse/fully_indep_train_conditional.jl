@@ -40,7 +40,6 @@ end
     Computes tr(A⁻¹ B).
 """
 function trinvAB(A::AbstractPDMat, B)
-    @warn "This `trinvAB` method is inefficient." maxlog=1
     tr(A \ B)
 end
 """
@@ -109,7 +108,7 @@ end
 """
     Fully Independent Training Conditional (FITC) covariance strategy.
 """
-struct FullyIndepStrat{M<:AbstractMatrix} <: CovarianceStrategy
+struct FullyIndepStrat{M<:AbstractMatrix} <: SparseStrategy
     inducing::M
 end
 SubsetOfRegsStrategy(fitc::FullyIndepStrat) = SubsetOfRegsStrategy(fitc.inducing)
@@ -132,7 +131,7 @@ function alloc_cK(covstrat::FullyIndepStrat, nobs)
     return cK_FITC
 end
 function update_cK!(cK::FullyIndepPDMat, X::AbstractMatrix, kernel::Kernel,
-                    logNoise::Real, data::KernelData, covstrat::FullyIndepStrat)
+                    logNoise::Real, kerneldata::KernelData, covstrat::FullyIndepStrat)
     inducing = covstrat.inducing
     Kuu = cK.Kuu
     Kuubuffer = mat(Kuu)
@@ -143,7 +142,7 @@ function update_cK!(cK::FullyIndepPDMat, X::AbstractMatrix, kernel::Kernel,
     Kfu = Kuf'
 
     dim, nobs = size(X)
-    Kdiag = [cov_ij(kernel, X, X, data, i, i, dim) for i in 1:nobs]
+    Kdiag = [cov_ij(kernel, X, X, EmptyData(), i, i, dim) for i in 1:nobs]
     Qdiag = [invquad(Kuu_PD, Kuf[:,i]) for i in 1:nobs]
     Λ = Diagonal(exp(2*logNoise) .+ Kdiag .- Qdiag)
 
@@ -165,8 +164,8 @@ function init_precompute(covstrat::FullyIndepStrat, X, y, kernel)
 end
 
 """
-dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData,
-                    alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
+dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK::AbstractPDMat, kerneldata::KernelData,
+                    alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kuf,
                     covstrat::FullyIndepStrat)
 Derivative of the log likelihood under the Fully Independent Training Conditional (FITC) approximation.
 
@@ -197,26 +196,27 @@ In the case of the FITC approximation, we have
     ∂Λi = ∂Kii - Kui' ∂(Kuu⁻¹) Kui - 2 ∂Kui' Kuu⁻¹ Kui
         = ∂Kii + Kui' Kuu⁻¹ ∂(Kuu) Kuu⁻¹ Kui - 2 ∂Kui' Kuu⁻¹ Kui
 """
-function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK::AbstractPDMat, data::KernelData,
-                    alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
+function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, 
+                    cK::AbstractPDMat, kerneldata::SparseKernelData,
+                    alpha::AbstractVector, Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kuf,
                     covstrat::FullyIndepStrat)
     # first compute the SoR component
     SoR = SubsetOfRegsStrategy(covstrat)
-    dmll_kern!(dmll, kernel, X, cK, data, alpha,
-               Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kfu,
+    dmll_kern!(dmll, kernel, X, cK, kerneldata, alpha,
+               Kuu, Kuf, Kuu⁻¹Kuf, Kuu⁻¹KufΣ⁻¹y, Σ⁻¹Kfu, ∂Kuu, ∂Kuf,
                SoR)
     nparams = num_params(kernel)
     dim, nobs = size(X)
     inducing = covstrat.inducing
     for iparam in 1:nparams
         # TODO: the grad_slice! calls here are redundant with the ones in the dmll_kern! call above
-        grad_slice!(∂Kuu, kernel, inducing, inducing, EmptyData(), iparam)
-        grad_slice!(∂Kfu, kernel, X,        inducing, EmptyData(), iparam)
+        grad_slice!(∂Kuu, kernel, inducing, inducing, kerneldata.Kuu, iparam)
+        grad_slice!(∂Kuf, kernel, inducing, X       , kerneldata.Kux1, iparam)
 
         ∂Λ = Diagonal([
-               (dKij_dθp(kernel, X, X, data, i, i, iparam, dim) # ∂Kii
+               (dKij_dθp(kernel, X, X, EmptyData(), i, i, iparam, dim) # ∂Kii
                 + dot(Kuu⁻¹Kuf[:,i], ∂Kuu * Kuu⁻¹Kuf[:,i])  # Kui' Kuu⁻¹ ∂(Kuu) Kuu⁻¹ Kui
-                - 2 * dot(∂Kfu[i,:], Kuu⁻¹Kuf[:,i]))        # -2 ∂Kui' Kuu⁻¹ Kui
+                - 2 * dot(∂Kuf[:,i], Kuu⁻¹Kuf[:,i]))        # -2 ∂Kui' Kuu⁻¹ Kui
                for i in 1:nobs
                ])
         V = dot(alpha, ∂Λ * alpha)
@@ -235,7 +235,7 @@ function dmll_kern!(dmll::AbstractVector, gp::GPBase, precomp::SoRPrecompute, co
     return dmll_kern!(dmll, gp.kernel, gp.x, gp.cK, gp.data, gp.alpha,
                       gp.cK.Kuu, gp.cK.Kuf,
                       precomp.Kuu⁻¹Kuf, precomp.Kuu⁻¹KufΣ⁻¹y, precomp.Σ⁻¹Kfu,
-                      precomp.∂Kuu, precomp.∂Kfu,
+                      precomp.∂Kuu, precomp.∂Kuf,
                       covstrat)
 end
 
@@ -329,8 +329,6 @@ end
 
 
 function FITC(x::AbstractMatrix, inducing::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, logNoise::Real)
-    nobs = length(y)
     covstrat = FullyIndepStrat(inducing)
-    cK = alloc_cK(covstrat, nobs)
-    GPE(x, y, mean, kernel, logNoise, covstrat, EmptyData(), cK)
+    GPE(x, y, mean, kernel, logNoise, covstrat)
 end

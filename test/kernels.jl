@@ -3,7 +3,7 @@ using GaussianProcesses, Calculus
 using Test, LinearAlgebra, Statistics, Random
 using ForwardDiff
 using GaussianProcesses: EmptyData, update_target_and_dtarget!, 
-      cov_ij, dKij_dθp, dKij_dθ!, 
+      cov_ij, dKij_dθp, dKij_dθ!,
       get_params, set_params!, StationaryARD, WeightedEuclidean
 import Calculus: gradient
 
