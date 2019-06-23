@@ -1,6 +1,6 @@
 using GaussianProcesses, RDatasets, LinearAlgebra, Statistics, PDMats, Optim, ForwardDiff, Plots
 import Distributions:Normal, Poisson
-import GaussianProcesses: expect_dens, get_params_kwargs, get_params, predict_f, update_ll_and_dll!, optimize!, update_target_and_dtarget!
+import GaussianProcesses: expect_dens, get_params_kwargs, get_params, predict_f, update_ll_and_dll!, optimize!, update_target_and_dtarget!, gausshermite, log_dens, sqrtπ
 using Random
 using Optim
 
@@ -25,7 +25,7 @@ function FullCovMCMCPrecompute(nobs::Int)
     buffer1 = Matrix{Float64}(undef, nobs, nobs)
     buffer2 = Vector{Float64}(undef, nobs)
     buffer3 = Vector{Float64}(undef, nobs)
-    return FullCovMCMCPrecompute(buffer1, buffer2, buffer3)    
+    return FullCovMCMCPrecompute(buffer1, buffer2, buffer3)
 end
 
 function init_precompute(covstrat::FullCovariance, X, y, k)
@@ -44,7 +44,7 @@ end
 # Compute the Hadamard product
 function hadamard(A::Matrix, B::Matrix)
     @assert size(A) == size(B)
-    H = Array{Float64}(undef, size(A)) 
+    H = Array{Float64}(undef, size(A))
     n, m = size(A)
     for j in 1:n
         for i in 1:m
@@ -80,7 +80,7 @@ function elbo_grad_q(gp::GPBase, Q::Approx)
     Σ = computeΣ(gp, diag(Q.qΣ))
     λ = Q.qΣ
     λbar = -gp.dll[1:gp.nobs] .* (Matrix(I, gp.nobs, gp.nobs)*1.0)
-    gλ = diag(0.5*(hadamard(Σ, Σ) .* (λ - λbar))) 
+    gλ = diag(0.5*(hadamard(Σ, Σ) .* (λ - λbar)))
     return gν, gλ
 end
 
@@ -89,7 +89,7 @@ end
 function elbo_grad_θ(gp::GPBase)
    # TODO: Can ν just equal νbar, as per Section 4?
    νbar = gp.dll[1:gp.nobs]
-   
+
    # Computing EQ16 of Opper
    ∇θ = -0.5*(dot(νbar, νbar) .- inv(gp.cK.mat))
    print(∇θ)
@@ -118,13 +118,13 @@ Carry out variational inference, as per Opper and Archambeau (2009) to compute t
 function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=false)
     # Initialise log-target and log-target's derivative
     mcmc(gp; nIter=1)
-    
+
     # TODO: Remove globals
     # Initialise the varaitaional parameters
     global Q = Approx(zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0)
     # Compute the initial ELBO objective between the intiialised Q and the GP
     λ = [zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0]
-   
+
     # Compute the ELBO function as per Opper and Archambeau EQ (9)
     function elbo(gp, Q)
         μ = mean(gp.mean, gp.x)
@@ -135,7 +135,7 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         # Assuming a mean-field approximation
         Fvar = diag(unwhiten(K, Q.qΣ))              # K⁻¹q_Σ
         varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
-        
+
         # Compute KL as per Opper and Archambeau eq (9)
         global Σopper = computeΣ(gp, diag(Q.qΣ))
         global Kinv = inv(K.mat)
@@ -145,16 +145,16 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         # println("KL: ", kl)
 
         kl = 0.5*tr(Σopper * Kinv) .+ 0.5(transpose(Q.qμ) * Kinv * Q.qμ) .+ 0.5(logdet(K.mat)-logdet(Σopper)) #I've made a change to the logdet that I need to check
-        
+
         # @assert kl >= 0 "KL-divergence should be positive.\n"
         println("KL: ", kl)
         # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
         elbo_val = sum(varExp)-kl
-        
+
         # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
         return elbo_val
     end
-    
+
     # Compute the ELBO function as per GPFlow VGP._buill_ll(). Note, this is different from the _build_ll() in VGP_Opper of GPFlow
     function elbo(Q)
         # Compute the prior KL e.g. KL(Q||P) s.t. P∼N(0, I)
@@ -171,17 +171,17 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         # Assuming a mean-field approximation
         Fvar = diag(unwhiten(K, Q.qΣ))              # K⁻¹q_Σ
         varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
-        
+
         # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
         elbo_val = sum(varExp)-kl
         # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
         return elbo_val
     end
-    init_elbo = elbo(gp, Q) 
+    init_elbo = elbo(gp, Q)
     if verbose
         println("Initial ELBO: ", init_elbo)
     end
-    
+
     elbo_approx = Array{Float64}(undef, nits+1)
     elbo_approx[1] = init_elbo
 
@@ -190,7 +190,7 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
     for i in 1:nits
         # Run the following two lines as a proxy for computing gp.dll
         params_kwargs = get_params_kwargs(gp; domean=true, kern=true, noise=false, lik=true)
-        update_target_and_dtarget!(gp; params_kwargs...)        
+        update_target_and_dtarget!(gp; params_kwargs...)
 
         # Compute the gradients of the variational objective function
         gradμ, gradΣ = elbo_grad_q(gp, Q)
@@ -213,6 +213,20 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         # plot(0:nits, elbo_approx)
     end
 end
+
+function expect_dens(lik::Likelihood, fmean::AbstractVector, fvar::AbstractVector, y::AbstractVector)
+    n_gaussHermite = 20
+    nodes, weights = gausshermite(n_gaussHermite)
+    weights /= GaussianProcesses.sqrtπ
+    f = fmean .+ sqrt.(2*fvar)*nodes'
+    lpred = Array{Float64}(undef, size(f));
+    @inbounds for i in 1:n_gaussHermite
+        fi = view(f, :, i)
+        lpred[:,i] = log_dens(lik, fi, y)
+    end
+    return lpred*weights
+end
+
 
 
 Random.seed!(123)
