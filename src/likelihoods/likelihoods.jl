@@ -29,3 +29,17 @@ function predict_obs(lik::Likelihood, fmean::AbstractVector, fvar::AbstractVecto
     σ² = (vLik + mLik.^2)*weights - μ.^2
     return μ, σ²
 end
+
+""" Computes the integral ∫log p(y|f)*q(f)df using quadrature using to calculate the ELBO in variational inference"""
+function expect_dens(lik::Likelihood, fmean::AbstractVector, fvar::AbstractVector, y::AbstractVector)
+    n_gaussHermite = 20
+    nodes, weights = gausshermite(n_gaussHermite)
+    weights /= sqrtπ
+    f = fmean .+ sqrt.(2*fvar)*nodes'
+    lpred = Array{Float64}(undef, size(f));
+    @inbounds for i in 1:n_gaussHermite
+        fi = view(f, :, i)
+        lpred[:,i] = log_dens(lik, fi, y)
+    end
+    return lpred*weights
+end

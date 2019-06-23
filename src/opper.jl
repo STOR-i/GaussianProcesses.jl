@@ -1,6 +1,6 @@
 using GaussianProcesses, RDatasets, LinearAlgebra, Statistics, PDMats, Optim, ForwardDiff, Plots
 import Distributions:Normal, Poisson
-import GaussianProcesses: predict_obs, get_params_kwargs, get_params, predict_f, update_ll_and_dll!, optimize!, update_target_and_dtarget!
+import GaussianProcesses: expect_dens, get_params_kwargs, get_params, predict_f, update_ll_and_dll!, optimize!, update_target_and_dtarget!
 using Random
 using Optim
 
@@ -128,24 +128,26 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
     # Compute the ELBO function as per Opper and Archambeau EQ (9)
     function elbo(gp, Q)
         μ = mean(gp.mean, gp.x)
-        Σ=  cov(gp.kernel, gp.x, gp.data)    #kernel function
+        Σ = cov(gp.kernel, gp.x, gp.data)    #kernel function
         K = PDMat(Σ + 1e-6*I)
         Fmean = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
 
         # Assuming a mean-field approximation
         Fvar = diag(unwhiten(K, Q.qΣ))              # K⁻¹q_Σ
-        #THIS predict_obs IS LIKELY CAUSING THE ERROR
-        varMean, varExp = predict_obs(gp.lik, Fmean, Fvar)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
+        varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
         
         # Compute KL as per Opper and Archambeau eq (9)
         global Σopper = computeΣ(gp, diag(Q.qΣ))
         global Kinv = inv(K.mat)
+        # # Compute the prior KL e.g. KL(Q||P) s.t. P∼N(0, I)
+        # kl = 0.5(dot(Q.qμ, Q.qμ) - logdet(Q.qΣ) + sum(diag(Q.qΣ).^2))
+        # @assert kl >= 0 "KL-divergence should be positive.\n"
+        # println("KL: ", kl)
+
         kl = 0.5*tr(Σopper * Kinv) .+ 0.5(transpose(Q.qμ) * Kinv * Q.qμ) .+ 0.5(logdet(K.mat)-logdet(Σopper)) #I've made a change to the logdet that I need to check
         
         # @assert kl >= 0 "KL-divergence should be positive.\n"
         println("KL: ", kl)
-
-    
         # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
         elbo_val = sum(varExp)-kl
         
@@ -162,18 +164,18 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
 
         # Following block computes K^{-1}q_{μ}
         μ = mean(gp.mean, gp.x)
-        Σ=  cov(gp.kernel, gp.x, gp.data)    #kernel function
+        Σ =  cov(gp.kernel, gp.x, gp.data)    #kernel function
         K = PDMat(Σ + 1e-6*I)
         Fmean = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
 
         # Assuming a mean-field approximation
         Fvar = diag(unwhiten(K, Q.qΣ))              # K⁻¹q_Σ
-        _, varExp = predict_obs(gp.lik, Fmean, Fvar)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
+        varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
         
         # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
         elbo_val = sum(varExp)-kl
         # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
-        return sum(varExp) - kl
+        return elbo_val
     end
     init_elbo = elbo(gp, Q) 
     if verbose
@@ -227,7 +229,7 @@ l = PoisLik()             # Poisson likelihood
 gp = GP(X, vec(Y), MeanZero(), k, l)
 set_priors!(gp.kernel,[Normal(-2.0,4.0),Normal(-2.0,4.0)])
 
-#vi(gp;nits=100, verbose=true, plot_elbo=true)
+vi(gp;nits=100, verbose=true, plot_elbo=true)
 
 
 samples = mcmc(gp; nIter=10000,ε=0.01);
