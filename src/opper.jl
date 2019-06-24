@@ -261,3 +261,26 @@ scatter!(X,Y, label="data")
 
 
 visamps=  rand(gp, xtest)
+
+
+#Test gradients
+
+
+#Set the GP
+params_kwargs = get_params_kwargs(gp; domean=true, kern=true, noise=false, lik=true)
+update_target_and_dtarget!(gp; params_kwargs...)        
+
+Q = Approx(randn(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0)
+#Calculate the elbo and its gradient
+elbo(gp, Q)
+# Compute the gradients of the variational objective function for either qμ or qΣ
+exact_grad = elbo_grad_q(gp, Q)[1]
+
+params = Q.qμ
+# Numerical approximation (just looking at Q.qμ)
+num_grad = Calculus.gradient(params) do params
+    Q.qμ = params
+    elbo(gp, Q)
+end
+
+num_grad ≈ exact_grad
