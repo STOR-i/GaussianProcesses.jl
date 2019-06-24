@@ -1,9 +1,9 @@
-using GaussianProcesses, RDatasets, LinearAlgebra, Statistics, PDMats, Optim, ForwardDiff, Plots
+using GaussianProcesses, RDatasets, LinearAlgebra, Statistics, PDMats, Optim, ForwardDiff, Plots, Calculus
 import Distributions:Normal, Poisson
-import GaussianProcesses: expect_dens, get_params_kwargs, get_params, predict_f, update_ll_and_dll!, optimize!, update_target_and_dtarget!, gausshermite, log_dens, sqrtπ
+import GaussianProcesses: expect_dens, get_params_kwargs, get_params, predict_f, update_ll_and_dll!, optimize!, update_target_and_dtarget!, gausshermite, log_dens, sqrtπ, unwhiten!
 using Random
 using Optim
-
+import PDMats: unwhiten!
 
 mutable struct Approx
     qμ
@@ -84,6 +84,43 @@ function elbo_grad_q(gp::GPBase, Q::Approx)
     return gν, gλ
 end
 
+"""
+Compute the gradient of the ELBO F w.r.t. the variational parameters μ and Σ using Julia Math's numerical approximation.
+"""
+function elbo_grad_q_numerical(gp, qμ::AbstractArray, qΣ::AbstractMatrix)
+    params = qμ
+    # Numerical approximation (just looking at Q.qμ)
+    μ_grad = Calculus.gradient(params) do params
+        qμ = params
+        elbo(gp, Q)
+    end
+
+    params = diag(qΣ)
+    Σ_grad = Calculus.gradient(params) do params
+        qΣ = params
+        elbo(gp, Q)
+    end
+
+    return μ_grad, Σ_grad
+end
+
+function elbo_grad_q_numerical(gp, qμ::AbstractArray, qΣ::AbstractArray)
+    params = qμ
+    # Numerical approximation (just looking at Q.qμ)
+    μ_grad = Calculus.gradient(params) do params
+        qμ = params
+        elbo(gp, Q)
+    end
+
+    params = qΣ
+    Σ_grad = Calculus.gradient(params) do params
+        qΣ = params
+        elbo(gp, Q)
+    end
+
+    return μ_grad, Σ_grad
+end
+
 
 # Compute gradient of the ELBO w.r.t the GP's kernel parameters
 function elbo_grad_θ(gp::GPBase)
@@ -99,7 +136,12 @@ end
 """
 Update the parameters of the variational approximation through gradient ascent
 """
-function updateQ!(Q::Approx, ∇μ, ∇Σ; α::Float64=0.01)
+function updateQ!(Q::Approx, ∇μ::AbstractArray, ∇Σ::AbstractMatrix; α::Float64=0.01)
+    Q.qμ += α*-∇μ
+    Q.qΣ += α*-diag((∇Σ .* (Matrix(I, length(∇Σ), length(∇Σ)) *1.0))) #need to stop parameters becoming negative
+end
+
+function updateQ!(Q::Approx, ∇μ::AbstractArray, ∇Σ::AbstractArray; α::Float64=0.01)
     Q.qμ += α*-∇μ
     Q.qΣ += α*-(∇Σ .* (Matrix(I, length(∇Σ), length(∇Σ)) *1.0)) #need to stop parameters becoming negative
 end
@@ -109,6 +151,37 @@ end
 Set the GP's posterior distribution to be the multivariate Gaussian approximation.
 """
 function approximate!(gp::GPBase, Q::Approx)
+end
+
+function elbo(gp, Q)
+    # Q.qΣ = Array{Float64}(I, length(Q.qμ), length(Q.qμ))
+
+    μ = mean(gp.mean, gp.x)
+    Σ = cov(gp.kernel, gp.x, gp.data)    #kernel function
+    K = PDMat(Σ + 1e-6*I)
+    Fmean = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
+
+    # Assuming a mean-field approximation
+    Fvar = unwhiten(K, Q.qΣ)              # K⁻¹q_Σ
+    varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
+
+    # Compute KL as per Opper and Archambeau eq (9)
+    Σopper = computeΣ(gp, (Q.qΣ))
+    Kinv = inv(K.mat)
+    # # Compute the prior KL e.g. KL(Q||P) s.t. P∼N(0, I)
+    # kl = 0.5(dot(Q.qμ, Q.qμ) - logdet(Q.qΣ) + sum(diag(Q.qΣ).^2))
+    # @assert kl >= 0 "KL-divergence should be positive.\n"
+    # println("KL: ", kl)
+
+    kl = 0.5*tr(Σopper * Kinv) .+ 0.5(transpose(Q.qμ) * Kinv * Q.qμ) .+ 0.5(logdet(K.mat)-logdet(Σopper)) #I've made a change to the logdet that I need to check
+
+    # @assert kl >= 0 "KL-divergence should be positive.\n"
+    # println("KL: ", kl)
+    # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
+    elbo_val = sum(varExp)-kl
+
+    # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
+    return elbo_val
 end
 
 
@@ -133,12 +206,12 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         Fmean = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
 
         # Assuming a mean-field approximation
-        Fvar = diag(unwhiten(K, Q.qΣ))              # K⁻¹q_Σ
+        Fvar = unwhiten(K, Q.qΣ)              # K⁻¹q_Σ
         varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
 
         # Compute KL as per Opper and Archambeau eq (9)
-        global Σopper = computeΣ(gp, diag(Q.qΣ))
-        global Kinv = inv(K.mat)
+        Σopper = computeΣ(gp, Q.qΣ)
+        Kinv = inv(K.mat)
         # # Compute the prior KL e.g. KL(Q||P) s.t. P∼N(0, I)
         # kl = 0.5(dot(Q.qμ, Q.qμ) - logdet(Q.qΣ) + sum(diag(Q.qΣ).^2))
         # @assert kl >= 0 "KL-divergence should be positive.\n"
@@ -147,7 +220,7 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         kl = 0.5*tr(Σopper * Kinv) .+ 0.5(transpose(Q.qμ) * Kinv * Q.qμ) .+ 0.5(logdet(K.mat)-logdet(Σopper)) #I've made a change to the logdet that I need to check
 
         # @assert kl >= 0 "KL-divergence should be positive.\n"
-        println("KL: ", kl)
+        # println("KL: ", kl)
         # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
         elbo_val = sum(varExp)-kl
 
@@ -160,7 +233,7 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         # Compute the prior KL e.g. KL(Q||P) s.t. P∼N(0, I)
         kl = 0.5(dot(Q.qμ, Q.qμ) - logdet(Q.qΣ) + sum(diag(Q.qΣ).^2))
         @assert kl >= 0 "KL-divergence should be positive.\n"
-        println("KL: ", kl)
+        # println("KL: ", kl)
 
         # Following block computes K^{-1}q_{μ}
         μ = mean(gp.mean, gp.x)
@@ -177,6 +250,7 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
         return elbo_val
     end
+
     init_elbo = elbo(gp, Q)
     if verbose
         println("Initial ELBO: ", init_elbo)
@@ -193,11 +267,12 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         update_target_and_dtarget!(gp; params_kwargs...)
 
         # Compute the gradients of the variational objective function
-        gradμ, gradΣ = elbo_grad_q(gp, Q)
+        gradμ, gradΣ = elbo_grad_q_numerical(gp, Q.qμ, Q.qΣ)
 
         # Update the variational parameters
         updateQ!(Q, gradμ, gradΣ)
         println("Variational Mean: ", mean(Q.qμ))
+
         # Recalculate the ELBO
         λ = [Q.qμ, Q.qΣ]
         current_elbo = elbo(gp, Q)
@@ -227,6 +302,20 @@ function expect_dens(lik::Likelihood, fmean::AbstractVector, fvar::AbstractVecto
     return lpred*weights
 end
 
+function expect_dens(lik::Likelihood, fmean::AbstractVector, fvar::AbstractMatrix, y::AbstractVector)
+    fvar = diag(fvar)
+    n_gaussHermite = 20
+    nodes, weights = gausshermite(n_gaussHermite)
+    weights /= GaussianProcesses.sqrtπ
+    f = fmean .+ sqrt.(2*fvar)*nodes'
+    lpred = Array{Float64}(undef, size(f));
+    @inbounds for i in 1:n_gaussHermite
+        fi = view(f, :, i)
+        lpred[:,i] = log_dens(lik, fi, y)
+    end
+    return lpred*weights
+end
+
 
 
 Random.seed!(123)
@@ -243,38 +332,38 @@ l = PoisLik()             # Poisson likelihood
 gp = GP(X, vec(Y), MeanZero(), k, l)
 set_priors!(gp.kernel,[Normal(-2.0,4.0),Normal(-2.0,4.0)])
 
-vi(gp;nits=100, verbose=true, plot_elbo=true)
+vi(gp;nits=50, verbose=true, plot_elbo=true)
 
 
-samples = mcmc(gp; nIter=10000,ε=0.01);
-
-#Sample predicted values
-xtest = range(minimum(gp.x),stop=maximum(gp.x),length=50);
-ymean = [];
-fsamples = Array{Float64}(undef,size(samples,2), length(xtest));
-for i in 1:size(samples,2)
-    set_params!(gp,samples[:,i])
-    update_target!(gp)
-    push!(ymean, predict_y(gp,xtest)[1])
-    fsamples[i,:] = rand(gp, xtest)
-end
-
-using Plots, Distributions
-#Predictive plots
-q10 = [quantile(fsamples[:,i], 0.1) for i in 1:length(xtest)]
-q50 = [quantile(fsamples[:,i], 0.5) for i in 1:length(xtest)]
-q90 = [quantile(fsamples[:,i], 0.9) for i in 1:length(xtest)]
-plot(xtest,exp.(q50),ribbon=(exp.(q10), exp.(q90)),leg=true, fmt=:png, label="quantiles")
-plot!(xtest,mean(ymean), label="posterior mean")
-plot!(xtest,visamps,label="VI approx")
-xx = range(-3,stop=3,length=1000);
-f_xx = 2*cos.(2*xx);
-plot!(xx, exp.(f_xx), label="truth")
-scatter!(X,Y, label="data")
-
-
-
-visamps=  rand(gp, xtest)
+# samples = mcmc(gp; nIter=10000,ε=0.01);
+#
+# #Sample predicted values
+# xtest = range(minimum(gp.x),stop=maximum(gp.x),length=50);
+# ymean = [];
+# fsamples = Array{Float64}(undef,size(samples,2), length(xtest));
+# for i in 1:size(samples,2)
+#     set_params!(gp,samples[:,i])
+#     update_target!(gp)
+#     push!(ymean, predict_y(gp,xtest)[1])
+#     fsamples[i,:] = rand(gp, xtest)
+# end
+#
+# using Plots, Distributions
+# #Predictive plots
+# q10 = [quantile(fsamples[:,i], 0.1) for i in 1:length(xtest)]
+# q50 = [quantile(fsamples[:,i], 0.5) for i in 1:length(xtest)]
+# q90 = [quantile(fsamples[:,i], 0.9) for i in 1:length(xtest)]
+# plot(xtest,exp.(q50),ribbon=(exp.(q10), exp.(q90)),leg=true, fmt=:png, label="quantiles")
+# plot!(xtest,mean(ymean), label="posterior mean")
+# plot!(xtest,visamps,label="VI approx")
+# xx = range(-3,stop=3,length=1000);
+# f_xx = 2*cos.(2*xx);
+# plot!(xx, exp.(f_xx), label="truth")
+# scatter!(X,Y, label="data")
+#
+#
+#
+# visamps=  rand(gp, xtest)
 
 
 #Test gradients
@@ -282,7 +371,7 @@ visamps=  rand(gp, xtest)
 
 #Set the GP
 params_kwargs = get_params_kwargs(gp; domean=true, kern=true, noise=false, lik=true)
-update_target_and_dtarget!(gp; params_kwargs...)        
+update_target_and_dtarget!(gp; params_kwargs...)
 
 Q = Approx(randn(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0)
 #Calculate the elbo and its gradient
@@ -291,10 +380,21 @@ elbo(gp, Q)
 exact_grad = elbo_grad_q(gp, Q)[1]
 
 params = Q.qμ
+
 # Numerical approximation (just looking at Q.qμ)
-num_grad = Calculus.gradient(params) do params
+μ_grad = Calculus.gradient(params) do params
     Q.qμ = params
     elbo(gp, Q)
 end
+
+
+params = diag(Q.qΣ)
+
+Σ_grad = Calculus.gradient(params) do params
+    Q.qΣ = params
+    elbo(gp, Q)
+end
+
+
 
 num_grad ≈ exact_grad
