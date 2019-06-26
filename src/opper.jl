@@ -136,15 +136,15 @@ end
 """
 Update the parameters of the variational approximation through gradient ascent
 """
-function updateQ!(Q::Approx, ∇μ::AbstractArray, ∇Σ::AbstractMatrix; α::Float64=0.01)
+function updateQ!(Q::Approx, ∇μ::AbstractArray, ∇Σ::AbstractMatrix; α::Float64=0.001)
     Q.qμ += α*-∇μ
-    Q.qΣ += α*-diag((∇Σ .* (Matrix(I, length(∇Σ), length(∇Σ)) *1.0))) #need to stop parameters becoming negative
+#    Q.qΣ += α*-diag((∇Σ .* (Matrix(I, length(∇Σ), length(∇Σ)) *1.0))) #need to stop parameters becoming negative
 end
 
-function updateQ!(Q::Approx, ∇μ::AbstractArray, ∇Σ::AbstractArray; α::Float64=0.01)
-    Q.qΣ = ∇Σ .* Matrix{Float64}(I, length(∇μ), length(∇μ))*1.0
+function updateQ!(Q::Approx, ∇μ::AbstractArray, ∇Σ::AbstractArray; α::Float64=0.001)
+#    Q.qΣ = ∇Σ .* Matrix{Float64}(I, length(∇μ), length(∇μ))*1.0
     Q.qμ += α*-∇μ
-    Q.qΣ += α*-(∇Σ .* (Matrix(I, length(∇Σ), length(∇Σ)) *1.0)) #need to stop parameters becoming negative
+#    Q.qΣ += α*-(∇Σ .* (Matrix(I, length(∇Σ), length(∇Σ)) *1.0)) #need to stop parameters becoming negative
 end
 
 
@@ -193,37 +193,38 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
 
     # TODO: Remove globals
     # Initialise the varaitaional parameters
-    global Q = Approx(zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*10.0)
+    global Q = Approx(zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0)
     # Compute the initial ELBO objective between the intiialised Q and the GP
-    λ = [zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*10.0]
+    λ = [zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0]
 
     # Compute the ELBO function as per Opper and Archambeau EQ (9)
     function elbo(gp, Q)
-        qΣexp = Q.qΣ
         μ = mean(gp.mean, gp.x)
         Σ = cov(gp.kernel, gp.x, gp.data)    #kernel function
         K = PDMat(Σ + 1e-6*I)
-        Fmean = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
+        Fmean = unwhiten(K, Q.qμ) + μ      # \sqrt{K}*q_μ
 
         # Assuming a mean-field approximation
-        Fvar = unwhiten(K, qΣexp)              # K⁻¹q_Σ
+        Fvar = unwhiten(K, diag(Q.qΣ))              # \sqrt{K}*q_Σ
         varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
 
         # Compute KL as per Opper and Archambeau eq (9)
-        Σopper = computeΣ(gp, qΣexp)
+        Σopper = computeΣ(gp, Q.qΣ)
         Kinv = inv(K.mat)
         # # Compute the prior KL e.g. KL(Q||P) s.t. P∼N(0, I)
         # kl = 0.5(dot(Q.qμ, Q.qμ) - logdet(Q.qΣ) + sum(diag(Q.qΣ).^2))
         # @assert kl >= 0 "KL-divergence should be positive.\n"
         # println("KL: ", kl)
 
-        kl = 0.5*tr(Σopper * Kinv) .+ 0.5(transpose(Q.qμ) * Kinv * Q.qμ) .+ 0.5(logdet(K.mat)-logdet(Σopper)) #I've made a change to the logdet that I need to check
+        kl = 0.5*tr(Q.qΣ * Kinv) .+ 0.5(transpose(Q.qμ-Fmean) * Kinv * (Q.qμ-Fmean)) .+ 0.5(logdet(K.mat)-logdet(Q.qΣ)) - 0.5*gp.nobs #I've made a change to the logdet that I need to check
 
         # @assert kl >= 0 "KL-divergence should be positive.\n"
         # println("KL: ", kl)
         # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
         elbo_val = sum(varExp)-kl
-
+        println("varExpO  ", sum(varExp), "\n")
+        println("KL  ", kl, "\n")
+        println("ELBO  ", elbo_val, "\n")
         # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
         return elbo_val
     end
@@ -242,7 +243,7 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         Fmean = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
 
         # Assuming a mean-field approximation
-        Fvar = diag(unwhiten(K, Q.qΣ))              # K⁻¹q_Σ
+        Fvar = unwhiten(K, diag(Q.qΣ))              # K⁻¹q_Σ
         varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
 
         # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
@@ -277,12 +278,12 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
             elbo(gp, Q)
         end
 
-        params = diag(Q.qΣ)
+        # params = diag(Q.qΣ)
 
-        gradΣ = Calculus.gradient(params) do params
-            Q.qΣ = Diagonal(params)+zeros(length(params),length(params)) 
-            elbo(gp, Q)
-        end
+        # gradΣ = Calculus.gradient(params) do params
+        #     Q.qΣ = Diagonal(params)+zeros(length(params),length(params)) 
+        #     elbo(gp, Q)
+        # end
 
         # Update the variational parameters
         updateQ!(Q, gradμ, gradΣ)
@@ -346,35 +347,35 @@ l = PoisLik()             # Poisson likelihood
 gp = GP(X, vec(Y), MeanZero(), k, l)
 set_priors!(gp.kernel,[Normal(-2.0,4.0),Normal(-2.0,4.0)])
 
-vi(gp;nits=50, verbose=true, plot_elbo=true)
+#vi(gp;nits=50, verbose=true, plot_elbo=true)
 
 
-# samples = mcmc(gp; nIter=10000,ε=0.01);
-#
-# #Sample predicted values
-# xtest = range(minimum(gp.x),stop=maximum(gp.x),length=50);
-# ymean = [];
-# fsamples = Array{Float64}(undef,size(samples,2), length(xtest));
-# for i in 1:size(samples,2)
-#     set_params!(gp,samples[:,i])
-#     update_target!(gp)
-#     push!(ymean, predict_y(gp,xtest)[1])
-#     fsamples[i,:] = rand(gp, xtest)
-# end
-#
-# using Plots, Distributions
-# #Predictive plots
-# q10 = [quantile(fsamples[:,i], 0.1) for i in 1:length(xtest)]
-# q50 = [quantile(fsamples[:,i], 0.5) for i in 1:length(xtest)]
-# q90 = [quantile(fsamples[:,i], 0.9) for i in 1:length(xtest)]
-# plot(xtest,exp.(q50),ribbon=(exp.(q10), exp.(q90)),leg=true, fmt=:png, label="quantiles")
-# plot!(xtest,mean(ymean), label="posterior mean")
-# plot!(xtest,visamps,label="VI approx")
-# xx = range(-3,stop=3,length=1000);
-# f_xx = 2*cos.(2*xx);
-# plot!(xx, exp.(f_xx), label="truth")
-# scatter!(X,Y, label="data")
-#
+samples = mcmc(gp; nIter=10000,ε=0.01);
+
+#Sample predicted values
+xtest = range(minimum(gp.x),stop=maximum(gp.x),length=50);
+ymean = [];
+fsamples = Array{Float64}(undef,size(samples,2), length(xtest));
+for i in 1:size(samples,2)
+    set_params!(gp,samples[:,i])
+    update_target!(gp)
+    push!(ymean, predict_y(gp,xtest)[1])
+    fsamples[i,:] = rand(gp, xtest)
+end
+
+using Plots, Distributions
+#Predictive plots
+q10 = [quantile(fsamples[:,i], 0.1) for i in 1:length(xtest)]
+q50 = [quantile(fsamples[:,i], 0.5) for i in 1:length(xtest)]
+q90 = [quantile(fsamples[:,i], 0.9) for i in 1:length(xtest)]
+plot(xtest,exp.(q50),ribbon=(exp.(q10), exp.(q90)),leg=true, fmt=:png, label="quantiles")
+plot!(xtest,mean(ymean), label="posterior mean")
+plot!(xtest,visamps,label="VI approx")
+xx = range(-3,stop=3,length=1000);
+f_xx = 2*cos.(2*xx);
+plot!(xx, exp.(f_xx), label="truth")
+scatter!(X,Y, label="data")
+
 #
 #
 # visamps=  rand(gp, xtest)
@@ -414,3 +415,15 @@ elbo_grad_q_numerical(gp, Q.qμ, Q.qΣ)
 
 
 num_grad ≈ μ_grad
+
+#########################################################
+Q.qμ = mean(fsamples;dims=1)[:]
+Q.qΣ = cov(fsamples)
+
+el=elbo(gp,Q)
+
+g(Q) = elbo(gp,Q)
+g'(Q)
+
+#Correct expect_dens for the Poisson case according to GPflow
+gp.y.*Fmean - exp.(Fmean + Fvar/2) -lgamma.(gp.y.+1.0) + gp.y 
