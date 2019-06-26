@@ -147,42 +147,19 @@ function updateQ!(Q::Approx, ∇μ::AbstractArray, ∇Σ::AbstractArray; α::Flo
 #    Q.qΣ += α*-(∇Σ .* (Matrix(I, length(∇Σ), length(∇Σ)) *1.0)) #need to stop parameters becoming negative
 end
 
+"""
+Update only the variational mean.
+"""
+function updateQ!(Q::Approx, ∇μ::AbstractArray; α::Float64=0.01)
+    Q.qμ += α*-∇μ
+end
+
 
 """
 Set the GP's posterior distribution to be the multivariate Gaussian approximation.
 """
 function approximate!(gp::GPBase, Q::Approx)
 end
-
-# function elbo(gp, Q)
-#     μ = mean(gp.mean, gp.x)
-#     Σ = cov(gp.kernel, gp.x, gp.data)    #kernel function
-#     K = PDMat(Σ + 1e-6*I)
-#     Fmean = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
-#
-#     # Assuming a mean-field approximation
-#     Fvar = unwhiten(K, Q.qΣ)              # K⁻¹q_Σ
-#     varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
-#
-#     # Compute KL as per Opper and Archambeau eq (9)
-#     Σopper = computeΣ(gp, (Q.qΣ))
-#     Kinv = inv(K.mat)
-#     # # Compute the prior KL e.g. KL(Q||P) s.t. P∼N(0, I)
-#     # kl = 0.5(dot(Q.qμ, Q.qμ) - logdet(Q.qΣ) + sum(diag(Q.qΣ).^2))
-#     # @assert kl >= 0 "KL-divergence should be positive.\n"
-#     # println("KL: ", kl)
-#
-#     kl = 0.5*tr(Σopper * Kinv) .+ 0.5(transpose(Q.qμ) * Kinv * Q.qμ) .+ 0.5(logdet(K.mat)-logdet(Σopper)) #I've made a change to the logdet that I need to check
-#
-#     # @assert kl >= 0 "KL-divergence should be positive.\n"
-#     # println("KL: ", kl)
-#     # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
-#     elbo_val = sum(varExp)-kl
-#
-#     # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
-#     return elbo_val
-# end
-
 
 """
 Carry out variational inference, as per Opper and Archambeau (2009) to compute the GP's posterior, given a non-Gaussian likelihood.
@@ -201,11 +178,25 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
     function elbo(gp, Q)
         μ = mean(gp.mean, gp.x)
         Σ = cov(gp.kernel, gp.x, gp.data)    #kernel function
+        L = cholesky(Σ)
+        Fmean = L.L * Q.qμ # Assuming a zero mean function. In the case of a non-zero MF, sum this to the product.
         K = PDMat(Σ + 1e-6*I)
-        Fmean = unwhiten(K, Q.qμ) + μ      # \sqrt{K}*q_μ
+
+        
+        # Fmean = unwhiten(K, Q.qμ) + μ      # \sqrt{K}*q_μ
+        # # Assuming a mean-field approximation
+        # Fvar = unwhiten(K, diag(Q.qΣ))              # \sqrt{K}*q_Σ
+
+        # Fmean_prev = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
+        # Compute Fvar
+
+        q_sqrt_dnn = LowerTriangular(Q.qΣ)
+        L_tiled = L # In the case of multioutput GP, this would need to tiled d times, where d is the output dimension.
+        LTA = L_tiled.L * q_sqrt_dnn
+        Fvar = transpose(sum(LTA.data, dims=2)) # TODO: When log-transform Q.qΣ, LTA should be exponentiated
 
         # Assuming a mean-field approximation
-        Fvar = unwhiten(K, diag(Q.qΣ))              # \sqrt{K}*q_Σ
+        # Fvar = unwhiten(K, qΣexp)              # K⁻¹q_Σ
         varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
 
         # Compute KL as per Opper and Archambeau eq (9)
@@ -218,15 +209,10 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
 
         kl = 0.5*tr(Q.qΣ * Kinv) .+ 0.5(transpose(Q.qμ-Fmean) * Kinv * (Q.qμ-Fmean)) .+ 0.5(logdet(K.mat)-logdet(Q.qΣ)) - 0.5*gp.nobs #I've made a change to the logdet that I need to check
 
-        # @assert kl >= 0 "KL-divergence should be positive.\n"
-        # println("KL: ", kl)
         # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
         elbo_val = sum(varExp)-kl
-        println("varExpO  ", sum(varExp), "\n")
-        println("KL  ", kl, "\n")
-        println("ELBO  ", elbo_val, "\n")
-        # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
-        return elbo_val
+        @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
+        return -elbo_val
     end
 
     # Compute the ELBO function as per GPFlow VGP._buill_ll(). Note, this is different from the _build_ll() in VGP_Opper of GPFlow
@@ -280,17 +266,17 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
 
         # params = diag(Q.qΣ)
 
+        #
         # gradΣ = Calculus.gradient(params) do params
-        #     Q.qΣ = Diagonal(params)+zeros(length(params),length(params)) 
+        #     Q.qΣ = Diagonal(params)+zeros(length(params),length(params))
         #     elbo(gp, Q)
         # end
 
         # Update the variational parameters
-        updateQ!(Q, gradμ, gradΣ)
+        updateQ!(Q, gradμ)
         println("Variational Mean: ", mean(Q.qμ))
 
         # Recalculate the ELBO
-        λ = [Q.qμ, Q.qΣ]
         current_elbo = elbo(gp, Q)
         elbo_approx[i+1] = current_elbo
 
@@ -385,33 +371,35 @@ scatter!(X,Y, label="data")
 ########################
 #Test gradients
 ########################
+num_test = false
+if num_test
+    #Set the GP
+    params_kwargs = get_params_kwargs(gp; domean=true, kern=true, noise=false, lik=true)
+    update_target_and_dtarget!(gp; params_kwargs...)
 
-#Set the GP
-params_kwargs = get_params_kwargs(gp; domean=true, kern=true, noise=false, lik=true)
-update_target_and_dtarget!(gp; params_kwargs...)
+    Q = Approx(randn(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0)
 
-Q = Approx(randn(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0)
-
-#Calculate the elbo and its gradient
-elbo(gp, Q)
-
-# Compute the gradients of the variational objective function for either qμ or qΣ
-exact_grad = elbo_grad_q(gp, Q)[1]
-
-params = Q.qμ
-# Numerical approximation (just looking at Q.qμ)
-μ_grad = Calculus.gradient(params) do params
-    Q.qμ = params
+    #Calculate the elbo and its gradient
     elbo(gp, Q)
-end
 
-params = Q.qΣ
-Σ_grad = Calculus.gradient(params) do params
-    Q.qΣ = params
-    elbo(gp, Q)
-end
+    # Compute the gradients of the variational objective function for either qμ or qΣ
+    exact_grad = elbo_grad_q(gp, Q)[1]
 
-elbo_grad_q_numerical(gp, Q.qμ, Q.qΣ)
+    params = Q.qμ
+    # Numerical approximation (just looking at Q.qμ)
+    μ_grad = Calculus.gradient(params) do params
+        Q.qμ = params
+        elbo(gp, Q)
+    end
+
+    params = Q.qΣ
+    Σ_grad = Calculus.gradient(params) do params
+        Q.qΣ = params
+        elbo(gp, Q)
+    end
+
+    elbo_grad_q_numerical(gp, Q.qμ, Q.qΣ)
+
 
 
 num_grad ≈ μ_grad
