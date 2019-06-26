@@ -147,16 +147,16 @@ module TestSparse
 
     @testset "Sparse Approximations" begin
         @testset "Subset of Regressors" begin
-            test_sparse(SoR(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3700.9442607193782)
+            test_sparse(SoR(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3704.0847727395367)
         end
         @testset "Deterministic Training Conditionals" begin
-            test_sparse(DTC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3700.9441871196145)
+            test_sparse(DTC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3704.084703493389)
         end
         @testset "Fully Independent Training Conditionals" begin
-            test_sparse(FITC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3706.716231927398)
+            test_sparse(FITC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3709.601737889645)
         end
         @testset "Fully Independent Training Conditionals" begin
-            test_sparse(FSA(x', Xu, blockindices, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3705.8973027102716)
+            test_sparse(FSA(x', Xu, blockindices, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3706.2892293004734)
         end
     end
 end
