@@ -193,13 +193,13 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
 
     # TODO: Remove globals
     # Initialise the varaitaional parameters
-    global Q = Approx(zeros(gp.nobs), log.(Matrix(I, gp.nobs, gp.nobs)*1.0))
+    global Q = Approx(zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*10.0)
     # Compute the initial ELBO objective between the intiialised Q and the GP
-    λ = [zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0]
+    λ = [zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*10.0]
 
     # Compute the ELBO function as per Opper and Archambeau EQ (9)
     function elbo(gp, Q)
-        qΣexp = exp.(Q.qΣ)
+        qΣexp = Q.qΣ
         μ = mean(gp.mean, gp.x)
         Σ = cov(gp.kernel, gp.x, gp.data)    #kernel function
         K = PDMat(Σ + 1e-6*I)
@@ -207,7 +207,7 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
 
         # Assuming a mean-field approximation
         Fvar = unwhiten(K, qΣexp)              # K⁻¹q_Σ
-        varExp = expect_dens(gp.lik, Fmean, exp.(Fvar), gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
+        varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
 
         # Compute KL as per Opper and Archambeau eq (9)
         Σopper = computeΣ(gp, qΣexp)
@@ -280,7 +280,7 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         params = diag(Q.qΣ)
 
         gradΣ = Calculus.gradient(params) do params
-            Q.qΣ = params
+            Q.qΣ = Diagonal(params)+zeros(length(params),length(params)) 
             elbo(gp, Q)
         end
 
