@@ -179,11 +179,19 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         qΣexp = Q.qΣ
         μ = mean(gp.mean, gp.x)
         Σ = cov(gp.kernel, gp.x, gp.data)    #kernel function
+        L = cholesky(Σ)
+        Fmean = L.L * Q.qμ # Assuming a zero mean function. In the case of a non-zero MF, sum this to the product.
         K = PDMat(Σ + 1e-6*I)
-        Fmean = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
+        # Fmean_prev = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
+        # Compute Fvar
+
+        q_sqrt_dnn = LowerTriangular(Q.qΣ)
+        L_tiled = L # In the case of multioutput GP, this would need to tiled d times, where d is the output dimension.
+        LTA = L_tiled.L * q_sqrt_dnn
+        Fvar = transpose(sum(LTA.data, dims=2)) # TODO: When log-transform Q.qΣ, LTA should be exponentiated
 
         # Assuming a mean-field approximation
-        Fvar = unwhiten(K, qΣexp)              # K⁻¹q_Σ
+        # Fvar = unwhiten(K, qΣexp)              # K⁻¹q_Σ
         varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
 
         # Compute KL as per Opper and Archambeau eq (9)
@@ -196,13 +204,11 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
 
         kl = 0.5*tr(Σopper * Kinv) .+ 0.5(transpose(Q.qμ) * Kinv * Q.qμ) .+ 0.5(logdet(K.mat)-logdet(Σopper)) #I've made a change to the logdet that I need to check
 
-        # @assert kl >= 0 "KL-divergence should be positive.\n"
-        println("KL: ", kl)
         # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
         elbo_val = sum(varExp)-kl
 
-        # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
-        return elbo_val
+        @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
+        return -elbo_val
     end
 
     # Compute the ELBO function as per GPFlow VGP._buill_ll(). Note, this is different from the _build_ll() in VGP_Opper of GPFlow
