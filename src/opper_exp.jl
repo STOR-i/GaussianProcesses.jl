@@ -1,6 +1,6 @@
 using GaussianProcesses, RDatasets, LinearAlgebra, Statistics, PDMats, Optim, ForwardDiff, Plots, Calculus
 import Distributions:Normal, Poisson
-import GaussianProcesses: get_params_kwargs, get_params, predict_f, update_ll_and_dll!, optimize!, update_target_and_dtarget!, gausshermite, log_dens, sqrtπ
+import GaussianProcesses: get_params_kwargs, get_params, predict_f, update_ll_and_dll!, optimize!, update_target_and_dtarget!, gausshermite, log_dens, sqrtπ, TDist
 using Random
 using Optim
 import PDMats: unwhiten!
@@ -165,10 +165,20 @@ end
 Compute the KL-divergence between the GP prior and a Gaussian variational distribiton
 """
 function gaussKL(gp::GPBase, Q::Approx, invK)
+    return 0.5*(-logdet(gp.cK.mat)-logdet(invK) + dot(gp.cK.mat, invK) + dot(gp.μ - Q.qμ, invK*(gp.μ-Q.qμ)) - length(gp.μ))
+end
+
+function elbo(gp::GPBase, Q::Approx)
     Σ = cov(gp.kernel, gp.x, gp.data)    #kernel function
     K = PDMat(Σ + 1e-6*I)
     Kinv = inv(K.mat)
-    return 0.5*(-logdet(gp.cK.mat)-logdet(invK) + dot(gp.cK.mat, invK) + dot(Q.qμ - gp.μ, invK*(Q.qμ - gp.μ)) - length(gp.μ))
+    elbo_val = -0.5*dot(gp.y, Kinv*gp.y) + 0.5logdet(Kinv) - gp.nobs*log(2* π)
+    return elbo_val
+end
+
+function natgradELBO(y, k, noise; stoch_coef::Float64=1.0)
+    grad_1 = stoch_coef*k*(gp.y * transpose(gp.y))./noise
+    grad_2 = -0.5*(stoch_coef*(k')) 
 end
 
 """
@@ -183,71 +193,6 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
     global Q = Approx(zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0)
     # Compute the initial ELBO objective between the intiialised Q and the GP
     λ = [zeros(gp.nobs), Matrix(I, gp.nobs, gp.nobs)*1.0]
-
-    # Compute the ELBO function as per Opper and Archambeau EQ (9)
-    function elbo(gp, Q)
-        μ = mean(gp.mean, gp.x)
-        Σ = cov(gp.kernel, gp.x, gp.data)    #kernel function
-        L = cholesky(Σ)
-        Fmean = L.L * Q.qμ # Assuming a zero mean function. In the case of a non-zero MF, sum this to the product.
-        K = PDMat(Σ + 1e-6*I)
-
-        
-        # Fmean = unwhiten(K, Q.qμ) + μ      # \sqrt{K}*q_μ
-        # # Assuming a mean-field approximation
-        # Fvar = unwhiten(K, diag(Q.qΣ))              # \sqrt{K}*q_Σ
-
-        # Fmean_prev = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
-        # Compute Fvar
-
-        q_sqrt_dnn = LowerTriangular(Q.qΣ)
-        L_tiled = L # In the case of multioutput GP, this would need to tiled d times, where d is the output dimension.
-        LTA = L_tiled.L * q_sqrt_dnn
-        Fvar = transpose(sum(LTA.data, dims=2)) # TODO: When log-transform Q.qΣ, LTA should be exponentiated
-
-        # Assuming a mean-field approximation
-        # Fvar = unwhiten(K, qΣexp)              # K⁻¹q_Σ
-        varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
-
-        # Compute KL as per Opper and Archambeau eq (9)
-        Σopper = computeΣ(gp, Q.qΣ)
-        Kinv = inv(K.mat)
-        # # Compute the prior KL e.g. KL(Q||P) s.t. P∼N(0, I)
-        # kl = 0.5(dot(Q.qμ, Q.qμ) - logdet(Q.qΣ) + sum(diag(Q.qΣ).^2))
-        # @assert kl >= 0 "KL-divergence should be positive.\n"
-        # println("KL: ", kl)
-
-        # kl1 = 0.5*tr(Q.qΣ * Kinv) .+ 0.5(transpose(Q.qμ-Fmean) * Kinv * (Q.qμ-Fmean)) .+ 0.5(logdet(K.mat)-logdet(Q.qΣ)) - 0.5*gp.nobs #I've made a change to the logdet that I need to check
-        kl = gaussKL(gp, Q, Kinv) # This KL is much smaller than the above KL (kl1)
-        println("KL: ", kl)
-        # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
-        elbo_val = sum(varExp)-kl
-        @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
-        return elbo_val
-    end
-
-    # Compute the ELBO function as per GPFlow VGP._buill_ll(). Note, this is different from the _build_ll() in VGP_Opper of GPFlow
-    function elbo(Q)
-        # Compute the prior KL e.g. KL(Q||P) s.t. P∼N(0, I)
-        kl = 0.5(dot(Q.qμ, Q.qμ) - logdet(Q.qΣ) + sum(diag(Q.qΣ).^2))
-        @assert kl >= 0 "KL-divergence should be positive.\n"
-        # println("KL: ", kl)
-
-        # Following block computes K^{-1}q_{μ}
-        μ = mean(gp.mean, gp.x)
-        Σ =  cov(gp.kernel, gp.x, gp.data)    #kernel function
-        K = PDMat(Σ + 1e-6*I)
-        Fmean = unwhiten(K, Q.qμ) + μ      # K⁻¹q_μ
-
-        # Assuming a mean-field approximation
-        Fvar = unwhiten(K, diag(Q.qΣ))              # K⁻¹q_Σ
-        varExp = expect_dens(gp.lik, Fmean, Fvar, gp.y)      # ∫log p(y|f)q(f), where q(f) is a Gaussian approx.
-
-        # ELBO = Σ_n 𝔼_{q(f_n)} ln p(y_n|f_n) + KL(q(f)||p(f))
-        elbo_val = sum(varExp)-kl
-        # @assert elbo_val <= 0 "ELBO Should be less than 0.\n"
-        return elbo_val
-    end
 
     init_elbo = elbo(gp, Q)
     if verbose
@@ -265,28 +210,12 @@ function vi(gp::GPBase; verbose::Bool=false, nits::Int=100, plot_elbo::Bool=fals
         update_target_and_dtarget!(gp; params_kwargs...)
 
         # Compute the gradients of the variational objective function
-        # gradμ, gradΣ = elbo_grad_q_numerical(gp, Q.qμ, Q.qΣ)
-
-        params = Q.qμ
-
-        # TODO: Check the gradients are being correctly computed. If so, check ELBO function.
-        gradμ = Calculus.gradient(params) do params
-            Q.qμ = params
-            elbo(gp, Q)
-        end
-
-        # params = diag(Q.qΣ)
-
-        #
-        # gradΣ = Calculus.gradient(params) do params
-        #     Q.qΣ = Diagonal(params)+zeros(length(params),length(params))
-        #     elbo(gp, Q)
-        # end
-
+        gradμ, gradΣ = elbo_grad_q(gp, Q)
+        
         # Update the variational parameters
-        updateQ!(Q, gradμ, α=0.001)
+        updateQ!(Q, gradμ, α=0.1)
         println("Variational Mean: ", mean(Q.qμ))
-
+        println(Q)
         # Recalculate the ELBO
         current_elbo = elbo(gp, Q)
         elbo_approx[i+1] = current_elbo
@@ -332,16 +261,18 @@ end
 
 Random.seed!(123)
 
-n = 50
-X = collect(range(-3,stop=3,length=n));
-f = 2*cos.(2*X);
-Y = [rand(Poisson(exp.(f[i]))) for i in 1:n];
+# Training data
+n = 20
+X = range(-3,stop=3,length=n)
+sigma = 1.0\n
+Y = X + sigma*rand(TDist(3),n)
+
 
 #GP set-up
 k = Matern(3/2,0.0,0.0)   # Matern 3/2 kernel
-l = PoisLik()             # Poisson likelihood
+l = StuTLik(3,0.1)  # Poisson likelihood
 
-gp = GP(X, vec(Y), MeanZero(), k, l)
+gp = GPMC(X, vec(Y), MeanZero(), Matern(3/2,0.0,0.0), l)
 set_priors!(gp.kernel,[Normal(-2.0,4.0),Normal(-2.0,4.0)])
 
 vi(gp;nits=50, verbose=true, plot_elbo=true)
