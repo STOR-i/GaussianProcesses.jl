@@ -303,8 +303,7 @@ function update_target_and_dtarget!(gp::GPMC; kwargs...)
     update_target_and_dtarget!(gp, precomp; kwargs...)
 end
 
-
-predict_full(gp::GPMC, xpred::AbstractMatrix) = predictMVN(xpred, gp.x, gp.y, gp.kernel, gp.mean, gp.alpha, gp.covstrat, gp.cK)
+predict_full(gp::GPMC, xpred::AbstractMatrix) = predictMVN(gp,xpred, gp.x, gp.y, gp.kernel, gp.mean, gp.v, gp.covstrat, gp.cK)
 """
     predict_y(gp::GPMC, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
 
@@ -312,38 +311,22 @@ Return the predictive mean and variance of Gaussian Process `gp` at specfic poin
 are given as columns of matrix `x`. If `full_cov` is `true`, the full covariance matrix is
 returned instead of only variances.
 """
+
+
+function predictMVN!(gp::GPMC,Kxx, Kff, Kfx, mx, αf)
+    Lck = whiten!(Kff, Kfx)
+    mu = mx + Lck' * αf
+    subtract_Lck!(Kxx, Lck)
+    return mu, Kxx
+end
+
+
 function predict_y(gp::GPMC, x::AbstractMatrix; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
     return predict_obs(gp.lik, μ, σ2)
 end
 
 
-# Sample from functions from the GP
-function Random.rand!(gp::GPMC, x::AbstractMatrix, A::DenseMatrix)
-    nobs = size(x,2)
-    n_sample = size(A,2)
-
-    if gp.nobs == 0
-        # Prior mean and covariance
-        μ = mean(gp.mean, x);
-        Σraw = cov(gp.kernel, x, x);
-        # Add jitter to get stable covariance
-        Σ, chol = make_posdef!(Σraw)
-    else
-        # Posterior mean and covariance
-        μ, Σ = predict_f(gp, x; full_cov=true)
-    end
-    return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
-end
-
-Random.rand(gp::GPMC, x::AbstractMatrix, n::Int) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n))
-
-# Sample from 1D GP
-Random.rand(gp::GPMC, x::AbstractVector, n::Int) = rand(gp, x', n)
-
-# Generate only one sample from the GP and returns a vector
-Random.rand(gp::GPMC, x::AbstractMatrix) = vec(rand(gp,x,1))
-Random.rand(gp::GPMC, x::AbstractVector) = vec(rand(gp,x',1))
 
 appendlikbounds!(lb, ub, gp::GPMC, bounds) = appendbounds!(lb, ub, num_params(gp.lik), bounds)
 

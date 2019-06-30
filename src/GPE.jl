@@ -374,7 +374,7 @@ end
 # Predict observations #
 #——————————————————————#
 
-predict_full(gp::GPE, xpred::AbstractMatrix) = predictMVN(xpred, gp.x, gp.y, gp.kernel, gp.mean, gp.alpha, gp.covstrat, gp.cK)
+predict_full(gp::GPE, xpred::AbstractMatrix) = predictMVN(gp,xpred, gp.x, gp.y, gp.kernel, gp.mean, gp.alpha, gp.covstrat, gp.cK)
 """
     predict_full(gp::GPE, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
 
@@ -382,6 +382,14 @@ Return the predictive mean and variance of Gaussian Process `gp` at specfic poin
 are given as columns of matrix `x`. If `full_cov` is `true`, the full covariance matrix is
 returned instead of only variances.
 """
+
+function predictMVN!(gp::GPE,Kxx, Kff, Kfx, mx, αf)
+    mu = mx + Kfx' * αf
+    Lck = whiten!(Kff, Kfx)
+    subtract_Lck!(Kxx, Lck)
+    return mu, Kxx
+end
+
 function predict_y(gp::GPE, x::AbstractMatrix; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
     if full_cov
@@ -392,35 +400,6 @@ function predict_y(gp::GPE, x::AbstractMatrix; full_cov::Bool=false)
     end
 end
 
-#———————————————————————————————————————————————————————————
-# Sample from the GPE
-function Random.rand!(gp::GPE, xpred::AbstractMatrix, A::DenseMatrix)
-    nobs = size(xpred,2)
-    n_sample = size(A,2)
-
-    if gp.nobs == 0
-        # Prior mean and covariance
-        μ = mean(gp.mean, xpred);
-        Σraw = cov(gp.kernel, xpred, xpred);
-        Σraw, chol = make_posdef!(Σraw)
-        Σ = PDMat(Σraw, chol)
-    else
-        # Posterior mean and covariance
-        μ, Σraw = predict_f(gp, xpred; full_cov=true)
-        Σraw, chol = make_posdef!(Σraw)
-        Σ = PDMat(Σraw, chol)
-    end
-    return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
-end
-
-Random.rand(gp::GPE, x::AbstractMatrix, n::Int) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n))
-
-# Sample from 1D GPE
-Random.rand(gp::GPE, x::AbstractVector, n::Int) = rand(gp, x', n)
-
-# Generate only one sample from the GPE and returns a vector
-Random.rand(gp::GPE, x::AbstractMatrix) = vec(rand(gp,x,1))
-Random.rand(gp::GPE, x::AbstractVector) = vec(rand(gp,x',1))
 
 #—————————————————————————————————————————————————————–
 #Functions for setting and calling the parameters of the GP object
