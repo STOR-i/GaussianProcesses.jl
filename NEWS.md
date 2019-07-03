@@ -1,5 +1,9 @@
 # News
 
+## Version 1.0.0 (2019-07-03)
+* Introduced sparse approximation methods
+  * Subset of regressors, deterministic training conditional, fully independent training conditional and full-scale approximation are all available 
+
 ## Version 0.9.0 (2018-12-07)
 * Introduction of `ElasticGPE` to allow `GP` which can grow without
   "refitting" whole Gaussian process (see also [#88](https://github.com/STOR-i/GaussianProcesses.jl/issues/88)).
