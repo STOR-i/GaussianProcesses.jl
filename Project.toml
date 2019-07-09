@@ -1,0 +1,40 @@
+name = "GaussianProcesses"
+uuid = "482d963d-215c-4c64-a1e6-68ef95496ddc"
+license = "MIT"
+version = "1.0.1"
+
+[deps]
+Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+ElasticArrays = "fdbdab4c-e67f-52f5-8c3f-e7b388dad3d4"
+ElasticPDMats = "2904ab23-551e-5aed-883f-487f97af5226"
+FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+PDMats = "90014a1f-27ba-587c-ab20-58faa44d9150"
+RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+ScikitLearnBase = "6e75b9c4-186b-50bd-896f-2d2496a4843e"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
+
+[compat]
+julia = "1.0"
+Distances = "0.7.3"
+Distributions = "0.16.2"
+ElasticArrays = "0.2.0"
+ElasticPDMats = "0.2.1"
+FastGaussQuadrature = "0.3.1"
+Optim = "0.16.0"
+PDMats = "0.9.4"
+RecipesBase = "0.6"
+ScikitLearnBase = "0.4.0"
+SpecialFunctions = "0.7.0"
+StaticArrays = "0.6, 0.10"
+StatsFuns = "0.7.0"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
