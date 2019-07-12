@@ -155,7 +155,7 @@ module TestSparse
         @testset "Fully Independent Training Conditionals" begin
             test_sparse(FITC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3709.601737889645)
         end
-        @testset "Fully Independent Training Conditionals" begin
+        @testset "Full Scale Approximation" begin
             test_sparse(FSA(x', Xu, blockindices, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3706.2892293004734)
         end
     end
