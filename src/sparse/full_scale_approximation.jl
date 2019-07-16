@@ -406,7 +406,7 @@ predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector
       = Σxx - Kxu Kuu⁻¹ Kux + Kxu ΣQR⁻¹ Kux         # expanding
       = Σxx - Qxx           + Kxu ΣQR⁻¹ Kux         # definition of Qxx
 """
-function predictMVN(xpred::AbstractMatrix, blockindpred::BlockIndices, 
+function predictMVN(gp::GPE, xpred::AbstractMatrix, blockindpred::BlockIndices, 
                     xtrain::AbstractMatrix, ytrain::AbstractVector,
                     kernel::Kernel, meanf::Mean,
                     alpha::AbstractVector,
