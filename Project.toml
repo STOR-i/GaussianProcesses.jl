@@ -1,7 +1,7 @@
 name = "GaussianProcesses"
 uuid = "482d963d-215c-4c64-a1e6-68ef95496ddc"
 license = "MIT"
-version = "1.0.1"
+version = "1.0.0"
 
 [deps]
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
