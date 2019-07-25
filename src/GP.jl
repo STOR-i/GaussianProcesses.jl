@@ -51,7 +51,7 @@ end
 @inline subtract_Lck!(Sigma_raw, Lck) = Sigma_raw .-= Lck'Lck
 
 """
-    predict_f(gp::GPBase, X::Matrix{Float64}[; full_cov::Bool = false])
+    predict_f(gp::GPBase, X::Matrix{Float64}[]; full_cov::Bool = false)
 
 Return posterior mean and variance of the Gaussian Process `gp` at specfic points which are
 given as columns of matrix `X`. If `full_cov` is `true`, the full covariance matrix is
@@ -71,6 +71,24 @@ function predict_f(gp::GPBase, x::AbstractMatrix; full_cov::Bool=false)
             σ2[k] = max(diag(sig)[1], 0.0)
         end
         return μ, σ2
+    end
+end
+
+"""
+    predict_f(gp::GPBase, X::Vector{Float64}[]; full_cov::Bool = false)
+
+Return posterior mean and variance of the Gaussian Process `gp` at a specfic point which is
+given as the vector `x`. If `full_cov` is `true`, the full covariance matrix is
+returned instead of only the variance.
+"""
+function predict_f(gp::GPBase, x::AbstractVector; full_cov::Bool=false)
+    length(x) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
+    μ, σ2 = predict_full(gp, x[:,:])
+    if full_cov
+        return μ[1], σ2[1]
+    else
+        ## Calculate prediction for each point independently
+        return μ[1], max(diag(σ2)[1], 0.0)
     end
 end
 
