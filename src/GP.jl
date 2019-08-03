@@ -51,7 +51,7 @@ end
 @inline subtract_Lck!(Sigma_raw, Lck) = Sigma_raw .-= Lck'Lck
 
 """
-    predict_f(gp::GPBase, X::Matrix{Float64}[; full_cov::Bool = false])
+    predict_f(gp::GPBase, X::Matrix{Float64}[]; full_cov::Bool = false)
 
 Return posterior mean and variance of the Gaussian Process `gp` at specfic points which are
 given as columns of matrix `X`. If `full_cov` is `true`, the full covariance matrix is
