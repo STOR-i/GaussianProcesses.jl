@@ -67,10 +67,21 @@ end
 function Base.Matrix(a::BlockDiagPDMat)
     K = zeros(size(a))
     for (pd,ind) in zip(a.blockPD,a.blockindices)
-        b = @view(K[ind, ind])
+        # Error in sparse tests here...
+        # pd is 220 x 220 matrix
+        # println(size(ind))
+        # println("---------------------------------------")
+        # println(size(pd))
+        # println("---------------------------------------")
+        # println(size(@view(K[ind, ind])))
+        # println(size(mat(pd)))
+        b = convert(Array, @view(K[ind, ind]))
         b = copy(mat(pd))
     end
-    return K
+    println(size(K))
+    println(sum(K))
+
+    return K + Diagonal(repeat([1e-10], size(K, 1)))
 end
 mat(a::BlockDiagPDMat) = Matrix(a)
 
