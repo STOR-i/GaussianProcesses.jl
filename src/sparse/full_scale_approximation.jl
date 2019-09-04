@@ -67,14 +67,6 @@ end
 function Base.Matrix(a::BlockDiagPDMat)
     K = zeros(size(a))
     for (pd,ind) in zip(a.blockPD,a.blockindices)
-        # Error in sparse tests here...
-        # pd is 220 x 220 matrix
-        # println(size(ind))
-        # println("---------------------------------------")
-        # println(size(pd))
-        # println("---------------------------------------")
-        # println(size(@view(K[ind, ind])))
-        # println(size(mat(pd)))
         b = convert(Array, @view(K[ind, ind]))
         b = copy(mat(pd))
     end
