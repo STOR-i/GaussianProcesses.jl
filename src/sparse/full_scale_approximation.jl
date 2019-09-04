@@ -68,11 +68,8 @@ function Base.Matrix(a::BlockDiagPDMat)
     K = zeros(size(a))
     for (pd,ind) in zip(a.blockPD,a.blockindices)
         b = convert(Array, @view(K[ind, ind]))
-        b = copy(mat(pd))
+        b = copy(mat(pd)) # TODO: I think the error lies here. Originally it was copy!(@view(K[ind, ind]), mat(pd))
     end
-    println(size(K))
-    println(sum(K))
-
     return K + Diagonal(repeat([1e-10], size(K, 1)))
 end
 mat(a::BlockDiagPDMat) = Matrix(a)
