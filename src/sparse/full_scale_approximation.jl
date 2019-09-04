@@ -67,7 +67,8 @@ end
 function Base.Matrix(a::BlockDiagPDMat)
     K = zeros(size(a))
     for (pd,ind) in zip(a.blockPD,a.blockindices)
-        copy!(@view(K[ind,ind]), mat(pd))
+        b = @view(K[ind, ind])
+        b = copy(mat(pd))
     end
     return K
 end
