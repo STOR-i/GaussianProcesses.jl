@@ -26,5 +26,3 @@ var_lik(poisson::PoisLik, f::AbstractVector) = exp.(f)
 
 get_params(poisson::PoisLik) = []
 num_params(poisson::PoisLik) = 0
-
-
