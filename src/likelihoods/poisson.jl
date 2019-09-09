@@ -33,7 +33,6 @@ function var_exp(ll::PoisLik, y::AbstractArray, m::AbstractArray, V::AbstractMat
     for (a, b, c) in zip(y, m, V_diag)
         tot +=  a*b - exp(b + c/2) - log(factorial(convert(Int64, a))) # convert to lgamma(y+1) 
     end
-    println("Variational Expectation: ", tot)
     return tot
 end
 

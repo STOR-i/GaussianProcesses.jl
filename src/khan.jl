@@ -47,15 +47,31 @@ function vi(gp::GPBase; nits::Int64=1000)
     V = deepcopy(Q.V)
     evaluation = Inf
     
-    # TODO: Have functoin for ELBO and evaluate the ELBO at the MCMC MAP estimate. Should be better than just a random estimate.
-
     # Optimise Q
-    for i in 1:5 # TODO: Switch 5 to gp.nobs
+    for i in 1:gp.nobs
+        println("Iteration: ", i)
         push_back!(V, i)
         ktilde = K[end, end] - 1/V[end, end]
         v_corner_old = deepcopy(V[end, end])
         for _ in 1:3
-            V[end, end] = 1/(Ω[end, end] - ktilde)# - 2g)
+            gv = dv_var_exp(gp.lik, gp.y[end], gp.μ[i], V[end, end])
+            V[end, end] = 1/(Ω[end, end] - ktilde - 2*gv)
         end
+        # Update V 
+        # TODO: Check that it should be V[:, end] and not V[end, :]
+        V[1, 1] += (V[end, end] - v_corner_old) * (transpose(V[:, end])*V[:, end]) / v_corner_old^2
+        V[:, end] = - v_corner_old*V[:, end] / V[end, end]
+
+        # Update K_22
+        K[end, end] = ktilde + 1/V[end, end]
+
+        # Update m 
+        function m_solver(m::AbstractArray)
+            # Return negative solution to enable maximisation
+            return  -(maximum(m) - 0.5*transpose(m - gp.μ)*Ω*(m - gp.μ) + var_exp(gp.lik, gp.y, m, V))
+        end
+        res = optimize(m_solver, Q.m, LBFGS(); autodiff = :forward)
+        Q.m = Optim.minimizer(res)
+        println(Q.m)
     end
 end
