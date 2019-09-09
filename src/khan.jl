@@ -11,7 +11,7 @@ function initialise_Q(gp::GPBase)
     K = deepcopy(Ω)
     m = mean(gp.mean, gp.x)
     Q = Approx(m, V)
-    return Q
+    return Q, V, K
 end
 
 
@@ -31,7 +31,7 @@ function vi(gp::GPBase; nits::Int64=1000)
     mcmc(gp; nIter=1)
 
     # Initialise variational approximation
-    Q = initialise_Q(gp)
+    Q, Ω, K = initialise_Q(gp)
     V = deepcopy(Q.V)
     evaluation = Inf
 
@@ -41,7 +41,7 @@ function vi(gp::GPBase; nits::Int64=1000)
         ktilde = K[end, end] - 1/V[end, end]
         v_corner_old = deepcopy(V[end, end])
         for _ in 1:3
-            V[end, end] = 1/(Ω[end, end] - ktile)# - 2g)
+            V[end, end] = 1/(Ω[end, end] - ktilde)# - 2g)
         end
     end
 end
