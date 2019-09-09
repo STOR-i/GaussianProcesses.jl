@@ -1,6 +1,6 @@
 module GaussianProcesses
 
-using Optim, PDMats, ElasticPDMats, ElasticArrays, Distances, FastGaussQuadrature, RecipesBase, Distributions
+using Optim, PDMats, ElasticPDMats, ElasticArrays, Distances, FastGaussQuadrature, RecipesBase, Distributions, Zygote
 using StaticArrays
 using StatsFuns, SpecialFunctions
 
@@ -14,8 +14,8 @@ import PDMats: dim, Matrix, diag, pdadd!, *, \, inv, logdet, eigmax, eigmin, whi
 export GPBase, GP, GPE, GPMC, ElasticGPE, predict_f, predict_y, Kernel, Likelihood, CompositeKernel, SumKernel, ProdKernel, Masked, FixedKernel, fix, Noise, Const, SE, SEIso, SEArd, Periodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Matern, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, #kernel functions
     MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, MeanPeriodic, #mean functions
     GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
-    mcmc, optimize!, vi, variational_expectation,              #inference functions
-    set_priors!,set_params!, update_target!, autodiff
+    mcmc, optimize!, vi, var_exp, dv_var_exp, elbo, initialise_Q,          #inference functions
+    set_priors!,set_params!, update_target!, autodiff, update_Q!
 using ForwardDiff: GradientConfig, Dual, partials, copyto!, Chunk
 import ForwardDiff: seed!
 
@@ -41,7 +41,6 @@ include("crossvalidation.jl")
 include("plot.jl")
 include("sparse/sparseGP.jl")
 include("khan.jl") # Flip to VI once complete
-include("expecatations.jl")
 
 
 # ScikitLearnBase, which is a skeleton package.

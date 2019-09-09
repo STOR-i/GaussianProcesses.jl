@@ -43,3 +43,7 @@ function expect_dens(lik::Likelihood, fmean::AbstractVector, fvar::AbstractVecto
     end
     return lpred*weights
 end
+
+function dv_var_exp(ll::PoisLik, y::Number, m::Number, V::Number)
+    return gradient(x -> var_exp(ll, y, m, x), V)[1]
+end

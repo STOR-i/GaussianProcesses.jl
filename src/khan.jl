@@ -15,8 +15,20 @@ function initialise_Q(gp::GPBase)
 end
 
 
+function update_Q!(Q, m, V)
+    Q.m = m
+    Q.V = V
+end
+
+
+function elbo(y::AbstractArray, μ::AbstractArray, Ω::AbstractMatrix, m::AbstractArray, V::AbstractMatrix, ll::Likelihood)
+    N = length(y)
+    VprodΩ = V * Ω
+    return -0.5*(logdet(VprodΩ) - tr(VprodΩ) - transpose(m - μ)*Ω*(m - μ) + N) + var_exp(ll, y, m, V)
+end
+
+
 function push_back!(mat::AbstractArray, idx::Integer)
-    # TODO: Make bang function
     # TODO: Possibly more efficient way to do this.
     ori_size = size(mat)
     target = mat[:, idx]
@@ -34,6 +46,8 @@ function vi(gp::GPBase; nits::Int64=1000)
     Q, Ω, K = initialise_Q(gp)
     V = deepcopy(Q.V)
     evaluation = Inf
+    
+    # TODO: Have functoin for ELBO and evaluate the ELBO at the MCMC MAP estimate. Should be better than just a random estimate.
 
     # Optimise Q
     for i in 1:5 # TODO: Switch 5 to gp.nobs
