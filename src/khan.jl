@@ -22,19 +22,32 @@ end
 
 
 function elbo(y::AbstractArray, μ::AbstractArray, Ω::AbstractMatrix, m::AbstractArray, V::AbstractMatrix, ll::Likelihood)
+    @assert length(μ) == length(m)
+    @assert size(V) == size(Ω)
+    println("y: ", size(y))
+    println("μ: ", size(μ))
+    println("Ω: ", size(Ω))
+    println("m: ", size(m))
+    println("V: ", size(V))
     N = length(y)
     VprodΩ = V * Ω
-    return -0.5*(logdet(VprodΩ) - tr(VprodΩ) - transpose(m - μ)*Ω*(m - μ) + N) + var_exp(ll, y, m, V)
+    vexp =  var_exp(ll, y, m, V)
+    return 0.5*(logdet(VprodΩ) - tr(VprodΩ) - transpose(m - μ)*Ω*(m - μ) + N) + vexp
 end
 
 
-function push_back!(mat::AbstractArray, idx::Integer)
+function push_back!(mat::AbstractMatrix, idx::Integer)
     # TODO: Possibly more efficient way to do this.
     ori_size = size(mat)
     target = mat[:, idx]
     temp =  mat[:,setdiff(1:end, idx)]
     mat = cat(temp, target, dims=2)
-    @assert size(mat) == ori_size
+end
+
+
+function push_back!(mat::AbstractVector)
+    target = mat[1]
+    append!(mat[2:end], target)
 end
 
 
@@ -46,32 +59,43 @@ function vi(gp::GPBase; nits::Int64=1000)
     Q, Ω, K = initialise_Q(gp)
     V = deepcopy(Q.V)
     evaluation = Inf
-    
+    y = deepcopy(gp.y)
+    μ = deepcopy(gp.μ)
+
     # Optimise Q
-    for i in 1:gp.nobs
-        println("Iteration: ", i)
-        push_back!(V, i)
-        ktilde = K[end, end] - 1/V[end, end]
-        v_corner_old = deepcopy(V[end, end])
-        for _ in 1:3
-            gv = dv_var_exp(gp.lik, gp.y[end], gp.μ[i], V[end, end])
-            V[end, end] = 1/(Ω[end, end] - ktilde - 2*gv)
+    for j in 1:nits
+        for i in 1:gp.nobs
+            push_back!(V, 1)
+            push_back!(Ω, 1)
+            push_back!(K, 1)
+            push_back!(y)
+            push_back!(μ)
+
+            ktilde = K[end, end] - 1/V[end, end]
+            v_corner_old = deepcopy(V[end, end])
+    
+            for _ in 1:3
+                gv = dv_var_exp(gp.lik, y[end], μ[end], V[end, end])
+                V[end, end] = 1/(Ω[end, end] - ktilde - 2*gv)
+            end
+            
+            # Update V 
+            V[1:(end-1), 1:(end-1)] += (V[end, end] - v_corner_old) * (V[1:(end-1), end] * transpose(V[1:(end-1), end])) / v_corner_old^2
+            V[1:(end-1), end] = -v_corner_old*V[1:(end-1), end] / V[end, end]
+            V[end, 1:(end-1)] = V[1:(end-1), end]
+            
+            # Update K_22
+            K[end, end] = ktilde + 1/V[end, end]
         end
-        # Update V 
-        # TODO: Check that it should be V[:, end] and not V[end, :]
-        V[1, 1] += (V[end, end] - v_corner_old) * (transpose(V[:, end])*V[:, end]) / v_corner_old^2
-        V[:, end] = - v_corner_old*V[:, end] / V[end, end]
-
-        # Update K_22
-        K[end, end] = ktilde + 1/V[end, end]
-
+        update_Q!(Q, Q.m, V)
+            
         # Update m 
-        function m_solver(m::AbstractArray)
-            # Return negative solution to enable maximisation
-            return  -(maximum(m) - 0.5*transpose(m - gp.μ)*Ω*(m - gp.μ) + var_exp(gp.lik, gp.y, m, V))
+            function m_solver(m::AbstractArray)
+                # Return negative solution to enable maximisation
+                return  -(-0.5*transpose(m - gp.μ)*Ω*(m - gp.μ) + var_exp(gp.lik, gp.y, m, V))
+            end
+            res = optimize(m_solver, Q.m, Newton())# LBFGS(); autodiff = :forward)
+            Q.m = Optim.minimizer(res)
         end
-        res = optimize(m_solver, Q.m, LBFGS(); autodiff = :forward)
-        Q.m = Optim.minimizer(res)
-        println(Q.m)
-    end
+    return Q
 end
