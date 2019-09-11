@@ -1,6 +1,5 @@
 using Optim, GaussianProcesses, Distributions, Random
 
-
 Random.seed!(203617)
 n=10;                          #number of training points
 d = 2
@@ -13,7 +12,6 @@ function scale_ω(ω::AbstractMatrix, ℓ::AbstractArray)
     return ωscaled
 end
 
-
 mutable struct RFF
     dimension::Int64
     ω::AbstractMatrix
@@ -22,7 +20,6 @@ mutable struct RFF
     ℓ::AbstractArray
     σ::Float64
 end
-
 
 mutable struct SSGPR
     X::AbstractMatrix
@@ -52,8 +49,5 @@ function build_design_mat!(F::RFF, X::AbstractMatrix)
     return ϕ_x    
 end
 
-
-
 gp = SSGPR(x, y, kern)
 println(gp)
-
