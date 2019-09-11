@@ -1,5 +1,4 @@
 # Squared Exponential Function with ARD
-
 """
     SEArd <: StationaryARD{WeightedSqEuclidean}
 
@@ -48,3 +47,4 @@ cov(se::SEArd, r::Number) = se.σ2*exp(-r / 2)
         return NaN
     end
 end
+
