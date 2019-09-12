@@ -40,7 +40,7 @@ Random.seed!(1234)
 #    end
 
     @testset "Basic" begin
-        Q = vi(gp)
+        Q = vi(gp, nits=1)
         gp.μ = Q.m
         gp.cK = PDMat(Q.V)
         xtest = range(minimum(gp.x),stop=maximum(gp.x),length=50);
