@@ -6,7 +6,7 @@ makedocs(
     sitename = "GaussianProcesses.jl",
     pages = Any["Introduction" => "index.md",
                 "Usage" => "usage.md",
-                "Reference" => ["gp.md", "kernels.md", "mean.md","lik.md","sparse.md"]
+                "Reference" => ["gp.md", "kernels.md", "mean.md","lik.md","sparse.md","crossvalidation.md"]
                ]
 )
 
