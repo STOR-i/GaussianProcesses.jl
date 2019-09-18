@@ -29,7 +29,7 @@ end
 function log_dens(studentT::StuTLik, f::AbstractVector, y::AbstractVector)
     ν = studentT.ν
     σ = studentT.σ
-    c = lgamma(0.5*(ν+1)) - lgamma(0.5*ν) - 0.5*log(pi*ν) - log(σ)
+    c = loggamma(0.5*(ν+1)) - loggamma(0.5*ν) - 0.5*log(pi*ν) - log(σ)
     return [c - (0.5*(ν+1))*log(1+(1/ν)*((yi-fi)/σ)^2) for (fi,yi) in zip(f,y)]
 end
 
