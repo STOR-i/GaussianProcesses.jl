@@ -20,10 +20,10 @@ end
 #===============================
   Predictions
 ================================#
-""" Compute predictions using the standard multivariate normal 
+""" Compute predictions using the standard multivariate normal
     conditional distribution formulae.
 """
-function predictMVN(gp::GPBase,xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector, 
+function predictMVN(gp::GPBase,xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector,
                    kernel::Kernel, meanf::Mean, alpha::AbstractVector,
                    covstrat::CovarianceStrategy, Ktrain::AbstractPDMat)
     crossdata = KernelData(kernel, xtrain, xpred)
@@ -89,7 +89,7 @@ function make_posdef!(m::AbstractMatrix, chol_factors::AbstractMatrix)
     n = size(m, 1)
     size(m, 2) == n || throw(ArgumentError("Covariance matrix must be square"))
     for _ in 1:10 # 10 chances
-        try 
+        try
             # return m, cholesky(m)
             copyto!(chol_factors, m)
             chol = cholesky!(Symmetric(chol_factors, :U))
@@ -116,11 +116,11 @@ function make_posdef!(m::AbstractMatrix)
 end
 
 
-#———————————————————————————————————————————————————————————
+# ———————————————————————————————————————————————————————————
 # Sample random draws from the GP
 function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix)
     nobs = size(x,2)
-    n_sample = size(A,2)
+    n_sample = size(A, 2)
 
     if gp.nobs == 0
         # Prior mean and covariance
@@ -130,12 +130,33 @@ function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix)
         Σ = PDMat(Σraw, chol)
     else
         # Posterior mean and covariance
-        μ, Σraw = predict_f(gp, x; full_cov=true)
+        μ, Σraw = predict_f(gp, x)
         Σraw, chol = make_posdef!(Σraw)
         Σ = PDMat(Σraw, chol)
     end
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end
+
+function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix, Q::Approx)
+    println("Making variational approximation to the true posterior") # TODO: Remove in final commit.
+    nobs = size(x,2)
+    n_sample = size(A, 2)
+
+    if gp.nobs == 0
+        # Prior mean and covariance
+        μ = mean(gp.mean, x);
+        Σraw = cov(gp.kernel, x, x);
+        Σraw, chol = make_posdef!(Σraw)
+        Σ = PDMat(Σraw, chol)
+    else
+        # Posterior mean and covariance
+        μ, Σraw = predict_f(gp, x)
+        Σraw, chol = make_posdef!(Q.V)
+        Σ = PDMat(Σraw, chol)
+    end
+    return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
+end
+
 
 Random.rand(gp::GPBase, x::AbstractMatrix, n::Int) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n))
 
@@ -145,3 +166,6 @@ Random.rand(gp::GPBase, x::AbstractVector, n::Int) = rand(gp, x', n)
 # Generate only one sample from the GPBase and returns a vector
 Random.rand(gp::GPBase, x::AbstractMatrix) = vec(rand(gp,x,1))
 Random.rand(gp::GPBase, x::AbstractVector) = vec(rand(gp,x',1))
+
+# Generate samples from the variational approxiamtion
+Random.rand(gp::GPBase, x::AbstractVector, Q::Approx) = vec(rand(gp, x', 1, Q))

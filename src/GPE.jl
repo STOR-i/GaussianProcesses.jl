@@ -199,7 +199,7 @@ end
 
 Derivative of the marginal log likelihood log p(Y|θ) with respect to the kernel hyperparameters.
 """
-function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::KernelData, 
+function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::KernelData,
                     ααinvcKI::Matrix{Float64}, covstrat::CovarianceStrategy)
     dim, nobs = size(X)
     nparams = num_params(k)
@@ -241,8 +241,8 @@ function init_precompute(covstrat::FullCovariance, X, y, k)
     FullCovariancePrecompute(nobs)
 end
 init_precompute(gp::GPBase) = init_precompute(gp.covstrat, gp.x, gp.y, gp.kernel)
-    
-function precompute!(precomp::FullCovariancePrecompute, gp::GPBase) 
+
+function precompute!(precomp::FullCovariancePrecompute, gp::GPBase)
     get_ααinvcKI!(precomp.ααinvcKI, gp.cK, gp.alpha)
 end
 function dmll_kern!(dmll::AbstractVector, gp::GPBase, precomp::FullCovariancePrecompute, covstrat::CovarianceStrategy)

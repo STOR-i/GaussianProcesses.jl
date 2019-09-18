@@ -43,7 +43,7 @@ mutable struct GPMC{X<:AbstractMatrix,Y<:AbstractVector{<:Real},M<:Mean,K<:Kerne
     function GPMC{X,Y,M,K,L,CS,D}(x::X, y::Y, mean::M, kernel::K, lik::L, covstrat::CS, data::D) where {X,Y,M,K,L,CS,D}
         dim, nobs = size(x)
         length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        gp = new{X,Y,M,K,L,CS,D}(x, y, mean, kernel, lik, covstrat, dim, nobs, 
+        gp = new{X,Y,M,K,L,CS,D}(x, y, mean, kernel, lik, covstrat, dim, nobs,
                                  data, zeros(nobs))
         initialise_target!(gp)
     end
@@ -163,8 +163,8 @@ function FullCovMCMCPrecompute(nobs::Int)
     return FullCovMCMCPrecompute(buffer1, buffer2, buffer3)
 end
 init_precompute(gp::GPMC) = FullCovMCMCPrecompute(gp.nobs)
-    
-function precompute!(precomp::FullCovMCMCPrecompute, gp::GPBase) 
+
+function precompute!(precomp::FullCovMCMCPrecompute, gp::GPBase)
     f = unwhiten(gp.cK, gp.v)  + gp.μ
     dl_df = dlog_dens_df(gp.lik, f, gp.y)
     precomp.dl_df[:] = dl_df

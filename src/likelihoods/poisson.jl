@@ -31,13 +31,19 @@ function var_exp(ll::PoisLik, y::AbstractArray, m::AbstractArray, V::AbstractMat
     tot = 0
     V_diag = diag(V)
     for (a, b, c) in zip(y, m, V_diag)
-        tot +=  a*b - exp(b + c/2) - log(factorial(convert(Int64, a))) # convert to lgamma(y+1) 
+        tot +=  a*b - exp(b + c/2) - log(factorial(convert(Int64, a))) # convert to lgamma(y+1)
     end
     return tot
 end
 
-
-function var_exp(ll::PoisLik, y::Number, m::Number, V::Number)
-    return y*m - exp(m + V/2) - log(factorial(convert(Int64, y))) # convert to lgamma(y+1) 
+function var_exp(ll::PoisLik, y::AbstractArray, m::AbstractArray, V::AbstractArray)
+    tot = 0
+    for (a, b, c) in zip(y, m, V)
+        tot +=  a*b - exp(b + c/2) - log(factorial(convert(Int64, a))) # convert to lgamma(y+1)
+    end
+    return tot
 end
 
+function var_exp(ll::PoisLik, y::Number, m::Number, V::Number)
+    return y*m - exp(m + V/2) - log(factorial(convert(Int64, y))) # convert to lgamma(y+1)
+end
