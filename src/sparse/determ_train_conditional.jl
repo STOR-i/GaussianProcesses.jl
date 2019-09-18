@@ -38,13 +38,13 @@ end
     where μ_DTC and Σ_DTC are the predictive mean and covariance
     functions for the Subset of Regressors approximation.
 """
-function predictMVN(gp::GPE, xpred::AbstractMatrix,
+function predictMVN(xpred::AbstractMatrix,
                     xtrain::AbstractMatrix, ytrain::AbstractVector, 
                     kernel::Kernel, meanf::Mean,
                     alpha::AbstractVector,
                     covstrat::DeterminTrainCondStrat, Ktrain::AbstractPDMat)
     SoR = SubsetOfRegsStrategy(covstrat)
-    μ_SoR, Σ_SoR = predictMVN(gp, xpred, xtrain, ytrain, kernel, meanf, alpha, SoR, Ktrain)
+    μ_SoR, Σ_SoR = predictMVN(xpred, xtrain, ytrain, kernel, meanf, alpha, SoR, Ktrain)
     inducing = covstrat.inducing
     Kuu = Ktrain.Kuu
     

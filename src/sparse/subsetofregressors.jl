@@ -295,7 +295,7 @@ end
       = Qxx - Qxx           + Kxu ΣQR⁻¹ Kux         # definition of Qxx
       = Kxu ΣQR⁻¹ Kux                               # simplifying
 """
-function predictMVN(gp::GPE, xpred::AbstractMatrix,
+function predictMVN(xpred::AbstractMatrix,
                     xtrain::AbstractMatrix, ytrain::AbstractVector,
                     kernel::Kernel, meanf::Mean,
                     alpha::AbstractVector,

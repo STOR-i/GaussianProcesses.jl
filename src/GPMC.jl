@@ -303,7 +303,7 @@ function update_target_and_dtarget!(gp::GPMC; kwargs...)
     update_target_and_dtarget!(gp, precomp; kwargs...)
 end
 
-predict_full(gp::GPMC, xpred::AbstractMatrix) = predictMVN(gp,xpred, gp.x, gp.y, gp.kernel, gp.mean, gp.v, gp.covstrat, gp.cK)
+predict_full(gp::GPMC, xpred::AbstractMatrix) = predictMVN(xpred, gp.x, gp.y, gp.kernel, gp.mean, whiten(gp.cK,gp.v), gp.covstrat, gp.cK)
 """
     predict_y(gp::GPMC, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
 
@@ -311,15 +311,6 @@ Return the predictive mean and variance of Gaussian Process `gp` at specfic poin
 are given as columns of matrix `x`. If `full_cov` is `true`, the full covariance matrix is
 returned instead of only variances.
 """
-
-
-function predictMVN!(gp::GPMC,Kxx, Kff, Kfx, mx, αf)
-    Lck = whiten!(Kff, Kfx)
-    mu = mx + Lck' * αf
-    subtract_Lck!(Kxx, Lck)
-    return mu, Kxx
-end
-
 
 function predict_y(gp::GPMC, x::AbstractMatrix; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)

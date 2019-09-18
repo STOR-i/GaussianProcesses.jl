@@ -318,13 +318,13 @@ predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector
       = Σxx - Kxu Kuu⁻¹ Kux + Kxu ΣQR⁻¹ Kux         # expanding
       = Σxx - Qxx           + Kxu ΣQR⁻¹ Kux         # definition of Qxx
 """
-function predictMVN(gp::GPE, xpred::AbstractMatrix,
+function predictMVN(xpred::AbstractMatrix,
                     xtrain::AbstractMatrix, ytrain::AbstractVector,
                     kernel::Kernel, meanf::Mean,
                     alpha::AbstractVector,
                     covstrat::FullyIndepStrat, Ktrain::FullyIndepPDMat)
     DTC = DeterminTrainCondStrat(covstrat)
-    μ_DTC, Σ_DTC = predictMVN(gp, xpred, xtrain, ytrain, kernel, meanf, alpha, DTC, Ktrain)
+    μ_DTC, Σ_DTC = predictMVN(xpred, xtrain, ytrain, kernel, meanf, alpha, DTC, Ktrain)
     return μ_DTC, Σ_DTC
 end
 
