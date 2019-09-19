@@ -15,7 +15,7 @@ end
 
 function log_dens(binomial::BinLik, f::AbstractVector, y::Vector{Int})
     θ = @. exp(f) / (1 + exp(f))
-    return Float64[loggamma(binomial.n+1.0) - loggamma(yi+1.0) - loggamma(binomial.n-yi+1.0) + yi*log(θi) + (binomial.n-yi)*log(1-θi) for (θi,yi) in zip(θ,y)]
+    return Float64[lgamma(binomial.n+1.0) - lgamma(yi+1.0) - lgamma(binomial.n-yi+1.0) + yi*log(θi) + (binomial.n-yi)*log(1-θi) for (θi,yi) in zip(θ,y)]
 end
 
 function dlog_dens_df(binomial::BinLik, f::AbstractVector, y::Vector{Int})

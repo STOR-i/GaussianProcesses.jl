@@ -12,7 +12,7 @@ struct PoisLik <: Likelihood end
 #log of probability density
 function log_dens(poisson::PoisLik, f::AbstractVector, y::Vector{Int})
     #where we exponentiate for positivity f = exp(fi)
-    return y.*f - exp.(f) - loggamma.(1.0 .+ y)
+    return y.*f - exp.(f) - lgamma.(1.0 .+ y)
 end
 
 #derivative of pdf wrt latent function
