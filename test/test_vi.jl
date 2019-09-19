@@ -41,22 +41,25 @@ Random.seed!(1234)
 
     @testset "Basic" begin
         Q = vi(gp, nits=10)
-        println("Trace: ", sum(diag(Q.V)))
-        # println(Q.V)
         println("Positive Definite: ", isposdef(Q.V))
-        # println(Q.m)
         println("-------------------")
-        xtest = range(minimum(gp.x),stop=maximum(gp.x),length=50);
+
+        xtest = range(minimum(gp.x),stop=maximum(gp.x),length=50)
+
         nsamps = 500
-        visamples = Array{Float64}(undef, nsamps, length(xtest));
+        ymean = [];
+        visamples = Array{Float64}(undef, nsamps, size(xtest, 1))
+
         for i in 1:nsamps
-                visamples[i,:] = rand(gp, xtest, Q)
+            visamples[i, :] = rand(gp, xtest, Q)
+            push!(ymean, predict_y(gp, xtest)[1])
         end
-        q10 = [quantile(visamples[:,i], 0.1) for i in 1:length(xtest)]
+
+        q10 = [quantile(visamples[i,:], 0.1) for i in 1:length(xtest)]
         q50 = [quantile(visamples[:,i], 0.5) for i in 1:length(xtest)]
         q90 = [quantile(visamples[:,i], 0.9) for i in 1:length(xtest)]
-        plot(xtest, exp.(q50),ribbon=(exp.(q10), exp.(q90)),leg=true, fmt=:png, label="quantiles")
-        plot!(xtest, mean(ymean), label="posterior mean")
+        plot(xtest, exp.(q50), ribbon=(exp.(q10), exp.(q90)), leg=true, fmt=:png, label="quantiles")
+        plot!(xtest, mean(ymean), label="posterior mean", w=2)
         xx = range(-3,stop=3,length=1000);
         f_xx = 2*cos.(2*xx);
         plot!(xx, exp.(f_xx), label="truth")

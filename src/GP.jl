@@ -115,12 +115,11 @@ function make_posdef!(m::AbstractMatrix)
     return make_posdef!(m, chol_buffer)
 end
 
-
 # ———————————————————————————————————————————————————————————
 # Sample random draws from the GP
 function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix)
     nobs = size(x,2)
-    n_sample = size(A, 2)
+    n_sample = size(A,2)
 
     if gp.nobs == 0
         # Prior mean and covariance
@@ -130,30 +129,20 @@ function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix)
         Σ = PDMat(Σraw, chol)
     else
         # Posterior mean and covariance
-        μ, Σraw = predict_f(gp, x)
+        μ, Σraw = predict_f(gp, x; full_cov=true)
         Σraw, chol = make_posdef!(Σraw)
         Σ = PDMat(Σraw, chol)
     end
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end
-
 function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix, Q::Approx)
-    println("Making variational approximation to the true posterior") # TODO: Remove in final commit.
-    nobs = size(x,2)
+    nobs = size(x, 2)
     n_sample = size(A, 2)
-
-    if gp.nobs == 0
-        # Prior mean and covariance
-        μ = mean(gp.mean, x);
-        Σraw = cov(gp.kernel, x, x);
-        Σraw, chol = make_posdef!(Σraw)
-        Σ = PDMat(Σraw, chol)
-    else
-        # Posterior mean and covariance
-        μ, Σraw = predict_f(gp, x)
-        Σraw, chol = make_posdef!(Q.V)
-        Σ = PDMat(Σraw, chol)
-    end
+    pred, post_var = predict_f(gp, x; full_cov=true)
+    # A = Array{Float64}(undef, size(x, 2), 1)
+    μ, Σraw = predict_f(gp, x; full_cov=true)
+    Σraw, chol = GaussianProcesses.make_posdef!(Σraw)
+    Σ = PDMat(Σraw, chol)
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end
 
@@ -168,4 +157,6 @@ Random.rand(gp::GPBase, x::AbstractMatrix) = vec(rand(gp,x,1))
 Random.rand(gp::GPBase, x::AbstractVector) = vec(rand(gp,x',1))
 
 # Generate samples from the variational approxiamtion
+Random.rand(gp::GPBase, x::AbstractMatrix, n::Int, Q::Approx) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n), Q)
 Random.rand(gp::GPBase, x::AbstractVector, Q::Approx) = vec(rand(gp, x', 1, Q))
+Random.rand(gp::GPBase, x::AbstractMatrix, Q::Approx) = vec(rand(gp, x, 1, Q))

@@ -35,7 +35,7 @@ include("GP.jl")
 include("GPE.jl")
 include("GPEelastic.jl")
 include("GPMC.jl")
-include("khan.jl") # Flip to VI once complete
+include("vi.jl") # Flip to VI once complete
 include("mcmc.jl")
 include("optimize.jl")
 include("crossvalidation.jl")
