@@ -2,10 +2,9 @@ module TestVI
 using GaussianProcesses, Distributions, PDMats, Plots, LinearAlgebra
 gr()
 using Test, Random
-Random.seed!(1234)
+Random.seed!(203617)
 
 @testset "VI" begin
-    Random.seed!(203617)
     n = 20
     X = collect(range(-3,stop=3,length=n));
     f = 2*cos.(2*X);
@@ -17,27 +16,11 @@ Random.seed!(1234)
     set_priors!(gp.kernel,[Normal(-2.0,4.0),Normal(-2.0,4.0)])
     Q, Ω, K = initialise_Q(gp)
 
-    # @testset "AutoDiff" begin
-    #     exact = -0.5*exp(Q.m[end] + Q.V[end, end]/2)
-    #     zyg_calc = dv_var_exp(l, Y[end], Q.m[end], Q.V[end, end])
-    #     @test exact ≈ zyg_calc # Test AutoDiff is giving the same results as exact gradient computation
-    # end
-
-#    @testset "Increasing Elbo" begin
-#        println(gp.kernel)
-#        initial_elbo = elbo(Y, mean(gp.mean, gp.x), Ω, Q.m, Q.V, l)
-#        println("Initial ELBO evaluation: ", initial_elbo)
-#        samples = mcmc(gp; nIter=5000)
-#        sample_μ = mean(samples[1:20, :], dims=2)
-#        sample_var = cov(transpose(samples[1:20, :]))
-#        sample_θ = mean(samples[21:end, :], dims=2)
-#
-#        set_params!(gp.kernel, vec(sample_θ))
-#        update_Q!(Q, sample_μ, sample_var)
-#        mcmc_elbo = elbo(Y, mean(gp.mean, gp.x), Ω, Q.m, Q.V, l)
-#        println("Post-MCMC ELBO: ", mcmc_elbo)
-#        @test mcmc_elbo > initial_elbo
-#    end
+    @testset "AutoDiff" begin
+        exact = -0.5*exp(Q.m[end] + Q.V[end, end]/2)
+        zyg_calc = dv_var_exp(l, Y[end], Q.m[end], Q.V[end, end])
+        @test exact ≈ zyg_calc # Test AutoDiff is giving the same results as exact gradient computation
+    end
 
     @testset "Basic" begin
         Q = vi(gp, nits=10)
