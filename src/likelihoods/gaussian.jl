@@ -55,3 +55,32 @@ num_params(gauss::GaussLik) = 1
 function predict_obs(gauss::GaussLik, fmean::AbstractVector, fvar::AbstractVector)
     return fmean, fvar + gauss.σ^2
 end
+
+function var_exp(ll::GaussLik, y::AbstractArray, m::AbstractArray, V::AbstractMatrix)
+    tot = 0
+    V_diag = diag(V)
+    for (a, b, c) in zip(y, m, V_diag)
+        tot +=  var_exp(ll, a, b, c) # convert to lgamma(y+1)
+    end
+    return tot
+end
+
+function var_exp(ll::GaussLik, y::AbstractArray, m::AbstractArray, V::AbstractArray)
+    tot = 0
+    for (a, b, c) in zip(y, m, V)
+        tot +=  var_exp(ll, a, b, c)
+    end
+    return tot
+end
+
+function var_exp(ll::GaussLik, y::Number, m::Number, V::Number)
+    return -0.5*log(2*π) - 0.5*log(ll.σ) - 0.5*((y - m)^2 + V)/ll.σ
+end
+
+function dv_var_exp(ll::GaussLik, y::Number, m::Number, V::Number)
+    return gradient(x -> var_exp(ll, y, m, x), V)[1]
+end
+
+function dm_var_exp(ll::GaussLik, y::Number, m::Number, V::Number)
+    return gradient(x -> var_exp(ll, y, x, V), m)[1]
+end

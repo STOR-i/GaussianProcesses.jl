@@ -301,6 +301,7 @@ end
 
 
 predict_full(gp::GPMC, xpred::AbstractMatrix) = predictMVN(gp,xpred, gp.x, gp.y, gp.kernel, gp.mean, gp.v, gp.covstrat, gp.cK)
+predict_full(gp::GPMC, xpred::AbstractMatrix, Q::Approx) = predictMVN(gp,xpred, gp.x, gp.y, gp.kernel, gp.mean, gp.v, gp.covstrat, Q)
 """
     predict_y(gp::GPMC, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
 
@@ -308,22 +309,36 @@ Return the predictive mean and variance of Gaussian Process `gp` at specfic poin
 are given as columns of matrix `x`. If `full_cov` is `true`, the full covariance matrix is
 returned instead of only variances.
 """
+function predictMVN(gp::GPBase,xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector,
+                   kernel::Kernel, meanf::Mean, alpha::AbstractVector,
+                   covstrat::CovarianceStrategy, Q::Approx)
+    Ktrain = PDMat(Q.V)
+    crossdata = KernelData(kernel, xtrain, xpred)
+    priordata = KernelData(kernel, xpred, xpred)
+    Kcross = cov(kernel, xtrain, xpred, crossdata)
+    Kpred = cov(kernel, xpred, xpred, priordata)
+    mx = mean(meanf, xpred)
+    mu, Sigma_raw = predictMVNvi!(gp,Kpred, Ktrain, Kcross, mx, alpha) #TODO: Handle through multiple dispatch
+    return mu, Sigma_raw
+end
 
-
-function predictMVN!(gp::GPMC,Kxx, Kff, Kfx, mx, αf)
+function predictMVN!(gp::GPMC, Kxx, Kff, Kfx, mx, αf)
     Lck = whiten!(Kff, Kfx)
     mu = mx + Lck' * αf
     subtract_Lck!(Kxx, Lck)
     return mu, Kxx
 end
 
+function predictMVNvi!(gp::GPMC, Kxx, Kff, Kfx, mx, αf)
+    Lck = whiten!(Kff, Kfx)
+    mu = mx + Lck' * αf
+    return mu, Kxx
+end
 
 function predict_y(gp::GPMC, x::AbstractMatrix; full_cov::Bool=false)
     μ, σ2 = predict_f(gp, x; full_cov=full_cov)
     return predict_obs(gp.lik, μ, σ2)
 end
-
-
 
 appendlikbounds!(lb, ub, gp::GPMC, bounds) = appendbounds!(lb, ub, num_params(gp.lik), bounds)
 

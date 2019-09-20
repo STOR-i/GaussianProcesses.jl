@@ -47,3 +47,7 @@ end
 function var_exp(ll::PoisLik, y::Number, m::Number, V::Number)
     return y*m - exp(m + V/2) - log(factorial(convert(Int64, y))) # convert to lgamma(y+1)
 end
+
+function dv_var_exp(ll::PoisLik, y::Number, m::Number, V::Number)
+    return gradient(x -> var_exp(ll, y, m, x), V)[1]
+end

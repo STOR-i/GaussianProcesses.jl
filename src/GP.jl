@@ -64,6 +64,11 @@ function predict_f(gp::GPBase, x::AbstractMatrix; full_cov::Bool=false)
     end
 end
 
+function predict_f(gp::GPBase, x::AbstractMatrix, Q::Approx)
+    size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
+    return predict_full(gp, x, Q)
+end
+
 # 1D Case for prediction of process
 predict_f(gp::GPBase, x::AbstractVector, args...; kwargs...) = predict_f(gp, x', args...; kwargs...)
 # 1D Case for prediction of observations
@@ -135,13 +140,12 @@ function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix)
     end
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end
+
 function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix, Q::Approx)
     nobs = size(x, 2)
     n_sample = size(A, 2)
-    pred, post_var = predict_f(gp, x; full_cov=true)
-    # A = Array{Float64}(undef, size(x, 2), 1)
-    μ, Σraw = predict_f(gp, x; full_cov=true)
-    Σraw, chol = GaussianProcesses.make_posdef!(Σraw)
+    μ, Σraw = predict_f(gp, x, Q)
+    Σraw, chol = make_posdef!(Σraw)
     Σ = PDMat(Σraw, chol)
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end
