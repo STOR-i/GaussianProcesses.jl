@@ -1,8 +1,9 @@
 # News
 
-## Version 1.0.0 (2019-07-03)
+## Version 1.0.0 (2019-09-21)
 * Introduced sparse approximation methods
   * Subset of regressors, deterministic training conditional, fully independent training conditional and full-scale approximation are all available 
+* Extended functionality to include leave-one-out cross-validation
 
 ## Version 0.9.0 (2018-12-07)
 * Introduction of `ElasticGPE` to allow `GP` which can grow without

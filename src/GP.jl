@@ -32,7 +32,7 @@ end
 """ Compute predictions using the standard multivariate normal 
     conditional distribution formulae.
 """
-function predictMVN(gp::GPBase,xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector, 
+function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector,
                    kernel::Kernel, meanf::Mean, alpha::AbstractVector,
                    covstrat::CovarianceStrategy, Ktrain::AbstractPDMat)
     crossdata = KernelData(kernel, xtrain, xpred)
@@ -40,7 +40,7 @@ function predictMVN(gp::GPBase,xpred::AbstractMatrix, xtrain::AbstractMatrix, yt
     Kcross = cov(kernel, xtrain, xpred, crossdata)
     Kpred = cov(kernel, xpred, xpred, priordata)
     mx = mean(meanf, xpred)
-    mu, Sigma_raw = predictMVN!(gp,Kpred, Ktrain, Kcross, mx, alpha)
+    mu, Sigma_raw = predictMVN!(Kpred, Ktrain, Kcross, mx, alpha)
     return mu, Sigma_raw
 end
 
