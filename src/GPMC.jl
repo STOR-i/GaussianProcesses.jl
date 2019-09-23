@@ -321,6 +321,33 @@ end
 
 appendlikbounds!(lb, ub, gp::GPMC, bounds) = appendbounds!(lb, ub, num_params(gp.lik), bounds)
 
+#—————————————————————————————————————————————————————–
+# Function for sampling from the prior of the GP object hyperparameters.
+
+function sample_param(gp::GPMC; noise::Bool=true, domean::Bool=true, kern::Bool=true)
+    samples = Float64[]
+    if noise
+        noise_priors = get_priors(gp.logNoise)
+        @assert !isempty(noise_priors) "prior distributions of logNoise hyperparameters should be set"
+        noise_sample = rand(Product(noise_prior))
+        push!(samples, noise_sample...)
+    end
+
+    if domean
+        mean_priors = get_priors(gp.mean)
+        @assert !isempty(mean_priors) "prior distributions of mean hyperparameters should be set"
+        mean_sample = rand(Product(mean_prior))
+        append!(samples, mean_sample...)
+    end
+    if kern
+        kernel_priors = get_priors(gp.kernel)
+        @assert !isempty(kernel_priors) "prior distributions of kernel hyperparameters should be set"
+        kernel_sample = rand(Product(kernel_prior))
+        append!(samples, kernel_sample...)
+    end
+    return samples
+end
+
 function get_params(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     params = Float64[]
     append!(params, gp.v)
