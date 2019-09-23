@@ -18,7 +18,7 @@ To cite GaussianProcesses.jl, please reference the [arXiv paper](https://arxiv.o
 ```
 @article{gaussianprocesses.jl,
   title={GaussianProcesses. jl: A Nonparametric Bayes package for the Julia Language},
-  author={Fairbrother, Jamie and Nemeth, Christopher and Rischard, Maxime and Brea, Johanni},
+  author={Fairbrother, Jamie and Nemeth, Christopher and Rischard, Maxime and Brea, Johanni and Pinder, Thomas},
   journal={arXiv preprint arXiv:1812.09064},
   year={2018}
 }
@@ -99,3 +99,4 @@ Sample code is available from the [notebooks](https://github.com/STOR-i/Gaussian
 ## ScikitLearn
 
 This package also supports the [ScikitLearn](https://github.com/cstjean/ScikitLearn.jl) interface. ScikitLearn provides many tools for machine learning such as hyperparameter tuning and cross-validation. See [here](https://github.com/cstjean/ScikitLearn.jl/blob/master/examples/Gaussian_Processes_Julia.ipynb) for an example of its usage with this package.
+
