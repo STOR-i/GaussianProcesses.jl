@@ -29,7 +29,7 @@ function predictMVN!(Kxx, Kff, Kfx, mx, αf)
     return mu, Kxx
 end
 
-""" Compute predictions using the standard multivariate normal 
+""" Compute predictions using the standard multivariate normal
     conditional distribution formulae.
 """
 function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector,
@@ -74,6 +74,11 @@ function predict_f(gp::GPBase, x::AbstractMatrix; full_cov::Bool=false)
     end
 end
 
+function predict_f(gp::GPBase, x::AbstractMatrix, Q::Approx)
+    size(x,1) == gp.dim || throw(ArgumentError("Gaussian Process object and input observations do not have consistent dimensions"))
+    return predict_full(gp, x, Q)
+end
+
 # 1D Case for prediction of process
 predict_f(gp::GPBase, x::AbstractVector, args...; kwargs...) = predict_f(gp, x', args...; kwargs...)
 # 1D Case for prediction of observations
@@ -99,7 +104,7 @@ function make_posdef!(m::AbstractMatrix, chol_factors::AbstractMatrix)
     n = size(m, 1)
     size(m, 2) == n || throw(ArgumentError("Covariance matrix must be square"))
     for _ in 1:10 # 10 chances
-        try 
+        try
             # return m, cholesky(m)
             copyto!(chol_factors, m)
             chol = cholesky!(Symmetric(chol_factors, :U))
@@ -146,6 +151,16 @@ function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix)
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end
 
+# Sample random draws from the variational GP
+function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix, Q::Approx)
+    nobs = size(x, 2)
+    n_sample = size(A, 2)
+    μ, Σraw = predict_f(gp, x, Q)
+    Σraw, chol = make_posdef!(Σraw)
+    Σ = PDMat(Σraw, chol)
+    return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
+end
+
 Random.rand(gp::GPBase, x::AbstractMatrix, n::Int) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n))
 
 # Sample from 1D GPBase
@@ -154,3 +169,8 @@ Random.rand(gp::GPBase, x::AbstractVector, n::Int) = rand(gp, x', n)
 # Generate only one sample from the GPBase and returns a vector
 Random.rand(gp::GPBase, x::AbstractMatrix) = vec(rand(gp,x,1))
 Random.rand(gp::GPBase, x::AbstractVector) = vec(rand(gp,x',1))
+
+# Generate samples from the variational approxiamtion
+Random.rand(gp::GPBase, x::AbstractMatrix, n::Int, Q::Approx) = rand!(gp, x, Array{Float64}(undef, size(x, 2), n), Q)
+Random.rand(gp::GPBase, x::AbstractVector, Q::Approx) = vec(rand(gp, x', 1, Q))
+Random.rand(gp::GPBase, x::AbstractMatrix, Q::Approx) = vec(rand(gp, x, 1, Q))

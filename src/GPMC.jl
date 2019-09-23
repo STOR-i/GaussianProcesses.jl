@@ -43,7 +43,7 @@ mutable struct GPMC{X<:AbstractMatrix,Y<:AbstractVector{<:Real},M<:Mean,K<:Kerne
     function GPMC{X,Y,M,K,L,CS,D}(x::X, y::Y, mean::M, kernel::K, lik::L, covstrat::CS, data::D) where {X,Y,M,K,L,CS,D}
         dim, nobs = size(x)
         length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        gp = new{X,Y,M,K,L,CS,D}(x, y, mean, kernel, lik, covstrat, dim, nobs, 
+        gp = new{X,Y,M,K,L,CS,D}(x, y, mean, kernel, lik, covstrat, dim, nobs,
                                  data, zeros(nobs))
         initialise_target!(gp)
     end
@@ -167,8 +167,8 @@ function FullCovMCMCPrecompute(nobs::Int)
     return FullCovMCMCPrecompute(buffer1, buffer2, buffer3)
 end
 init_precompute(gp::GPMC) = FullCovMCMCPrecompute(gp.nobs)
-    
-function precompute!(precomp::FullCovMCMCPrecompute, gp::GPBase) 
+
+function precompute!(precomp::FullCovMCMCPrecompute, gp::GPBase)
     f = unwhiten(gp.cK, gp.v)  + gp.μ
     dl_df = dlog_dens_df(gp.lik, f, gp.y)
     precomp.dl_df[:] = dl_df
@@ -304,6 +304,28 @@ function update_target_and_dtarget!(gp::GPMC; kwargs...)
 end
 
 predict_full(gp::GPMC, xpred::AbstractMatrix) = predictMVN(xpred, gp.x, gp.y, gp.kernel, gp.mean, whiten(gp.cK,gp.v), gp.covstrat, gp.cK)
+predict_full(gp::GPMC, xpred::AbstractMatrix, Q::Approx) = predictMVN(gp, xpred, gp.x, gp.y, gp.kernel, gp.mean, gp.v, gp.covstrat, Q)
+
+function predictMVN(gp::GPBase,xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector,
+    kernel::Kernel, meanf::Mean, alpha::AbstractVector,
+    covstrat::CovarianceStrategy, Q::Approx)
+    Ktrain = PDMat(Q.V)
+    crossdata = KernelData(kernel, xtrain, xpred)
+    priordata = KernelData(kernel, xpred, xpred)
+    Kcross = cov(kernel, xtrain, xpred, crossdata)
+    Kpred = cov(kernel, xpred, xpred, priordata)
+    mx = mean(meanf, xpred)
+    mu, Sigma_raw = predictMVNvi!(gp,Kpred, Ktrain, Kcross, mx, alpha) #TODO: Handle through multiple dispatch
+    return mu, Sigma_raw
+end
+
+function predictMVNvi!(gp::GPMC, Kxx, Kff, Kfx, mx, αf)
+     Lck = whiten!(Kff, Kfx)
+     mu = mx + Lck' * αf
+     return mu, Kxx
+ end
+
+
 """
     predict_y(gp::GPMC, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
 

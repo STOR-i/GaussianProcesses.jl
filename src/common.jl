@@ -139,3 +139,8 @@ function prior_gradlogpdf(obj::MeanOrKernelOrLikelihood)
 
     [gradlogpdf(prior, param) for (prior, param) in zip(priors, get_params(obj))]
 end
+
+mutable struct Approx
+    m::AbstractArray
+    V::AbstractMatrix # TODO: Rewrite as PDMat
+end
