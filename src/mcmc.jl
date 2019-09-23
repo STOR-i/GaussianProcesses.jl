@@ -83,3 +83,76 @@ function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64
     @printf("Acceptance rate: %f \n", num_acceptances/nIter)
     return post'
 end
+
+
+"""
+    ess(gp::GPBase; kwargs...)
+
+Sample GP hyperparameters using the elliptical slice sampling algorithm described in,
+
+Murray, Iain, Ryan P. Adams, and David JC MacKay. "Elliptical slice sampling." 
+Journal of Machine Learning Research 9 (2010): 541-548.
+
+Requires minimal tuning and is very efficient when sampling hyperparameters from GPs.
+"""
+function ess(gp::GPBase, nIter::Int=1000, burn::Int=1, thin::Int=1, noise::Bool=true,
+             domean::Bool=true, kern::Bool=true)
+    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise)
+    count = 0
+    function calc_target(θ::AbstractVector)
+        count += 1
+        try
+            set_params!(gp, θ; params_kwargs...)
+            update_target!(gp; params_kwargs...)
+            return gp.target
+        catch err
+            if(!all(isfinite.(θ))
+               || isa(err, ArgumentError)
+               || isa(err, LinearAlgebra.PosDefException))
+                return -Inf
+            else
+                throw(err)
+            end
+        end
+    end
+
+    function sample(f::AbstractVector, likelihood)
+        v     = sample_params(gp; params_kwargs...)
+        u     = rand()
+        logy  = likelihood(f) + log(u);
+        θ     = rand()*2*π;
+        θ_min = θ - 2*π;
+        θ_max = θ;
+        f_prime = f * cos(θ) + v * sin(θ);
+        props = 1
+        while  likelihood(f_prime) <= logy
+            props += 1
+            if θ < 0
+                θ_min = θ;
+            else
+                θ_max = θ;
+            end
+            θ = rand() * (θ_max - θ_min) + θ_min;
+            f_prime = f * cos(θ) + v * sin(θ);
+        end
+        return f_prime, props
+    end
+
+    total_proposals = 0
+    θ_cur = get_params(gp; params_kwargs...)
+    D = length(θ_cur)
+    post = Array{Float64}(undef, nIter, D)
+
+    for i = 1:nIter
+        θ_cur, num_proposals = sample(θ_cur, calc_target)
+        post[i,:] = θ_cur
+        total_proposals += num_proposals
+    end
+
+    post = post[burn:thin:end,:]
+    set_params!(gp, θ_cur; params_kwargs...)
+    @printf("Number of iterations = %d, Thinning = %d, Burn-in = %d \n", nIter,thin,burn)
+    println("Number of function calls: ", count)
+    @printf("Acceptance rate: %f \n", nIter / total_proposals)
+    return post'
+end
