@@ -70,7 +70,7 @@ function vi(gp::GPBase; nits::Int64=100)
     lower = cat(repeat([-Inf], gp.nobs), repeat([1e-10], gp.nobs), dims = 1)
     upper = cat(repeat([Inf], gp.nobs), repeat([Inf], gp.nobs), dims = 1)
     initial_x = cat(Q.m, diag(Q.V), dims=1)
-    inner_optimizer = GradientDescent()
+    inner_optimizer = ConjugateGradient() 
     res = optimize(objective_func, lower, upper, initial_x, Fminbox(inner_optimizer))
 
     optθ = Optim.minimizer(res)
