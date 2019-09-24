@@ -48,6 +48,7 @@ mutable struct GPA{X<:AbstractMatrix,Y<:AbstractVector{<:Real},M<:Mean,K<:Kernel
         initialise_target!(gp)
     end
 end
+@deprecate GPMC GPA
 
 function GPA(x::AbstractMatrix, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood, covstrat::CovarianceStrategy)
     data = KernelData(kernel, x, x, covstrat)
