@@ -1,5 +1,5 @@
 get_params_kwargs(::GPE; kwargs...) = delete!(Dict(kwargs), :lik)
-get_params_kwargs(::GPMC; kwargs...) = delete!(Dict(kwargs), :noise)
+get_params_kwargs(::GPA; kwargs...) = delete!(Dict(kwargs), :noise)
 
 """
     optimize!(gp::GPBase; kwargs...)
@@ -10,7 +10,7 @@ Optimise the hyperparameters of Gaussian process `gp` based on type II maximum l
     * `domean::Bool`: Mean function hyperparameters should be optmized
     * `kern::Bool`: Kernel function hyperparameters should be optmized
     * `noise::Bool`: Observation noise hyperparameter should be optimized (GPE only)
-    * `lik::Bool`: Likelihood hyperparameters should be optimized (GPMC only)
+    * `lik::Bool`: Likelihood hyperparameters should be optimized (GPA only)
     * `meanbounds`: [lowerbounds, upperbounds] for the mean hyperparameters
     * `kernbounds`: [lowerbounds, upperbounds] for the kernel hyperparameters
     * `noisebounds`: [lowerbound, upperbound] for the noise hyperparameter
