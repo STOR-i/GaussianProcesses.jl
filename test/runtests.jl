@@ -5,7 +5,7 @@ module TestGaussianProcesses
 @time include("kernels.jl")
 @time include("optim.jl")
 @time include("mcmc.jl")
-@time include("GPA.jl")
+@time include("gpa.jl")
 @time include("elastic.jl")
 @time include("memory.jl")
 @time include("test_crossvalidation.jl")

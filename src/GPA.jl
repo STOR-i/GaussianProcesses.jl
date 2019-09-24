@@ -62,7 +62,7 @@ Fit a Gaussian process to a set of training points. The Gaussian process with
 non-Gaussian observations is defined in terms of its user-defined likelihood function,
 mean and covaiance (kernel) functions.
 
-The non-Gaussian likelihood is handled by a Monte Carlo method. The latent function
+The non-Gaussian likelihood is handled by an approximate method (e.g. Monte Carlo). The latent function
 values are represented by centered (whitened) variables ``f(x) = m(x) + Lv`` where
 ``v ∼ N(0, I)`` and ``LLᵀ = K_θ``.
 
@@ -389,7 +389,7 @@ end
 
 
 function Base.show(io::IO, gp::GPA)
-    println(io, "GP Monte Carlo object:")
+    println(io, "GP Approximate object:")
     println(io, "  Dim = ", gp.dim)
     println(io, "  Number of observations = ", gp.nobs)
     println(io, "  Mean function:")
