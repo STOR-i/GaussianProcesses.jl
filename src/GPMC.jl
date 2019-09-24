@@ -303,7 +303,8 @@ function update_target_and_dtarget!(gp::GPMC; kwargs...)
     update_target_and_dtarget!(gp, precomp; kwargs...)
 end
 
-predict_full(gp::GPMC, xpred::AbstractMatrix) = predictMVN(xpred, gp.x, gp.y, gp.kernel, gp.mean, whiten(gp.cK,gp.v), gp.covstrat, gp.cK)
+
+predict_full(gp::GPMC, xpred::AbstractMatrix) = predictMVN(xpred, gp.x, gp.y, gp.kernel, gp.mean, gp.cK\unwhiten(gp.cK,gp.v), gp.covstrat, gp.cK)
 """
     predict_y(gp::GPMC, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
 
