@@ -10,4 +10,5 @@ module TestGaussianProcesses
 @time include("memory.jl")
 @time include("test_crossvalidation.jl")
 @time include("test_sparse.jl")
+@time include("test_vi.jl")
 end
