@@ -29,7 +29,7 @@ function predictMVN!(Kxx, Kff, Kfx, mx, αf)
     return mu, Kxx
 end
 
-""" Compute predictions using the standard multivariate normal 
+""" Compute predictions using the standard multivariate normal
     conditional distribution formulae.
 """
 function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector,
@@ -99,7 +99,7 @@ function make_posdef!(m::AbstractMatrix, chol_factors::AbstractMatrix)
     n = size(m, 1)
     size(m, 2) == n || throw(ArgumentError("Covariance matrix must be square"))
     for _ in 1:10 # 10 chances
-        try 
+        try
             # return m, cholesky(m)
             copyto!(chol_factors, m)
             chol = cholesky!(Symmetric(chol_factors, :U))

@@ -27,4 +27,28 @@ var_lik(poisson::PoisLik, f::AbstractVector) = exp.(f)
 get_params(poisson::PoisLik) = []
 num_params(poisson::PoisLik) = 0
 
+function var_exp(ll::PoisLik, y::AbstractArray, m::AbstractArray, V::AbstractMatrix)
+    tot = 0
+    V_diag = diag(V)
+    for (a, b, c) in zip(y, m, V_diag)
+        tot +=  a*b - exp(b + c/2) - log(factorial(convert(Int64, a))) # convert to lgamma(y+1)
+    end
+    return tot
+end
 
+function var_exp(ll::PoisLik, y::AbstractArray, m::AbstractArray, V::AbstractArray)
+    tot = 0
+    for (a, b, c) in zip(y, m, V)
+        tot +=  a*b - exp(b + c/2) - log(factorial(convert(Int64, a))) # convert to lgamma(y+1)
+    end
+    return tot
+end
+
+
+function var_exp(ll::PoisLik, y::Number, m::Number, V::Number)
+    return y*m - exp(m + V/2) - log(factorial(convert(Int64, y))) # convert to lgamma(y+1)
+end
+
+function dv_var_exp(ll::PoisLik, y::Number, m::Number, V::Number)
+    return gradient(x -> var_exp(ll, y, m, x), V)[1]
+end
