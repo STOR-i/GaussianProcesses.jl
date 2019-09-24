@@ -83,7 +83,7 @@ search: GP GPE GPMC GPBase gperm log1p getpid getproperty MissingException
   Fit a Gaussian process that is defined by its mean, its kernel, and its
   likelihood function lik to a set of training points x and y.
 
-  See also: GPMC
+  See also: GPA
 ```
 
 Alternatively, [online documentation](http://stor-i.github.io/GaussianProcesses.jl/latest/index.html) and is under development
