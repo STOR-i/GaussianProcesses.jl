@@ -58,7 +58,7 @@ function vi(gp::GPBase; nits::Int64=100)
     end
 
     # Initialise log-target and log-target's derivative
-    mcmc(gp; nIter=1)
+    mcmc(gp; nIter=1);
 
     # Initialise variational approximation
     Q, Ω, K = initialise_Q(gp)
@@ -134,7 +134,3 @@ function predictMVNvi!(gp::GPA, Kxx, Kff, Kfx, mx, αf)
     return mu, Kxx
 end
 
-function predict_y(gp::GPA, x::AbstractMatrix; full_cov::Bool=false)
-    μ, σ2 = predict_f(gp, x; full_cov=full_cov)
-    return predict_obs(gp.lik, μ, σ2)
-end
