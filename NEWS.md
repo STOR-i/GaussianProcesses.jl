@@ -1,6 +1,6 @@
 # News
 
-## Version 1.0.0 (2019-09-21)
+## Version 0.10.0 (2019-09-21)
 * Introduced sparse approximation methods
   * Subset of regressors, deterministic training conditional, fully independent training conditional and full-scale approximation are all available 
 * Extended functionality to include leave-one-out cross-validation
