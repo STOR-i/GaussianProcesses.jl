@@ -1,5 +1,8 @@
 module TestMCMC
-using GaussianProcesses, Distributions
+#using GaussianProcesses, Distributions
+using Distributions
+include("../src/GaussianProcesses.jl")
+using .GaussianProcesses
 using Test, Random
 
 Random.seed!(1)
@@ -13,7 +16,7 @@ Random.seed!(1)
     kern = RQ(1.0, 1.0, 1.0)
 
     # Just checks that it doesn't crash
-    @testset "Basic" begin
+    @testset "HMC" begin
         @testset "Without likelihood" begin
             gp = GP(X, y, MeanZero(), kern)
             set_priors!(gp.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
@@ -25,6 +28,21 @@ Random.seed!(1)
             gp = GP(X, y, MeanZero(), kern, lik)
             set_priors!(gp.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
             mcmc(gp)
+        end
+    end
+
+    @testset "ESS" begin
+        @testset "Without likelihood" begin
+            gp = GP(X, y, MeanZero(), kern)
+            set_priors!(gp.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
+            ess(gp)
+        end
+
+        @testset "With likelihood" begin
+            lik = GaussLik(-1.0)
+            gp = GP(X, y, MeanZero(), kern, lik)
+            set_priors!(gp.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
+            ess(gp)
         end
     end
 end
