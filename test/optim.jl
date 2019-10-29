@@ -103,14 +103,14 @@ Random.seed!(1)
         # Just checks that it doesn't crash
         # and that the final mll is better that the initial value
         @testset "Basic" begin
-            gp = GPMC(X, y, MeanLin(zeros(d)), SE(1.0, 1.0), BernLik())
+            gp = GPA(X, y, MeanLin(zeros(d)), SE(1.0, 1.0), BernLik())
             init_target = gp.target
             optimize!(gp)
             @test gp.target > init_target
         end
 
         @testset "Keyword arguments" begin
-            gp = GPMC(X, y, MeanLin(zeros(d)), SE(1.0, 1.0), BernLik())
+            gp = GPA(X, y, MeanLin(zeros(d)), SE(1.0, 1.0), BernLik())
             init_params = GaussianProcesses.get_params(gp; domean=true, kern=true, lik=true)
 
             # Check mean fixed

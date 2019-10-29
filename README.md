@@ -18,7 +18,7 @@ To cite GaussianProcesses.jl, please reference the [arXiv paper](https://arxiv.o
 ```
 @article{gaussianprocesses.jl,
   title={GaussianProcesses. jl: A Nonparametric Bayes package for the Julia Language},
-  author={Fairbrother, Jamie and Nemeth, Christopher and Rischard, Maxime annd Brea, Johanni and Pinder, Thomas},
+  author={Fairbrother, Jamie and Nemeth, Christopher and Rischard, Maxime and Brea, Johanni and Pinder, Thomas},
   journal={arXiv preprint arXiv:1812.09064},
   year={2018}
 }
@@ -53,10 +53,11 @@ The package has a number of *mean*, *kernel* and *likelihood* functions availabl
 
 ### Inference
 
-The parameters of the model can be estimated by maximizing the log-likelihood (where the latent function is integrated out) using the `optimize!` function, or in the case of *non-Gaussian data*, an `mcmc` function is available, utilizing the Hamiltonian Monte Carlo sampler, and can be used to infer the model parameters and latent function values.
+The parameters of the model can be estimated by maximizing the log-likelihood (where the latent function is integrated out) using the `optimize!` function, or in the case of *non-Gaussian data*, an `mcmc` function is available, utilizing the Hamiltonian Monte Carlo sampler, or a variational approximation can be used to infer the model parameters and latent function values.
 ```julia
 optimize!(gp)    # Find parameters which maximize the log-likelihood
 mcmc(gp)         # Sample from the GP posterior
+vi(gp)           # Create a variational approximation
 ```
 See the [notebooks](https://github.com/STOR-i/GaussianProcesses.jl/tree/master/notebooks) for examples of the functions used in the package.
 
@@ -83,7 +84,7 @@ search: GP GPE GPMC GPBase gperm log1p getpid getproperty MissingException
   Fit a Gaussian process that is defined by its mean, its kernel, and its
   likelihood function lik to a set of training points x and y.
 
-  See also: GPMC
+  See also: GPA
 ```
 
 Alternatively, [online documentation](http://stor-i.github.io/GaussianProcesses.jl/latest/index.html) and is under development

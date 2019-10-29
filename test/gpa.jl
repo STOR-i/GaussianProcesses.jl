@@ -1,10 +1,10 @@
-module TestGPMC
+module TestGPA
 using GaussianProcesses, Calculus, Distributions
 using Test, Random
 
 Random.seed!(1)
 
-@testset "GPMC" begin
+@testset "GPA" begin
     d, n = 3, 20
     ll = rand(d)
     X = 2π * rand(d, n)

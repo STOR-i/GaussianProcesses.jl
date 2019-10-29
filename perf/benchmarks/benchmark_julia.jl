@@ -1,5 +1,5 @@
 using GaussianProcesses
-using GaussianProcesses: update_mll_and_dmll!, update_cK!
+using GaussianProcesses: update_mll_and_dmll!, update_cK!, FullCovariancePrecompute
 using BenchmarkTools
 using DataFrames
 using JLD
@@ -24,12 +24,12 @@ kerns = Dict(
     )
     
 function benchmark_kernel(group, kern)
-    XY_df = CSV.read("simdata.csv", DataFrame; allowmissing=:none)
-    Xt = XY_df[[:x1, :x2, :x3, :x4, :x5, :x6, :x7, :x8, :x9, :x10]]
+    XY_df = CSV.read("simdata.csv")
+    Xt = XY_df[:,[:x1, :x2, :x3, :x4, :x5, :x6, :x7, :x8, :x9, :x10]]
     X = Matrix(transpose(Matrix(Xt)))
     Y = XY_df[:Y]
     @assert length(Y) == nt
-    buffer = Array{Float64}(undef, nt,nt)
+    buffer = FullCovariancePrecompute(nt)
     gp = GP(X, Y, MeanConst(0.0), kern, 0.3)
     group["cK"] = @benchmarkable update_cK!($gp)
     group["mll_and_dmll"] = @benchmarkable update_mll_and_dmll!($gp, $buffer)
@@ -52,7 +52,7 @@ for (label, k) in kerns
     benchmark_kernel(SUITE[label], k)
 end
 ;
-
+ 
 results = run(SUITE, verbose=false, seconds=10000, samples=20, evals=1)
 ;
 

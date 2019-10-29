@@ -1,6 +1,6 @@
 module GaussianProcesses
 
-using Optim, PDMats, ElasticPDMats, ElasticArrays, Distances, FastGaussQuadrature, RecipesBase, Distributions
+using Optim, PDMats, ElasticPDMats, ElasticArrays, Distances, FastGaussQuadrature, RecipesBase, Distributions, Zygote
 using StaticArrays
 using StatsFuns, SpecialFunctions
 
@@ -11,11 +11,16 @@ import PDMats: dim, Matrix, diag, pdadd!, *, \, inv, logdet, eigmax, eigmin, whi
 
 # Functions that should be available to package
 # users should be explicitly exported here
-export GPBase, GP, GPE, GPMC, ElasticGPE, predict_f, predict_y, Kernel, Likelihood, CompositeKernel, SumKernel, ProdKernel, Masked, FixedKernel, fix, Noise, Const, SE, SEIso, SEArd, Periodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Matern, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, #kernel functions
+export GPBase, GP, GPE, GPA, ElasticGPE, Approx, predict_f, predict_y, Kernel, Likelihood, CompositeKernel, SumKernel, ProdKernel, Masked, FixedKernel, fix, Noise, Const, SE, SEIso, SEArd, Periodic, Poly, RQ, RQIso, RQArd, Lin, LinIso, LinArd, Matern, Mat12Iso, Mat12Ard, Mat32Iso, Mat32Ard, Mat52Iso, Mat52Ard, #kernel functions
     MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, MeanPeriodic, #mean functions
     GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
+<<<<<<< HEAD
     mcmc, ess, optimize!,                                      #inference functions
     set_priors!,set_params!, update_target!, autodiff
+=======
+    mcmc, optimize!, vi, var_exp, dv_var_exp, elbo, initialise_Q,    #inference functions
+    set_priors!,set_params!, update_target!, autodiff, update_Q!
+>>>>>>> origin/master
 using ForwardDiff: GradientConfig, Dual, partials, copyto!, Chunk
 import ForwardDiff: seed!
 
@@ -34,7 +39,8 @@ include("chol_utils.jl")
 include("GP.jl")
 include("GPE.jl")
 include("GPEelastic.jl")
-include("GPMC.jl")
+include("GPA.jl")
+include("vi.jl") 
 include("mcmc.jl")
 include("optimize.jl")
 include("crossvalidation.jl")
