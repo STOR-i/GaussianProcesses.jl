@@ -319,42 +319,35 @@ function predict_y(gp::GPA, x::AbstractMatrix; full_cov::Bool=false)
     return predict_obs(gp.lik, μ, σ2)
 end
 
-
-
 appendlikbounds!(lb, ub, gp::GPA, bounds) = appendbounds!(lb, ub, num_params(gp.lik), bounds)
 
-<<<<<<< HEAD:src/GPMC.jl
 #—————————————————————————————————————————————————————–
 # Function for sampling from the prior of the GP object hyperparameters.
 
-function sample_param(gp::GPMC; noise::Bool=true, domean::Bool=true, kern::Bool=true)
+function sample_params(gp::GPA; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     samples = Float64[]
-    if noise
-        noise_priors = get_priors(gp.logNoise)
-        @assert !isempty(noise_priors) "prior distributions of logNoise hyperparameters should be set"
-        noise_sample = rand(Product(noise_prior))
-        push!(samples, noise_sample...)
+    if lik && num_params(gp.lik)>0
+        like_priors = get_priors(gp.lik)
+        @assert !isempty(like_priors) "prior distributions of likelihood hyperparameters should be set"
+        like_sample = rand(Product(like_priors))
+        append!(samples, like_sample)
     end
-
-    if domean
+    if domean && num_params(gp.mean)>0
         mean_priors = get_priors(gp.mean)
         @assert !isempty(mean_priors) "prior distributions of mean hyperparameters should be set"
-        mean_sample = rand(Product(mean_prior))
-        append!(samples, mean_sample...)
+        mean_sample = rand(Product(mean_priors))
+        append!(samples, mean_sample)
     end
-    if kern
+    if kern && num_params(gp.kernel)>0
         kernel_priors = get_priors(gp.kernel)
         @assert !isempty(kernel_priors) "prior distributions of kernel hyperparameters should be set"
-        kernel_sample = rand(Product(kernel_prior))
-        append!(samples, kernel_sample...)
+        kernel_sample = rand(Product(kernel_priors))
+        append!(samples, kernel_sample)
     end
     return samples
 end
 
-function get_params(gp::GPMC; lik::Bool=true, domean::Bool=true, kern::Bool=true)
-=======
 function get_params(gp::GPA; lik::Bool=true, domean::Bool=true, kern::Bool=true)
->>>>>>> origin/master:src/GPA.jl
     params = Float64[]
     append!(params, gp.v)
     if lik  && num_params(gp.lik)>0
