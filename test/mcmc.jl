@@ -1,8 +1,5 @@
 module TestMCMC
-#using GaussianProcesses, Distributions
-using Distributions
-include("../src/GaussianProcesses.jl")
-using .GaussianProcesses
+using GaussianProcesses, Distributions
 using Test, Random
 
 Random.seed!(1)
@@ -32,18 +29,10 @@ Random.seed!(1)
     end
 
     @testset "ESS" begin
-        @testset "Without likelihood" begin
-            gp = GP(X, y, MeanZero(), kern)
-            set_priors!(gp.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
-            ess(gp)
-        end
-
-        @testset "With likelihood" begin
-            lik = GaussLik(-1.0)
-            gp = GP(X, y, MeanZero(), kern, lik)
-            set_priors!(gp.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
-            ess(gp)
-        end
+        gp = GP(X, y, MeanZero(), kern)
+        set_priors!(gp.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
+        set_priors!(gp.logNoise, [Distributions.Normal(-1.0, 1.0)])
+        ess(gp)
     end
 end
 end
