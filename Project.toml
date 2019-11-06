@@ -1,6 +1,6 @@
 name = "GaussianProcesses"
 uuid = "891a1506-143c-57d2-908e-e1f8e92e6de9"
-version = "0.10.0"
+version = "0.10.1"
 license = "MIT"
 
 [deps]
@@ -33,7 +33,7 @@ PDMats = ">= 0.9.4"
 RecipesBase = ">= 0.6"
 ScikitLearnBase = ">= 0.4.0"
 SpecialFunctions = ">= 0.7.0"
-StaticArrays = "0.6, 0.9"
+StaticArrays = "0.6, 0.9, 0.10, 0.11, 0.12"
 StatsFuns = ">= 0.7.0"
 Zygote = ">= 0.3.2"
 julia = "1"
