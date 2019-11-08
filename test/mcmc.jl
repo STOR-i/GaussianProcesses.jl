@@ -5,7 +5,7 @@ using Test, Random
 Random.seed!(1)
 
 @testset "MCMC" begin
-    d, n = 2, 20
+    d, n = 1, 20
     ll = rand(d)
     X = 2π * rand(d, n)
     y = randn(n) .+ 0.5
@@ -13,11 +13,11 @@ Random.seed!(1)
     kern = RQ(1.0, 1.0, 1.0)
 
     # Just checks that it doesn't crash
-    @testset "Basic" begin
+    @testset "HMC" begin
         @testset "Without likelihood" begin
             gp = GP(X, y, MeanZero(), kern)
             set_priors!(gp.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
-            mcmc(gp)
+            global hmc_chain = mcmc(gp)
         end
 
         @testset "With likelihood" begin
@@ -27,5 +27,13 @@ Random.seed!(1)
             mcmc(gp)
         end
     end
+
+    @testset "ESS" begin
+        gpess = GP(X, y, MeanZero(), kern)
+        set_priors!(gpess.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
+        set_priors!(gpess.logNoise, [Distributions.Normal(-1.0, 1.0)])
+        global ess_chain = ess(gpess)
+    end
+
 end
 end
