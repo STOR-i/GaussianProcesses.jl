@@ -31,6 +31,9 @@ julia> Pkg.add("GaussianProcesses")
 1. Inference methods
     * Exact methods based on linear algebra for Gaussian processes with a normal likelihood;
     * Hamiltonian Monte Carlo for Gaussian processes with any other likelihood;
+    * Elliptical slice sampler for Gaussian processes with a Gaussian likelihood;
+    * Variational inference for Gaussian processes with any likelihood;
+    * Sparse approximations to accelerate inference through pseudo-inputs;
 2. Hyperparameters
     * Optimization of the marginal likelihood for exact GPs;
     * Posterior samples of the hyperparameters for likelihoods other than normal;
@@ -56,10 +59,6 @@ please get in touch or submit a pull request through GitHub.
 * Tuning of Hamiltonian Monte Carlo for efficient posterior draws;
 * Multivariate Gaussian processes, when the output is a vector, which encompasses
   multi-task GPs, cokriging, multiclass classification.
-* Other MCMC methods for GPs
-    * slice sampler;
 * Approximation methods for large GPs:
-    * sparse GPs (subset of regressors, etc.);
-    * variational approximations;
     * expectation propagation;
     * Laplace approximations;
