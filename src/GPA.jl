@@ -319,9 +319,33 @@ function predict_y(gp::GPA, x::AbstractMatrix; full_cov::Bool=false)
     return predict_obs(gp.lik, μ, σ2)
 end
 
-
-
 appendlikbounds!(lb, ub, gp::GPA, bounds) = appendbounds!(lb, ub, num_params(gp.lik), bounds)
+
+#—————————————————————————————————————————————————————–
+# Function for sampling from the prior of the GP object hyperparameters.
+
+function sample_params(gp::GPA; lik::Bool=true, domean::Bool=true, kern::Bool=true)
+    samples = Float64[]
+    if lik && num_params(gp.lik)>0
+        like_priors = get_priors(gp.lik)
+        @assert !isempty(like_priors) "prior distributions of likelihood hyperparameters should be set"
+        like_sample = rand(Product(like_priors))
+        append!(samples, like_sample)
+    end
+    if domean && num_params(gp.mean)>0
+        mean_priors = get_priors(gp.mean)
+        @assert !isempty(mean_priors) "prior distributions of mean hyperparameters should be set"
+        mean_sample = rand(Product(mean_priors))
+        append!(samples, mean_sample)
+    end
+    if kern && num_params(gp.kernel)>0
+        kernel_priors = get_priors(gp.kernel)
+        @assert !isempty(kernel_priors) "prior distributions of kernel hyperparameters should be set"
+        kernel_sample = rand(Product(kernel_priors))
+        append!(samples, kernel_sample)
+    end
+    return samples
+end
 
 function get_params(gp::GPA; lik::Bool=true, domean::Bool=true, kern::Bool=true)
     params = Float64[]
