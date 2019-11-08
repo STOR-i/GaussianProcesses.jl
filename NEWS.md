@@ -1,8 +1,13 @@
 # News
 
+## Version 0.11.0 (2019-11-08)
+* Introduced an alternative sampling method to Hamiltonian Monte-Carlo, namely an elliptical slice sampler
+  * Performing inference via an ESS is more robust to poor hyperparameter initialisation
+  * An ESS is often able to explore the posterior space more efficiently in the case of highly dependent Gaussian variables. 
+
 ## Version 0.10.0 (2019-09-21)
 * Introduced sparse approximation methods
-  * Subset of regressors, deterministic training conditional, fully independent training conditional and full-scale approximation are all available 
+  * Subset of regressors, deterministic training conditional, fully independent training conditional and full-scale approximation are all available
 * Extended functionality to include leave-one-out cross-validation
 * Introduced functionality to enable variational inference in GPs with non-Gaussian data.
   * The approach used is a variant of that presented in [Khan et. al.](http://papers.nips.cc/paper/4535-fast-bayesian-inference-for-non-conjugate-gaussian-process-regression)
@@ -63,7 +68,7 @@ Note: Could not create release compatible with both Julia v0.7 and Julia v1.0 du
 * Introduced `KernelData` type to recycle calculations
 * Removed Winston plotting functions and implemented PyPlot as an alternative
 * Created methods for `mean` and `cov` functions of the `Mean` and `Kernel` objects
-* Fixed `optimize!` function to be consistent with most recent version of Optim.jl 
+* Fixed `optimize!` function to be consistent with most recent version of Optim.jl
 * Improvements to the `Periodic` kernel
 * `fit!` function no longer exported due to clash with a few packages
 

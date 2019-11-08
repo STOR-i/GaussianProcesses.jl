@@ -53,10 +53,11 @@ The package has a number of *mean*, *kernel* and *likelihood* functions availabl
 
 ### Inference
 
-The parameters of the model can be estimated by maximizing the log-likelihood (where the latent function is integrated out) using the `optimize!` function, or in the case of *non-Gaussian data*, an `mcmc` function is available, utilizing the Hamiltonian Monte Carlo sampler, or a variational approximation can be used to infer the model parameters and latent function values.
+The parameters of the model can be estimated by maximizing the log-likelihood (where the latent function is integrated out) using the `optimize!` function, or in the case of *non-Gaussian data*, an `mcmc` function is available, utilizing the Hamiltonian Monte Carlo sampler. In addition to a HMC sampler, it is possible to sample from the posterior using an elliptical slice sampler, provided that the data exhibits a Gaussian likelihood. Finally, for fast, yet approximate inference in the case of Poisson data, a variational approximation can be used to infer the model parameters and latent function values.
 ```julia
 optimize!(gp)    # Find parameters which maximize the log-likelihood
 mcmc(gp)         # Sample from the GP posterior
+ess(gp)          # Sample from the GP posterior using an elliptical slice sampler
 vi(gp)           # Create a variational approximation
 ```
 See the [notebooks](https://github.com/STOR-i/GaussianProcesses.jl/tree/master/notebooks) for examples of the functions used in the package.
