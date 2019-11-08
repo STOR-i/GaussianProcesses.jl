@@ -1,6 +1,6 @@
 module GaussianProcesses
 
-using Optim, PDMats, ElasticPDMats, ElasticArrays, Distances, FastGaussQuadrature, RecipesBase, Distributions, Zygote
+using Optim, PDMats, ElasticPDMats, ElasticArrays, Distances, FastGaussQuadrature, RecipesBase, Distributions, Zygote, ProgressMeter
 using StaticArrays
 using StatsFuns, SpecialFunctions
 
