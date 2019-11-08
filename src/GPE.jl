@@ -398,24 +398,23 @@ end
 
 function sample_params(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
     samples = Float64[]
-    if noise
+    if noise && num_params(gp.logNoise) != 0
         noise_priors = get_priors(gp.logNoise)
         @assert !isempty(noise_priors) "prior distributions of logNoise should be set"
         noise_sample = rand(Product(noise_priors))
-        push!(samples, noise_sample...)
+        append!(samples, noise_sample)
     end
-
-    if domean
+    if domean && num_params(gp.mean) != 0
         mean_priors = get_priors(gp.mean)
         @assert !isempty(mean_priors) "prior distributions of mean should be set"
-        mean_sample = rand(Product(mean_prior))
-        append!(samples, mean_sample...)
+        mean_sample = rand(Product(mean_priors))
+        append!(samples, mean_sample)
     end
-    if kern
+    if kern && num_params(gp.kernel) != 0
         kernel_priors = get_priors(gp.kernel)
         @assert !isempty(kernel_priors) "prior distributions of kernel should be set"
         kernel_sample = rand(Product(kernel_priors))
-        append!(samples, kernel_sample...)
+        append!(samples, kernel_sample)
     end
     return samples
 end

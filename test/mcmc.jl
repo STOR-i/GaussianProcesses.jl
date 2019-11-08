@@ -13,7 +13,7 @@ Random.seed!(1)
     kern = RQ(1.0, 1.0, 1.0)
 
     # Just checks that it doesn't crash
-    @testset "Basic" begin
+    @testset "HMC" begin
         @testset "Without likelihood" begin
             gp = GP(X, y, MeanZero(), kern)
             set_priors!(gp.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
@@ -26,6 +26,13 @@ Random.seed!(1)
             set_priors!(gp.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
             mcmc(gp)
         end
+    end
+
+    @testset "ESS" begin
+        gp = GP(X, y, MeanZero(), kern)
+        set_priors!(gp.kernel, [Distributions.Normal(-1.0, 1.0) for i in 1:3])
+        set_priors!(gp.logNoise, [Distributions.Normal(-1.0, 1.0)])
+        ess(gp)
     end
 end
 end

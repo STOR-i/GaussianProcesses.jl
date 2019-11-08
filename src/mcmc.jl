@@ -1,3 +1,5 @@
+using ProgressMeter
+
 """
     mcmc(gp::GPBase; kwargs...)
 
@@ -10,7 +12,7 @@ function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64
     precomp = init_precompute(gp)
     params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     count = 0
-    function calc_target(gp::GPBase, θ::AbstractVector) #log-target and its gradient
+    function calc_target!(gp::GPBase, θ::AbstractVector) #log-target and its gradient
         count += 1
         try
             set_params!(gp, θ; params_kwargs...)
@@ -29,14 +31,13 @@ function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64
         end
     end
 
-
     θ_cur = get_params(gp; params_kwargs...)
     D = length(θ_cur)
     leapSteps = 0                   #accumulator to track number of leap-frog steps
     post = Array{Float64}(undef, nIter, D)     #posterior samples
     post[1,:] = θ_cur
 
-    @assert calc_target(gp, θ_cur)
+    @assert calc_target!(gp, θ_cur)
     target_cur, grad_cur = gp.target, gp.dtarget
 
     num_acceptances = 0
@@ -51,7 +52,7 @@ function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64
         leapSteps +=L
         for l in 1:L
             θ += ε * ν
-            if  !calc_target(gp,θ)
+            if  !calc_target!(gp,θ)
                 reject=true
                 break
             end
@@ -93,13 +94,13 @@ Sample GP hyperparameters using the elliptical slice sampling algorithm describe
 Murray, Iain, Ryan P. Adams, and David JC MacKay. "Elliptical slice sampling." 
 Journal of Machine Learning Research 9 (2010): 541-548.
 
-Requires minimal tuning and is very efficient when sampling hyperparameters from GPs.
+Requires hyperparameter priors to be Gaussian.
 """
-function ess(gp::GPBase, nIter::Int=1000, burn::Int=1, thin::Int=1, noise::Bool=true,
-             domean::Bool=true, kern::Bool=true)
-    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise)
+function ess(gp::GPE; nIter::Int=1000, burn::Int=1, thin::Int=1, lik::Bool=true,
+             noise::Bool=true, domean::Bool=true, kern::Bool=true)
+    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     count = 0
-    function calc_target(θ::AbstractVector)
+    function calc_target!(θ::AbstractVector)
         count += 1
         try
             set_params!(gp, θ; params_kwargs...)
@@ -116,16 +117,16 @@ function ess(gp::GPBase, nIter::Int=1000, burn::Int=1, thin::Int=1, noise::Bool=
         end
     end
 
-    function sample(f::AbstractVector, likelihood)
+    function sample!(f::AbstractVector)
         v     = sample_params(gp; params_kwargs...)
         u     = rand()
-        logy  = likelihood(f) + log(u);
+        logy  = calc_target!(f) + log(u);
         θ     = rand()*2*π;
         θ_min = θ - 2*π;
         θ_max = θ;
         f_prime = f * cos(θ) + v * sin(θ);
         props = 1
-        while  likelihood(f_prime) <= logy
+        while calc_target!(f_prime) <= logy
             props += 1
             if θ < 0
                 θ_min = θ;
@@ -144,7 +145,7 @@ function ess(gp::GPBase, nIter::Int=1000, burn::Int=1, thin::Int=1, noise::Bool=
     post = Array{Float64}(undef, nIter, D)
 
     for i = 1:nIter
-        θ_cur, num_proposals = sample(θ_cur, calc_target)
+        θ_cur, num_proposals = sample!(θ_cur)
         post[i,:] = θ_cur
         total_proposals += num_proposals
     end
@@ -156,3 +157,5 @@ function ess(gp::GPBase, nIter::Int=1000, burn::Int=1, thin::Int=1, noise::Bool=
     @printf("Acceptance rate: %f \n", nIter / total_proposals)
     return post'
 end
+
+

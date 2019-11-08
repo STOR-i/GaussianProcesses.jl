@@ -1,4 +1,4 @@
-The gaussianprocesses.jl package is licensed under the MIT "Expat" License:
+The GaussianProcesses.jl package is licensed under the MIT "Expat" License:
 
 > Copyright (c) 2015: Jamie Fairbrother, Christopher Nemeth
 >
