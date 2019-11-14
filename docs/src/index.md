@@ -12,7 +12,7 @@ For an extensive review of Gaussian Processes there is an excellent book [Gaussi
 
 ## Installation
 
-GaussianProcesses.jl requires Julia version 0.5 or above.
+GaussianProcesses.jl requires Julia version 1.0 or above.
 To install GaussianProcesses.jl run the following command inside the Julia package REPL
 
 ```julia

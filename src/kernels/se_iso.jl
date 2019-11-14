@@ -17,9 +17,13 @@ mutable struct SEIso{T<:Real} <: Isotropic{SqEuclidean}
 end
 
 """
+Squared Exponential kernel function
+
     SEIso(ll::T, lσ::T)
 
-Create `SEIso` with length scale `exp(ll)` and signal standard deviation `exp(lσ)`.
+# Arguments
+  - `ll::Real`: length scale (given on log scale)
+  - `lσ::Real`: signal standard deviation (given on log scale)  
 """
 SEIso(ll::T, lσ::T) where T = SEIso{T}(exp(2 * ll), exp(2 * lσ), [])
 
