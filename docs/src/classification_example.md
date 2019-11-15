@@ -1,4 +1,3 @@
-
 # Binary classification with the crabs data
 
 The package is designed to handle models of the following general form

@@ -19,9 +19,13 @@ mutable struct Mat52Iso{T<:Real} <: MaternIso
 end
 
 """
+Matern 5/2 isotropic covariance function
+    
     Mat52Iso(ll::Real, lσ::Real)
 
-Create `Mat52Iso` with length scale `exp(ll)` and signal standard deviation `exp(lσ)`.
+# Arguments
+  - `ll::Real`: length scale (given on log scale)
+  - `lσ::Real`: signal standard deviation (given on log scale)  
 """
 Mat52Iso(ll::T, lσ::T) where T = Mat52Iso{T}(exp(ll), exp(2 * lσ), [])
 

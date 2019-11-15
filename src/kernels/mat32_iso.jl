@@ -19,9 +19,13 @@ mutable struct Mat32Iso{T<:Real} <: MaternIso
 end
 
 """
+Matern 3/2 isotropic covariance function
+    
     Mat32Iso(ll::T, lσ::T)
 
-Create `Mat32Iso` with length scale `exp(ll)` and signal standard deviation `exp(lσ)`.
+# Arguments
+  - `ll::Real`: length scale (given on log scale)
+  - `lσ::Real`: signal standard deviation (given on log scale)  
 """
 Mat32Iso(ll::T, lσ::T) where T = Mat32Iso{T}(exp(ll), exp(2 * lσ), [])
 

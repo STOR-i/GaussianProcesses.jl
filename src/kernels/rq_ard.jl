@@ -22,10 +22,14 @@ mutable struct RQArd{T<:Real} <: StationaryARD{WeightedSqEuclidean}
 end
 
 """
+Rational Quadratic ARD Covariance Function
+
     RQArd(ll::Vector{Real}, lσ::Real, lα::Real)
 
-Create `RQArd` with length scale `exp.(ll)`, signal standard deviation `exp(lσ)`, and
-shape parameter `exp(lα)`.
+# Arguments
+  - `ll::Vector{Real}`: vector of length scales (given on log scale)
+  - `lσ::Real`: signal standard deviation (given on log scale)
+  - `lα::Real`: shape parameter (given on log scale)  
 """
 RQArd(ll::Vector{T}, lσ::T, lα::T) where T = RQArd{T}(exp.(-2 .* ll), exp(2 * lσ), exp(lα), [])
 

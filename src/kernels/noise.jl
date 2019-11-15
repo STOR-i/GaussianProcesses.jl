@@ -1,4 +1,4 @@
-#White Noise kernel
+# White Noise kernel
 
 """
     Noise <: Kernel
@@ -17,9 +17,12 @@ mutable struct Noise{T<:Real} <: Kernel
 end
 
 """
+White Noise kernel
+    
     Noise(lσ::Real)
 
-Create `Noise` with signal standard deviation `exp(lσ)`.
+# Arguments
+  - `lσ::Real`: signal standard deviation (given on log scale)  
 """
 Noise(lσ::T) where T = Noise{T}(exp(2 * lσ), [])
 

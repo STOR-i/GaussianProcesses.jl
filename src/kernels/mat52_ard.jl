@@ -20,9 +20,13 @@ mutable struct Mat52Ard{T<:Real} <: MaternARD
 end
 
 """
+Matern 5/2 ARD covariance Function
+
     Mat52Ard(ll::Vector{Real}, lσ::Real)
 
-Create `Mat52Ard` with length scale `exp.(ll)` and signal standard deviation `exp(lσ)`.
+# Arguments
+  - `ll::Vector{Real}`: vector of length scales (given on log scale)
+  - `lσ::Real`: signal standard deviation (given on log scale)  
 """
 Mat52Ard(ll::Vector{T}, lσ::T) where T = Mat52Ard{T}(exp.(-2 .* ll), exp(2 * lσ), [])
 

@@ -1,4 +1,4 @@
-# Polynomial covariance function
+# Polynomial kernel function
 
 """
     Poly <: Kernel
@@ -21,10 +21,14 @@ mutable struct Poly{T<:Real} <: Kernel
 end
 
 """
+Polynomial kernel function
+
     Poly(lc::Real, lσ::Real, deg::Int)
 
-Create `Poly` with signal standard deviation `exp(lσ)`, additive constant `exp(lc)`,
-and degree `deg`.
+# Arguments
+  - `lc::Real`: additive constant (given on log scale)
+  - `lσ::Real`: signal standard deviation (given on log scale)
+  - `deg::Int`: degree of polynomial  
 """
 Poly(lc::T, lσ::T, deg::Int) where T = Poly{T}(exp(lc), exp(2 * lσ), deg, [])
 

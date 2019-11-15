@@ -20,9 +20,13 @@ mutable struct SEArd{T<:Real} <: StationaryARD{WeightedSqEuclidean}
 end
 
 """
+Squared Exponential Function with ARD
+
     SEArd(ll::Vector{Real}, lσ::Real)
 
-Create `SEArd` with length scale `exp.(ll)` and signal standard deviation `exp(lσ)`.
+# Arguments
+  - `ll::Vector{Real}`: vector of length scales (given on log scale)
+  - `lσ::Real`: signal standard deviation (given on log scale)  
 """
 SEArd(ll::Vector{T}, lσ::T) where T = SEArd{T}(exp.(-2 .* ll), exp(2 * lσ), [])
 

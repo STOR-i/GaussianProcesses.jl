@@ -21,10 +21,14 @@ mutable struct RQIso{T<:Real} <: Isotropic{SqEuclidean}
 end
 
 """
+Rational Quadratic Isotropic Covariance Function
+
     RQIso(ll:T, lσ::T, lα::T)
 
-Create `RQIso` with length scale `exp(ll)`, signal standard deviation `exp(lσ)`, and
-shape parameter `exp(lα)`.
+# Arguments
+  - `ll::Real`: length scale (given on log scale)
+  - `lσ::Real`: signal standard deviation (given on log scale)
+  - `lα::Real`: shape parameter (given on log scale)  
 """
 RQIso(ll::T, lσ::T, lα::T) where T = RQIso{T}(exp(2 * ll), exp(2 * lσ), exp(lα), [])
 

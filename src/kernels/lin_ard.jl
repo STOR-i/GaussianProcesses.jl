@@ -17,9 +17,12 @@ mutable struct LinArd{T<:Real} <: Kernel
 end
 
 """
+Linear ARD Covariance Function
+
     LinArd(ll::Vector{T})
 
-Create `LinArd` with length scale `exp.(ll)`.
+# Arguments
+  - `ll::Vector{Real}`: vector of length scales (given on log scale)
 """
 LinArd(ll::Vector{T}) where T = LinArd{T}(exp.(ll), [])
 

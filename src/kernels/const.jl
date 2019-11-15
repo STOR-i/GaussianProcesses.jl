@@ -15,9 +15,12 @@ mutable struct Const{T} <: Kernel where {T<:Real}
 end
 
 """
+Constant kernel function
+    
     Const(lσ::T)
 
-Create `Const` with signal standard deviation `exp(lσ)`.
+# Arguments
+  - `lσ::Real`: signal standard deviation (given on log scale)  
 """
 Const(lσ::T) where T = Const{T}(exp(2 * lσ), [])
 

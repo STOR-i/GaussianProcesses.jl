@@ -1,4 +1,4 @@
-# Periodic Function
+# Periodic kernel function
 
 """
     Periodic <: Isotropic{Euclidean}
@@ -21,10 +21,14 @@ mutable struct Periodic{T<:Real} <: Isotropic{Euclidean}
 end
 
 """
+Periodic kernel function
+
     Periodic(ll::Real, lσ::Real, lp::Real)
 
-Create `Periodic` with length scale `exp(ll)`, signal standard deviation `exp(lσ)`, and
-period `exp(lp)`.
+# Arguments
+  - `ll::Real`: length scale (given on log scale)
+  - `lσ::Real`: signal standard deviation (given on log scale)
+  - `lp::Real`: periodicity parameter (given on log scale)  
 """
 Periodic(ll::T, lσ::T, lp::T) where T = Periodic{T}(exp(2 * ll), exp(2 * lσ), exp(lp), [])
 

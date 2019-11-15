@@ -17,9 +17,12 @@ mutable struct LinIso{T<:Real} <: Kernel
 end
 
 """
+Linear Isotropic Covariance Function
+
     LinIso(ll::T)
 
-Create `LinIso` with length scale `exp(ll)`.
+# Arguments
+ - `ll::Real`: length scale (given on log scale)
 """
 LinIso(ll::T) where T = LinIso{T}(exp(2 * ll), [])
 
