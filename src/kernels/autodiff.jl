@@ -21,11 +21,14 @@ function to_autodiff(k::Kernel, duals::Vector{D}) where {D<:Dual}
         ftype = fieldtype(kerneltype, field)
         if ftype<:Float64
             push!(newtypes, D)
-            push!(values, duals[1]) # whatever
+            val = getfield(k, field)
+            dualval = D(val, zero(D).partials)
+            push!(values, dualval)
         elseif ftype<:Vector{Float64}
             push!(newtypes, Vector{D})
-            val = getfield(k, field)
-            push!(values, duals[1:length(val)]) # whatever
+            vals = getfield(k, field)
+            dualvals = [D(val, zero(D).partials) for val in vals]
+            push!(values, dualvals) # whatever
         elseif ftype<:Kernel
             subkernel = getfield(k, field)
             ad_subkernel = to_autodiff(subkernel, duals)
@@ -46,7 +49,6 @@ function autodiff(k::Kernel)
     hyp = get_params(k)
     duals = cfg.duals
     kdual = to_autodiff(k, duals)
-    set_params!(kdual, duals)
     ad = ADkernel{typeof(k),typeof(kdual),typeof(hyp),eltype(cfg),typeof(cfg)}(k, kdual, hyp, cfg)
     return ad
 end
