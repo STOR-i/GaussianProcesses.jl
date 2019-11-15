@@ -4,7 +4,7 @@ using Test, LinearAlgebra, Statistics, Random
 using ForwardDiff
 using GaussianProcesses: EmptyData, update_target_and_dtarget!, 
       cov_ij, dKij_dθp, dKij_dθ!,
-      get_params, set_params!, StationaryARD, WeightedEuclidean
+      get_params, set_params!, num_params, StationaryARD, WeightedEuclidean
 import Calculus: gradient
 
 Random.seed!(1)
@@ -24,10 +24,17 @@ function testkernel(kern::Kernel)
     cK = zeros(n, n)
     cK2 = zeros(n, n2)
     @test length(GaussianProcesses.get_param_names(kern)) ==
-        length(GaussianProcesses.get_params(kern)) ==
-        GaussianProcesses.num_params(kern)
+        length(get_params(kern)) ==
+        num_params(kern)
 
 
+    @testset "get and set params" begin
+        kcopy = deepcopy(kern)
+        params_1 = randn(num_params(kcopy))
+        set_params!(kcopy, params_1)
+        params_2 = get_params(kcopy)
+        @test params_1 ≈ params_2
+    end
     @testset "Variance" begin
         spec = cov(kern, X)
         @test spec ≈ invoke(cov, Tuple{Kernel, Matrix{Float64}}, kern, X)
@@ -54,8 +61,8 @@ function testkernel(kern::Kernel)
 
 
     @testset "Gradient" begin
-        nparams = GaussianProcesses.num_params(kern)
-        init_params = Vector(GaussianProcesses.get_params(kern))
+        nparams = num_params(kern)
+        init_params = Vector(get_params(kern))
         dK = zeros(nparams)
         i, j = 3, 5
         dKij_dθ!(dK, kern, X, X, data, i, j, d, nparams)
@@ -86,8 +93,8 @@ function testkernel(kern::Kernel)
         end
     end
     @testset "Gradient stack X1 ≠ X2" begin
-        nparams = GaussianProcesses.num_params(kern)
-        init_params = Vector(GaussianProcesses.get_params(kern))
+        nparams = num_params(kern)
+        init_params = Vector(get_params(kern))
         stack1 = Array{Float64}(undef, n, n2, nparams)
         stack2 = Array{Float64}(undef, n, n2, nparams)
 
@@ -114,8 +121,8 @@ function testkernel(kern::Kernel)
 
 
     @testset "Gradient stack" begin
-        nparams = GaussianProcesses.num_params(kern)
-        init_params = Vector(GaussianProcesses.get_params(kern))
+        nparams = num_params(kern)
+        init_params = Vector(get_params(kern))
         stack1 = Array{Float64}(undef, n, n, nparams)
         stack2 = Array{Float64}(undef, n, n, nparams)
 
@@ -139,9 +146,9 @@ function testkernel(kern::Kernel)
     end
 
     @testset "dtarget" begin
-        nparams = GaussianProcesses.num_params(kern)
+        nparams = num_params(kern)
         gp = GPE(X, y, MeanConst(0.0), kern, -3.0)
-        init_params = Vector(GaussianProcesses.get_params(gp))
+        init_params = Vector(get_params(gp))
         update_target_and_dtarget!(gp)
         theor_grad = copy(gp.dtarget)
         if nparams > 0
@@ -227,7 +234,7 @@ end
     @testset "Masked" for kernel in kernels
         println("\tTesting masked", nameof(typeof(kernel)), "...")
         if isa(kernel, LinArd) || isa(kernel, GaussianProcesses.StationaryARD)
-            par = GaussianProcesses.get_params(kernel)
+            par = get_params(kernel)
             k_masked = typeof(kernel).name.wrapper([par[1]], par[d+1:end]...)
             kern = Masked(k_masked, [1])
         else
@@ -237,14 +244,6 @@ end
         testkernel(kern)
     end
     @testset "autodiff" for kernel in kernels[1:end-1]
-        if typeof(kernel) <: FixedKernel
-            # TODO: autodiff for FixedKernel
-            continue
-        end
-        if typeof(kernel) <: StationaryARD{WeightedEuclidean}
-            # causes trouble
-            continue
-        end
         println("\tTesting autodiff ", nameof(typeof(kernel)), "...")
         testkernel(autodiff(kernel))
     end

@@ -1,5 +1,6 @@
 module TestGP
 using GaussianProcesses, ScikitLearnBase
+using GaussianProcesses: set_params!, get_params
 using Test, Random
 using LinearAlgebra: diag
 
@@ -60,6 +61,13 @@ Random.seed!(1)
     @testset "Random GP sampling" begin
         X_test = 2π * rand(d, n)
         samples = rand(gp, X_test)
+    end
+
+    @testset "params round trip" begin
+        params_1 = deepcopy(get_params(gp))
+        set_params!(gp, params_1)
+        params_2 = get_params(gp)
+        @test params_1 ≈ params_2
     end
     
 end
