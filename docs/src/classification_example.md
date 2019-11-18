@@ -4,9 +4,9 @@ The package is designed to handle models of the following general form
 $$\begin{aligned}
 \mathbf{y} \ |\ \mathbf{f}, \theta &\sim  \prod_{i=1}^n p(y_i \ | \ f_i,\theta), \\
     \mathbf{f} \ | \ \theta &\sim \mathcal{GP}\left(m_{\theta}(\mathbf{x}), k_{\theta}(\mathbf{x}, \mathbf{x}')\right),\\
-      \theta &\sim p(\theta), 
+      \theta &\sim p(\theta),
 \end{aligned}$$
-where $\mathbf{y}=(y_1,y_2,\ldots,y_n) \in \mathcal{Y}$ and $\mathbf{x} \in \mathcal{X}$ are the observations and covariates, respectively, and $f_i:=f(\mathbf{x}_i)$ is the latent function which we model with a Gaussian process prior. We assume that the responses $\mathbf{y}$ are independent and identically distributed and as a result the likelihood $p(\mathbf{y} \ | \ \mathbf{f}, \theta)$, can be factorized over the observations. 
+where $\mathbf{y}=(y_1,y_2,\ldots,y_n) \in \mathcal{Y}$ and $\mathbf{x} \in \mathcal{X}$ are the observations and covariates, respectively, and $f_i:=f(\mathbf{x}_i)$ is the latent function which we model with a Gaussian process prior. We assume that the responses $\mathbf{y}$ are independent and identically distributed and as a result the likelihood $p(\mathbf{y} \ | \ \mathbf{f}, \theta)$, can be factorized over the observations.
 
 In the case where the observations are Gaussian distributed, the marginal likelihood and predictive distribution can be derived analytically. See the  [Regression notebook](https://github.com/STOR-i/GaussianProcesses.jl/blob/master/notebooks/Regression.ipynb) for an illustration.
 
@@ -20,7 +20,7 @@ using Random
 
 Random.seed!(113355)
 
-crabs = dataset("MASS","crabs");              # load the data 
+crabs = dataset("MASS","crabs");              # load the data
 crabs = crabs[shuffle(1:size(crabs)[1]), :];  # shuffle the data
 
 train = crabs[1:div(end,2),:];
@@ -32,12 +32,12 @@ y[train[:,:Sp].=="O"].=1;
 X = convert(Matrix,train[:,4:end]);          # predictors
 ```
 
-We assume a zero mean GP with a Matern 3/2 kernel. We use the automatic relevance determination (ARD) kernel to allow each dimension of the predictor variables to have a different length scale. As this is binary classifcation, we use the Bernoulli likelihood, 
+We assume a zero mean GP with a Matern 3/2 kernel. We use the automatic relevance determination (ARD) kernel to allow each dimension of the predictor variables to have a different length scale. As this is binary classifcation, we use the Bernoulli likelihood,
 
 $$
 y_i \sim \mbox{Bernoulli}(\Phi(f_i))
 $$
-where $\Phi: \mathbb{R} \rightarrow [0,1]$ is the cumulative distribution function of a standard Gaussian and acts as a squash function that maps the GP function to the interval [0,1], giving the probability that $y_i=1$. 
+where $\Phi: \mathbb{R} \rightarrow [0,1]$ is the cumulative distribution function of a standard Gaussian and acts as a squash function that maps the GP function to the interval [0,1], giving the probability that $y_i=1$.
 
 **Note** that `BernLik` requires the observations to be of type `Bool` and unlike some likelihood functions (e.g. student-t) does not contain any parameters to be set at initialisation.
 
@@ -49,7 +49,7 @@ kern = Matern(3/2,zeros(5),0.0);   # Matern 3/2 ARD kernel (note that hyperparam
 lik = BernLik();                   # Bernoulli likelihood for binary data {0,1}
 ```
 
-We fit the GP using the general `GP` function. This function is a shorthand for the `GPA` function which is used to generate **approximations** of the latent function when the **likelihood is non-Gaussian**. 
+We fit the GP using the general `GP` function. This function is a shorthand for the `GPA` function which is used to generate **approximations** of the latent function when the **likelihood is non-Gaussian**.
 
 
 ```julia
@@ -68,7 +68,7 @@ gp = GP(X',y,mZero,kern,lik)      # Fit the Gaussian process model
         Type: Mat32Ard{Float64}, Params: [-0.0, -0.0, -0.0, -0.0, -0.0, 0.0]
       Likelihood:
         Type: BernLik, Params: Any[]
-      Input observations = 
+      Input observations =
     [16.2 11.2 … 11.6 18.5; 13.3 10.0 … 9.1 14.6; … ; 41.7 26.9 … 28.4 42.0; 15.4 9.4 … 10.4 16.6]
       Output observations = Bool[false, false, false, false, true, true, false, true, true, true  …  false, true, false, false, false, true, false, false, false, true]
       Log-posterior = -161.209
@@ -95,17 +95,17 @@ set_priors!(gp.kernel,[Normal(0.0,2.0) for i in 1:6])
 
 
 
-Samples of the latent function $f,\theta \ | \ X,y$ are drawn using MCMC sampling. By default, the `mcmc` function uses the Hamiltonian Monte Carlo algorithm. Unless defined, the default settings for the MCMC sampler are: 1,000 iterations with no burn-in phase or thinning of the Markov chain. 
+Samples of the latent function $f,\theta \ | \ X,y$ are drawn using MCMC sampling. By default, the `mcmc` function uses the Hamiltonian Monte Carlo algorithm. Unless defined, the default settings for the MCMC sampler are: 1,000 iterations with no burn-in phase or thinning of the Markov chain.
 
 
 ```julia
 samples = mcmc(gp; nIter=10000, burn=1000, thin=10);
 ```
 
-    Number of iterations = 10000, Thinning = 10, Burn-in = 1000 
-    Step size = 0.100000, Average number of leapfrog steps = 10.015100 
+    Number of iterations = 10000, Thinning = 10, Burn-in = 1000
+    Step size = 0.100000, Average number of leapfrog steps = 10.015100
     Number of function calls: 100152
-    Acceptance rate: 0.087600 
+    Acceptance rate: 0.087600
 
 
 We test the predictive accuracy of the fitted model against a hold-out dataset
@@ -149,5 +149,3 @@ scatter!(yTest)
 
 
 ![png](Classification_files/Classification_17_0.png)
-
-
