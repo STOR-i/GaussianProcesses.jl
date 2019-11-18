@@ -16,8 +16,8 @@ import Statistics
 
 import PyPlot; plt=PyPlot
 using LaTeXStrings
-cbbPalette = ["#E69F00", "#56B4E9", "#009E73", 
-                "#F0E442", "#0072B2", "#D55E00", 
+cbbPalette = ["#E69F00", "#56B4E9", "#009E73",
+                "#F0E442", "#0072B2", "#D55E00",
                 "#CC79A7"];
 ```
 
@@ -59,7 +59,7 @@ plt.legend(loc="lower center", fontsize="small")
 ```
 
 
-![png](Sparse%20Approximations_files/Sparse%20Approximations_4_0.png)
+![png](SparseApproximationsfiles/SA_4_0.png)
 
 
 # Exact GP inference
@@ -85,7 +85,7 @@ GPE(X, Y, MeanConst(mean(Y)), k, log(σy)) # warm-up
         Type: MeanConst, Params: [0.56185]
       Kernel:
         Type: SEIso{Float64}, Params: [-1.20397, 1.60944]
-      Input observations = 
+      Input observations =
     [4.92176 5.27531 … 3.48002 5.43604]
       Output observations = [-19.283, -6.07098, 3.33402, 12.6241, -14.5596, 20.8922, -7.86136, -3.41118, -0.686436, 9.39745  …  0.160936, 10.2597, -6.34116, 0.669071, -3.28242, 4.95583, 0.739365, 2.82739, 12.3229, 11.3255]
       Variance of observation noise = 100.00000000000004
@@ -110,7 +110,7 @@ xx = range(0, stop=10, length=200)
 plt.plot(x,Y, ".", color="black", markeredgecolor="None", alpha=0.1, label="simulated data")
 plt.plot(xx, fstar.(xx), color=cbbPalette[2], label=L"f^\star(X)", linewidth=2)
 plt.plot(xx, μ_exact, color=cbbPalette[3], label=L"$f(x) \mid Y, \hat\theta$")
-plt.fill_between(xx, μ_exact.-sqrt.(diag(Σ_exact)), μ_exact.+sqrt.(diag(Σ_exact)), 
+plt.fill_between(xx, μ_exact.-sqrt.(diag(Σ_exact)), μ_exact.+sqrt.(diag(Σ_exact)),
                  color=cbbPalette[3], alpha=0.5)
 plt.xlabel(L"X")
 plt.ylabel(L"Y")
@@ -121,7 +121,7 @@ plt.ylim(-7.5,7.5)
 ```
 
 
-![png](Sparse%20Approximations_files/Sparse%20Approximations_8_0.png)
+![png](SparseApproximationsfiles/SA_8_0.png)
 
 
 The sparse Gaussian Process approximations implemented rely on the concept of inducing points, which we denote $X_u$ (an $p \times m$ matrix of inducing points, where the dimensionality $p=1$ in this example).
@@ -153,7 +153,7 @@ We will reuse the same inducing points for all methods.
 
 We first demonstrate the subset of regressors method, the simplest and quickest approximation offered in the package.
 The shortcut function `SoR(X, Xu, Y, m, k, logNoise)`
-creates a Gaussian process object 
+creates a Gaussian process object
 
 
 ```julia
@@ -185,11 +185,11 @@ function plot_approximation(gp_exact, gp_approx, approx_label)
     plt.plot(x,Y, ".", color="black", markeredgecolor="None", alpha=0.1, label="simulated data")
     plt.plot(xx, fstar.(xx), color=cbbPalette[2], label=L"f^\star(X)", linewidth=2)
     plt.plot(xx, μ_exact, color=cbbPalette[3], label=L"$f(x) \mid Y, \hat\theta$")
-    plt.fill_between(xx, μ_exact.-sqrt.(diag(Σ_exact)), μ_exact.+sqrt.(diag(Σ_exact)), 
+    plt.fill_between(xx, μ_exact.-sqrt.(diag(Σ_exact)), μ_exact.+sqrt.(diag(Σ_exact)),
                      color=cbbPalette[3], alpha=0.3)
     plt.plot(xx, μapprox, color=cbbPalette[6], label=L"$f(x) \mid Y, \hat\theta$"*approx_label)
     y_err = sqrt.(diag(Σapprox))
-    plt.fill_between(xx, μapprox.-y_err, μapprox.+y_err, 
+    plt.fill_between(xx, μapprox.-y_err, μapprox.+y_err,
                      color=cbbPalette[6], alpha=0.5)
     plt.xlabel(L"X")
     plt.ylabel(L"Y")
@@ -204,7 +204,7 @@ plt.title("Subset of Regressors")
 ```
 
 
-![png](Sparse%20Approximations_files/Sparse%20Approximations_18_0.png)
+![png](SparseApproximationsfiles/SA_18_0.png)
 
 
 The locations of the inducing points are shown with black triangles (their y-coordinate is arbitrary).
@@ -216,7 +216,7 @@ This is in line with the academic literature, like the Q&R 2005 article cited ab
 
 ## Deterministic Training Conditionals
 
-We move on to the next approximation, “Deterministic Training Conditionals”, 
+We move on to the next approximation, “Deterministic Training Conditionals”,
 which does not approximate the prior variance as zero away from inducing points,
 and therefore should lead to better inference.
 
@@ -246,7 +246,7 @@ plt.title("Deterministic Training Conditionals")
 ```
 
 
-![png](Sparse%20Approximations_files/Sparse%20Approximations_23_0.png)
+![png](SparseApproximationsfiles/SA_23_0.png)
 
 
 It is just as fast as SoR, but has *conservative* predictive variance away from the inducing points, which reflects the information removed by the sparse approximation, and which is safer for inference.
@@ -283,7 +283,7 @@ plt.title("Fully Independent Training Conditionals")
 ```
 
 
-![png](Sparse%20Approximations_files/Sparse%20Approximations_28_0.png)
+![png](SparseApproximationsfiles/SA_28_0.png)
 
 
 As anticipated in Q&R 2005, the improvement over DTC is actually fairly minimal.
@@ -314,7 +314,7 @@ For predictions, we also need to provide the block indices.
 
 ```julia
 iprednearest = [argmin(abs.(xi.-Xu[1,:])) for xi in xx]
-blockindpred = [findall(isequal(i), iprednearest) 
+blockindpred = [findall(isequal(i), iprednearest)
                 for i in 1:size(Xu,2)]
 
 predict_f(gp_FSA, xx, blockindpred; full_cov=true)
@@ -332,11 +332,11 @@ function plot_approximation(gp_exact, gp_approx, approx_label, blockindpred)
     plt.plot(x,Y, ".", color="black", markeredgecolor="None", alpha=0.1, label="simulated data")
     plt.plot(xx, fstar.(xx), color=cbbPalette[2], label=L"f^\star(X)", linewidth=2)
     plt.plot(xx, μ_exact, color=cbbPalette[3], label=L"$f(x) \mid Y, \hat\theta$")
-    plt.fill_between(xx, μ_exact.-sqrt.(diag(Σ_exact)), μ_exact.+sqrt.(diag(Σ_exact)), 
+    plt.fill_between(xx, μ_exact.-sqrt.(diag(Σ_exact)), μ_exact.+sqrt.(diag(Σ_exact)),
                      color=cbbPalette[3], alpha=0.3)
     plt.plot(xx, μapprox, color=cbbPalette[6], label=L"$f(x) \mid Y, \hat\theta$"*approx_label)
     y_err = sqrt.(diag(Σapprox))
-    plt.fill_between(xx, μapprox.-y_err, μapprox.+y_err, 
+    plt.fill_between(xx, μapprox.-y_err, μapprox.+y_err,
                      color=cbbPalette[6], alpha=0.5)
     plt.xlabel(L"X")
     plt.ylabel(L"Y")
@@ -353,7 +353,7 @@ plot_approximation(gp_full, gp_FSA, "FSA", blockindpred)
 ```
 
 
-![png](Sparse%20Approximations_files/Sparse%20Approximations_34_0.png)
+![png](SparseApproximationsfiles/SA_34_0.png)
 
 
 We also show the dividing lines between blocks.
@@ -370,7 +370,7 @@ Gaussian process object is created with a special
 `CovarianceStrategy` structure, which stores the sparse approximation choice and parameters.
 Julia's multiple dispatch mechanism is then used in relevant GP methods to
 adapt the GP functionality according to which covariance strategy is used.
-It is therefore relatively straightforward for users to implement new approximations 
+It is therefore relatively straightforward for users to implement new approximations
 by creating a custom `CovarianceStrategy` structure, and implementing
 the methods that are affected by the approximation.
 
@@ -384,5 +384,3 @@ gp_SOR.covstrat
 
 
     GaussianProcesses.SubsetOfRegsStrategy{Array{Float64,2}}([3.82567 4.06404 … 5.73281 7.64571])
-
-

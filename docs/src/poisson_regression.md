@@ -29,7 +29,7 @@ scatter(X,Y,leg=false, fmt=:png)
 
 
 
-![png](Poisson%20regression_files/Poisson%20regression_1_0.png)
+![png](Poissonregression_files/Poissonregression_1_0.png)
 
 
 
@@ -54,7 +54,7 @@ gpvi = GP(X, vec(Y), MeanZero(), k, l)
         Type: Mat32Iso{Float64}, Params: [0.0, 0.0]
       Likelihood:
         Type: PoisLik, Params: Any[]
-      Input observations = 
+      Input observations =
     [-3.0 -2.68421 … 2.68421 3.0]
       Output observations = [3, 3, 1, 0, 0, 0, 0, 0, 3, 4, 7, 3, 1, 0, 0, 1, 0, 3, 4, 4]
       Log-posterior = -65.397
@@ -67,10 +67,10 @@ set_priors!(gpmc.kernel,[Normal(-2.0,4.0),Normal(-2.0,4.0)])
 @time samples = mcmc(gpmc; nIter=10000);
 ```
 
-    Number of iterations = 10000, Thinning = 1, Burn-in = 1 
-    Step size = 0.100000, Average number of leapfrog steps = 10.029000 
+    Number of iterations = 10000, Thinning = 1, Burn-in = 1
+    Step size = 0.100000, Average number of leapfrog steps = 10.029000
     Number of function calls: 100291
-    Acceptance rate: 0.801400 
+    Acceptance rate: 0.801400
       4.052686 seconds (24.20 M allocations: 2.026 GiB, 8.23% gc time)
 
 
@@ -103,7 +103,7 @@ scatter!(X,Y, label="data")
 
 
 
-![png](Poisson%20regression_files/Poisson%20regression_4_0.png)
+![png](Poissonregression_files/Poissonregression_4_0.png)
 
 
 
@@ -118,10 +118,10 @@ Syntactically, this can be found in a similar vein to mcmc by simply using the f
 @time Q = vi(gpvi);
 ```
 
-    Number of iterations = 1, Thinning = 1, Burn-in = 1 
-    Step size = 0.100000, Average number of leapfrog steps = 7.000000 
+    Number of iterations = 1, Thinning = 1, Burn-in = 1
+    Step size = 0.100000, Average number of leapfrog steps = 7.000000
     Number of function calls: 8
-    Acceptance rate: 0.000000 
+    Acceptance rate: 0.000000
       1.517399 seconds (1.09 M allocations: 471.231 MiB, 6.14% gc time)
 
 
@@ -150,6 +150,4 @@ scatter!(X,Y, label="data")
 
 
 
-![png](Poisson%20regression_files/Poisson%20regression_7_0.png)
-
-
+![png](Poissonregression_files/Poissonregression_7_0.png)
