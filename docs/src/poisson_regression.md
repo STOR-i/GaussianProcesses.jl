@@ -105,7 +105,7 @@ scatter!(X,Y, label="data")
 
 
 
-![png](Poisson_regression_files/Poisson%20regression_4_0.png)
+![png](Poisson_regression_files/Poisson_regression_4_0.png)
 
 
 
@@ -154,5 +154,5 @@ scatter!(X,Y, label="data")
 
 
 
-![png](Poisson_regression_files/Poisson%20regression_7_0.png)
+![png](Poisson_regression_files/Poisson_regression_7_0.png)
 

@@ -10,7 +10,7 @@ makedocs(
                      # "Basic usage" => ["usage.md", "plotting_gps.md"],
                      "Basic usage" => ["plotting_gps.md"],
                      "Tutorials" => ["classification_example.md", "sparse_example.md", "mauna_loa.md", "poisson_regression.md"],
-                     "Reference" => ["gp.md", "kernels.md", "mean.md","lik.md","sparse.md","crossvalidation.md"]
+                     "Reference" => ["gp.md", "kernels.md", "mean.md","lik.md","optimization.md","sparse.md","crossvalidation.md"]
                ]
 )
 
