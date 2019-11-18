@@ -44,7 +44,7 @@ plot(gp;  xlabel="gp.x", ylabel="gp.y", title="Gaussian process", legend=false, 
 
 
 
-![png](Plotting%20GPs_files/Plotting%20GPs_3_0.png)
+![png](Plotting_GPs_files/Plotting_GPs_3_0.png)
 
 
 
@@ -69,7 +69,7 @@ plot!(x, samples)
 
 
 
-![png](Plotting%20GPs_files/Plotting%20GPs_5_0.png)
+![png](Plotting_GPs_files/Plotting_GPs_5_0.png)
 
 
 
@@ -94,7 +94,7 @@ plot(p1, p2; fmt=:png)
 
 
 
-![png](Plotting%20GPs_files/Plotting%20GPs_7_0.png)
+![png](Plotting_GPs_files/Plotting_GPs_7_0.png)
 
 
 
@@ -113,7 +113,7 @@ plot(p1, p2, p3, p4; fmt=:png)
 
 
 
-![png](Plotting%20GPs_files/Plotting%20GPs_9_0.png)
+![png](Plotting_GPs_files/Plotting_GPs_9_0.png)
 
 
 

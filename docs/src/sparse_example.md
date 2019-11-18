@@ -59,7 +59,7 @@ plt.legend(loc="lower center", fontsize="small")
 ```
 
 
-![png](Sparse%20Approximations_files/Sparse%20Approximations_4_0.png)
+![png](Sparse_Approximations_files/Sparse_Approximations_4_0.png)
 
 
 # Exact GP inference
@@ -121,7 +121,7 @@ plt.ylim(-7.5,7.5)
 ```
 
 
-![png](Sparse%20Approximations_files/Sparse%20Approximations_8_0.png)
+![png](Sparse_Approximations_files/Sparse_Approximations_8_0.png)
 
 
 The sparse Gaussian Process approximations implemented rely on the concept of inducing points, which we denote $X_u$ (an $p \times m$ matrix of inducing points, where the dimensionality $p=1$ in this example).
@@ -204,7 +204,7 @@ plt.title("Subset of Regressors")
 ```
 
 
-![png](Sparse%20Approximations_files/Sparse%20Approximations_18_0.png)
+![png](Sparse_Approximations_files/Sparse_Approximations_18_0.png)
 
 
 The locations of the inducing points are shown with black triangles (their y-coordinate is arbitrary).
@@ -246,7 +246,7 @@ plt.title("Deterministic Training Conditionals")
 ```
 
 
-![png](Sparse%20Approximations_files/Sparse%20Approximations_23_0.png)
+![png](Sparse_Approximations_files/Sparse_Approximations_23_0.png)
 
 
 It is just as fast as SoR, but has *conservative* predictive variance away from the inducing points, which reflects the information removed by the sparse approximation, and which is safer for inference.
@@ -283,7 +283,7 @@ plt.title("Fully Independent Training Conditionals")
 ```
 
 
-![png](Sparse%20Approximations_files/Sparse%20Approximations_28_0.png)
+![png](Sparse_Approximations_files/Sparse_Approximations_28_0.png)
 
 
 As anticipated in Q&R 2005, the improvement over DTC is actually fairly minimal.
@@ -353,7 +353,7 @@ plot_approximation(gp_full, gp_FSA, "FSA", blockindpred)
 ```
 
 
-![png](Sparse%20Approximations_files/Sparse%20Approximations_34_0.png)
+![png](Sparse_Approximations_files/Sparse_Approximations_34_0.png)
 
 
 We also show the dividing lines between blocks.

@@ -1,5 +1,4 @@
-
-# Poisson Regression
+# Poisson Regression example
 
 Gaussian process models can be incredibly flexbile for modelling non-Gaussian data. One such example is in the case of count data $\mathbf{y}$, which can be modelled with a __Poisson model__ with a latent Gaussian process.
 $$
@@ -29,7 +28,7 @@ scatter(X,Y,leg=false, fmt=:png)
 
 
 
-![png](Poisson%20regression_files/Poisson%20regression_1_0.png)
+![png](Poisson_regression_files/Poisson_regression_1_0.png)
 
 
 
@@ -103,7 +102,7 @@ scatter!(X,Y, label="data")
 
 
 
-![png](Poisson%20regression_files/Poisson%20regression_4_0.png)
+![png](Poisson_regression_files/Poisson%20regression_4_0.png)
 
 
 
@@ -150,6 +149,6 @@ scatter!(X,Y, label="data")
 
 
 
-![png](Poisson%20regression_files/Poisson%20regression_7_0.png)
+![png](Poisson_regression_files/Poisson%20regression_7_0.png)
 
 

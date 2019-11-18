@@ -1,5 +1,4 @@
-
-# Mauna Loa Time Series Example
+# Time series example with Mauna Loa data
 
 Gaussian processes can be used to model nonlinear time series. We consider the problem of predicting future concentrations of CO<sub>2</sub> in the atmosphere. The data are taken from the Mauna Loa observatory in Hawaii which records the monthly average atmospheric concentration of CO<sub>2</sub> (in parts per million) between 1958 to 2015. The purposes of testing the predictive accuracy of the Gaussian process model, we fit the GP to the historical data from 1958 to 2004 and optimise the parameters using maximum likelihood estimation. 
 
