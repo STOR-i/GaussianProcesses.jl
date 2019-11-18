@@ -11,10 +11,4 @@ makedocs(
                ]
 )
 
-deploydocs(
-    repo = "github.com/STOR-i/GaussianProcesses.jl.git",
-    target = "build",
-    julia = "1.0",
-    deps = nothing,
-    make = nothing,
-)
+deploydocs(repo = "github.com/STOR-i/GaussianProcesses.jl.git")
