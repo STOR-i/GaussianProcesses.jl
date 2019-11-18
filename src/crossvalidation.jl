@@ -57,7 +57,7 @@ function logp_LOO(gp::GPE)
 end
 
 """
-    dlogpdθ_LOO_kern(gp::GPE)
+    dlogpdθ_LOO_kern!(gp::GPE)
 
 Gradient of leave-one-out CV criterion with respect to the kernel hyperparameters.
 See Rasmussen & Williams equations 5.13.
@@ -107,7 +107,7 @@ end
 
 Derivative of leave-one-out CV criterion with respect to the logNoise parameter.
 
-See also: [`logp_LOO`](@ref), [`dlogpdθ_LOO_kern`](@ref), [`dlogpdθ_LOO`](@ref)
+See also: [`logp_LOO`](@ref), [`dlogpdθ_LOO_kern!`](@ref), [`dlogpdθ_LOO`](@ref)
 """
 function dlogpdσ2_LOO(invΣ::PDMat, x::AbstractMatrix, y::AbstractVector, data::KernelData, alpha::AbstractVector)
     nobs = length(y)
@@ -137,7 +137,7 @@ end
 
 Derivatives of the leave-one-out CV criterion.
 
-See also: [`logp_LOO`](@ref), [`dlogpdθ_LOO_kern`](@ref), [`dlogpdσ2_LOO`](@ref)
+See also: [`logp_LOO`](@ref), [`dlogpdθ_LOO_kern!`](@ref), [`dlogpdσ2_LOO`](@ref)
 """
 function dlogpdθ_LOO(gp::GPE; noise::Bool, domean::Bool, kern::Bool)
     Σ = gp.cK

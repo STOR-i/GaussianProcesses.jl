@@ -1,14 +1,17 @@
 # Binary classification 
 
 The package is designed to handle models of the following general form
+
+
 $$\begin{aligned}
-\mathbf{y} \ |\ \mathbf{f}, \theta &\sim  \prod_{i=1}^n p(y_i \ | \ f_i,\theta), \\
-    \mathbf{f} \ | \ \theta &\sim \mathcal{GP}\left(m_{\theta}(\mathbf{x}), k_{\theta}(\mathbf{x}, \mathbf{x}')\right),\\
-      \theta &\sim p(\theta),
+\mathbf{y}  \ |\ \mathbf{f}, \theta &\sim  \prod_{i=1}^n p(y_i \ | \ f_i,\theta), \\
+\mathbf{f}  \ | \ \theta &\sim \mathcal{GP}\left(m_{\theta}(\mathbf{x}), k_{\theta}(\mathbf{x}, \mathbf{x}')\right),\\
+\theta & \sim p(\theta),
 \end{aligned}$$
+
 where $\mathbf{y}=(y_1,y_2,\ldots,y_n) \in \mathcal{Y}$ and $\mathbf{x} \in \mathcal{X}$ are the observations and covariates, respectively, and $f_i:=f(\mathbf{x}_i)$ is the latent function which we model with a Gaussian process prior. We assume that the responses $\mathbf{y}$ are independent and identically distributed and as a result the likelihood $p(\mathbf{y} \ | \ \mathbf{f}, \theta)$, can be factorized over the observations.
 
-In the case where the observations are Gaussian distributed, the marginal likelihood and predictive distribution can be derived analytically. See the  [Regression notebook](https://github.com/STOR-i/GaussianProcesses.jl/blob/master/notebooks/Regression.ipynb) for an illustration.
+In the case where the observations are Gaussian distributed, the marginal likelihood and predictive distribution can be derived analytically. See the [Regression documentation](http://stor-i.github.io/GaussianProcesses.jl/latest/Regression.html) for an illustration.
 
 In this example we show how the GP **Monte Carlo** function can be used for **supervised learning classification**. We use the Crab dataset from the R package MASS. In this dataset we are interested in predicting whether a crab is of colour form blue or orange. Our aim is to perform a Bayesian analysis and calculate the posterior distribution of the latent GP function $\mathbf{f}$ and model parameters $\theta$ from the training data $\{\mathbf{X}, \mathbf{y}\}$.
 
@@ -34,9 +37,9 @@ X = convert(Matrix,train[:,4:end]);          # predictors
 
 We assume a zero mean GP with a Matern 3/2 kernel. We use the automatic relevance determination (ARD) kernel to allow each dimension of the predictor variables to have a different length scale. As this is binary classifcation, we use the Bernoulli likelihood,
 
-$$
+```math
 y_i \sim \mbox{Bernoulli}(\Phi(f_i))
-$$
+```
 where $\Phi: \mathbb{R} \rightarrow [0,1]$ is the cumulative distribution function of a standard Gaussian and acts as a squash function that maps the GP function to the interval [0,1], giving the probability that $y_i=1$.
 
 **Note** that `BernLik` requires the observations to be of type `Bool` and unlike some likelihood functions (e.g. student-t) does not contain any parameters to be set at initialisation.

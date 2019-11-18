@@ -1,3 +1,4 @@
+# Sparse GPs
 
 This notebook demonstrates the sparse GP approximations implemented in the `GaussianProcesses.jl`.
 We will simulate a dataset, fit if first using
@@ -21,7 +22,7 @@ cbbPalette = ["#E69F00", "#56B4E9", "#009E73",
                 "#CC79A7"];
 ```
 
-# Simulated data
+## Simulated data
 
 We start by simulating some arbitrary data, with large noise
 and a fairly large sample size (n=5,000) so the
@@ -63,7 +64,7 @@ plt.legend(loc="lower center", fontsize="small")
 
 
 
-# Exact GP inference
+## Exact GP inference
 
 
 ```julia
@@ -150,9 +151,9 @@ Xu = Matrix(quantile(x, [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 
 
 We will reuse the same inducing points for all methods.
 
-# Sparse approximations
+## Sparse approximations
 
-## Subset of Regressors
+### Subset of Regressors
 
 We first demonstrate the subset of regressors method, the simplest and quickest approximation offered in the package.
 The shortcut function `SoR(X, Xu, Y, m, k, logNoise)`
@@ -219,7 +220,7 @@ but degrades quickly away from them.
 Most worryingly, the extrapolation behaviour is dangerous: the posterior variance is vastly underestimated (it goes to zero), which would lead to very misleading inference results.
 This is in line with the academic literature, like the Q&R 2005 article cited above.
 
-## Deterministic Training Conditionals
+### Deterministic Training Conditionals
 
 We move on to the next approximation, “Deterministic Training Conditionals”,
 which does not approximate the prior variance as zero away from inducing points,
@@ -260,7 +261,7 @@ It is just as fast as SoR, but has *conservative* predictive variance away from 
 The mean prediction is in fact mathematically the same as in SoR, so there is no improvement there.
 For these reasons, in general DTC should be preferred over SoR.
 
-## Fully Independent Training Conditionals
+### Fully Independent Training Conditionals
 
 The Fully Independent Training Conditionals (FITC) sparse approximation goes one step further, and adds a diagonal correction to the sparse covariance approximation of SoR and DTC (see Q&R 2005 for details).
 
@@ -299,7 +300,7 @@ As anticipated in Q&R 2005, the improvement over DTC is actually fairly minimal.
 However, the computational time is significantly higher (though still much lower than the exact GP).
 Consequently, for most applications, DTC may be preferable to FITC.
 
-## Full Scale Approximation
+### Full Scale Approximation
 
 The Full Scale Approximation (FSA) using the sparse approximation for long-range covariances, but is exact within smaller local blocks.
 The blocks need to be chosen in addition to the inducing points.
@@ -373,7 +374,7 @@ It is only at the dividing lines between blocks (shown as pink vertical lines) t
 The downside is that we pay the computational cost of the full inference within blocks,
 so the speed-up compared to the full analytic solution is less impressive.
 
-# Under the hood
+## Under the hood
 
 When we use the shortcut functions shown
 in this notebook — `SoR`, `DTC`, `FITC` and `FSA` — a
