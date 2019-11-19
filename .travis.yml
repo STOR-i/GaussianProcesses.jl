@@ -20,7 +20,7 @@ matrix:
 # uncomment following lines to deploy documentation
 jobs:
   include:
-    - stage: Documentation
+    - stage: "Documentation"
       julia: 1.0
       os: linux
       script:
