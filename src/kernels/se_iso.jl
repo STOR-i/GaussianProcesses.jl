@@ -21,9 +21,9 @@ Squared Exponential kernel function
 
     SEIso(ll::T, lσ::T)
 
-# Arguments
-  - `ll::Real`: length scale (given on log scale)
-  - `lσ::Real`: signal standard deviation (given on log scale)  
+# Arguments:
+- `ll::Real`: length scale (given on log scale)
+- `lσ::Real`: signal standard deviation (given on log scale)  
 """
 SEIso(ll::T, lσ::T) where T = SEIso{T}(exp(2 * ll), exp(2 * lσ), [])
 

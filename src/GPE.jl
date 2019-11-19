@@ -187,8 +187,11 @@ function update_cK!(gp::GPE)
     gp.cK = update_cK!(gp.cK, gp.x, gp.kernel, gp.logNoise, gp.data, gp.covstrat)
 end
 
-# modification of initialise_target! that reuses existing matrices to avoid
-# unnecessary memory allocations, which speeds things up significantly
+"""
+    update_mll!(gp::GPE)
+    
+Modification of initialise_target! that reuses existing matrices to avoid unnecessary memory allocations, which speeds things up significantly.
+"""    
 function update_mll!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
     if kern | noise
         update_cK!(gp)

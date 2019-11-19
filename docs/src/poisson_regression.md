@@ -1,13 +1,11 @@
-
-# Poisson Regression
+# Poisson Regression example
 
 Gaussian process models can be incredibly flexbile for modelling non-Gaussian data. One such example is in the case of count data $\mathbf{y}$, which can be modelled with a __Poisson model__ with a latent Gaussian process.
-$$
+
+```math
 \mathbf{y} \ | \ \mathbf{f} \sim \prod_{i=1}^{n} \frac{\lambda_i^{y_i}\exp\{-\lambda_i\}}{y_i!},
-$$
+```
 where $\lambda_i=\exp(f_i)$ and $f_i$ is the latent Gaussian process.
-
-
 
 ```julia
 #Load the package
@@ -26,12 +24,7 @@ gr()
 scatter(X,Y,leg=false, fmt=:png)
 ```
 
-
-
-
-![png](Poissonregression_files/Poissonregression_1_0.png)
-
-
+![png](Poisson_regression_files/Poisson_regression_1_0.png)
 
 
 ```julia
@@ -100,11 +93,7 @@ plot!(xx, exp.(f_xx), label="truth")
 scatter!(X,Y, label="data")
 ```
 
-
-
-
-![png](Poissonregression_files/Poissonregression_4_0.png)
-
+![png](Poisson_regression_files/Poisson_regression_4_0.png)
 
 
 ### Alternatives to MCMC
@@ -147,7 +136,5 @@ plot!(xx, exp.(f_xx), label="truth")
 scatter!(X,Y, label="data")
 ```
 
+![png](Poisson_regression_files/Poisson_regression_7_0.png)
 
-
-
-![png](Poissonregression_files/Poissonregression_7_0.png)

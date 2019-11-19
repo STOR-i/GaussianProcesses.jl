@@ -3,8 +3,7 @@ using ProgressMeter
 """
     mcmc(gp::GPBase; kwargs...)
 
-Run MCMC algorithms provided by the Klara package for estimating the hyperparameters of
-Gaussian process `gp`.
+Runs Hamiltonian Monte Carlo algorithm for estimating the hyperparameters of Gaussian process `GPE` and the latent function in the case of `GPA`.
 """
 function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64=0.1,
               Lmin::Int=5, Lmax::Int=15, lik::Bool=true, noise::Bool=true,

@@ -43,14 +43,15 @@ plot(gp;  xlabel="gp.x", ylabel="gp.y", title="Gaussian process", legend=false, 
 
 
 
-
-![png](PlottingGPs_files/PlottingGPs_3_0.png)
+![png](Plotting_GPs_files/Plotting_GPs_3_0.png)
 
 
 
 By default, the plot command plots the with a ribbon representing 95% confidence interval on the output observations, and with the observation points. These aspects be controlled with the following special additional keyword arguments:
-    - β (default=0.95) : level of confidence band plotted with mean (set to 0.0 for no band)
-    - obsv (default=true) : plot observations with mean function
+
+ * β (default=0.95) : level of confidence band plotted with mean (set to 0.0 for no band)
+ * obsv (default=true) : plot observations with mean function
+
 
 Note that not all plotting backends are able to plot the confidence band. Specifically, only those which support the ribbon attribute can plot the confidence band. See [here](https://juliaplots.github.io/supported/) for tables detailing which backends support which series types and attributes.
 
@@ -66,16 +67,12 @@ samples = rand(gp, x, 5)
 plot!(x, samples)
 ```
 
-
-
-
-![png](PlottingGPs_files/PlottingGPs_5_0.png)
-
+![png](Plotting_GPs_files/Plotting_GPs_5_0.png)
 
 
 Two-dimensional Gaussian processes are plotted in the same way. In this case, the `plot` command has the following special keyword:
 
-- var (default = false): plot variance of Gaussian process instead of the mean
+* var (default = false): plot variance of Gaussian process instead of the mean
 
 By default, the `plot` command will produce a contour plot for a two-dimensional process.
 
@@ -94,7 +91,8 @@ plot(p1, p2; fmt=:png)
 
 
 
-![png](PlottingGPs_files/PlottingGPs_7_0.png)
+
+![png](Plotting_GPs_files/Plotting_GPs_7_0.png)
 
 
 
@@ -113,10 +111,7 @@ plot(p1, p2, p3, p4; fmt=:png)
 
 
 
-![png](PlottingGPs_files/PlottingGPs_9_0.png)
+
+![png](Plotting_GPs_files/Plotting_GPs_9_0.png)
 
 
-
-    GKS: invalid bitmap size
-    GKS: invalid bitmap size
-    GKS: invalid bitmap size
