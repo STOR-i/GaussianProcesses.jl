@@ -7,6 +7,8 @@ Gaussian process models can be incredibly flexbile for modelling non-Gaussian da
 ```
 where $\lambda_i=\exp(f_i)$ and $f_i$ is the latent Gaussian process.
 
+To demonstrate this, we'll simulate some Poisson data where the rate parameter is the output of a cosine function.
+
 ```julia
 #Load the package
 using GaussianProcesses, Random, Distributions
@@ -26,6 +28,10 @@ scatter(X,Y,leg=false, fmt=:png)
 
 ![png](Poisson_regression_files/Poisson_regression_1_0.png)
 
+
+## Defining a Gaussian process
+
+By default, a `GP()` model assumes Gaussian data, so we must expilicitly specify that we are modelling Poisson data here through a likelihood argument. 
 
 ```julia
 #GP set-up

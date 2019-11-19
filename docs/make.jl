@@ -13,4 +13,5 @@ makedocs(
                ]
 )
 
-deploydocs(repo = "github.com/STOR-i/GaussianProcesses.jl.git")
+deploydocs(repo = "github.com/STOR-i/GaussianProcesses.jl.git",
+          target = "build")
