@@ -223,20 +223,27 @@ function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::Ke
     @assert nparams == length(dmll)
     dK_buffer = Vector{Float64}(undef, nparams)
     dmll[:] .= 0.0
-    @inbounds for j in 1:nobs
+    kcopies = [deepcopy(k) for _ in 1:Threads.nthreads()]
+    buffercopies = [similar(dK_buffer) for _ in 1:Threads.nthreads()]
+    dmllcopies = [deepcopy(dmll) for _ in 1:Threads.nthreads()]
+    @inbounds Threads.@threads for j in 1:nobs
+        kthread = kcopies[Threads.threadid()]
+        bufthread = buffercopies[Threads.threadid()]
+        dmllthread = dmllcopies[Threads.threadid()]
         # diagonal
-        dKij_dθ!(dK_buffer, k, X, X, data, j, j, dim, nparams)
+        dKij_dθ!(bufthread, kthread, X, X, data, j, j, dim, nparams)
         for iparam in 1:nparams
-            dmll[iparam] += dK_buffer[iparam] * ααinvcKI[j, j] / 2.0
+            dmllthread[iparam] += bufthread[iparam] * ααinvcKI[j, j] / 2.0
         end
         # off-diagonal
         for i in j+1:nobs
-            dKij_dθ!(dK_buffer, k, X, X, data, i, j, dim, nparams)
+            dKij_dθ!(bufthread, kthread, X, X, data, i, j, dim, nparams)
             @simd for iparam in 1:nparams
-                dmll[iparam] += dK_buffer[iparam] * ααinvcKI[i, j]
+                dmllthread[iparam] += bufthread[iparam] * ααinvcKI[i, j]
             end
         end
     end
+    dmll[:] = sum(dmllcopies)
     return dmll
 end
 

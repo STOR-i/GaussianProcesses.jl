@@ -39,17 +39,19 @@ end
 function cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData=EmptyData())
     dim, nobs = size(X)
     (nobs,nobs) == size(cK) || throw(ArgumentError("cK has size $(size(cK)) and X has size $(size(X))"))
-    @inbounds for j in 1:nobs
-        cK[j,j] = cov_ij(k, X, X, data, j, j, dim)
+    kcopies = [deepcopy(k) for _ in 1:Threads.nthreads()] # in case k is not threadsafe (e.g. ADkernel)
+    @inbounds Threads.@threads for j in 1:nobs
+        kthread = kcopies[Threads.threadid()]
+        cK[j,j] = cov_ij(kthread, X, X, data, j, j, dim)
         for i in 1:j-1
-            cK[i,j] = cov_ij(k, X, X, data, i, j, dim)
+            cK[i,j] = cov_ij(kthread, X, X, data, i, j, dim)
             cK[j,i] = cK[i,j]
         end
     end
     return cK
 end
 """
-    cov!(cK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix)
+    cov!(cK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData=EmptyData())
 
 Like [`cov(k, X1, X2)`](@ref), but stores the result in `cK` rather than a new matrix.
 """
@@ -62,9 +64,11 @@ function cov!(cK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMat
     dim1==dim2 || throw(ArgumentError("X1 and X2 must have same dimension"))
     dim = size(X1, 1)
     (nobs1,nobs2) == size(cK) || throw(ArgumentError("cK has size $(size(cK)) X1 $(size(X1)) and X2 $(size(X2))"))
-    @inbounds for i in 1:nobs1
+    kcopies = [deepcopy(k) for _ in 1:Threads.nthreads()]
+    @inbounds Threads.@threads for i in 1:nobs1
+        kthread = kcopies[Threads.threadid()]
         for j in 1:nobs2
-            cK[i,j] = cov_ij(k, X1, X2, data, i, j, dim)
+            cK[i,j] = cov_ij(kthread, X1, X2, data, i, j, dim)
         end
     end
     return cK
@@ -96,10 +100,12 @@ end
 function grad_slice!(dK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData, p::Int)
     dim, nobs = size(X)
     (nobs,nobs) == size(dK) || throw(ArgumentError("dK has size $(size(dK)) and X has size $(size(X))"))
-    @inbounds for j in 1:nobs
-        dK[j,j] = dKij_dθp(k,X,X,data,j,j,p,dim)
+    kcopies = [deepcopy(k) for _ in 1:Threads.nthreads()]
+    @inbounds Threads.@threads for j in 1:nobs
+        kthread = kcopies[Threads.threadid()]
+        dK[j,j] = dKij_dθp(kthread,X,X,data,j,j,p,dim)
         @simd for i in 1:(j-1)
-            dK[i,j] = dKij_dθp(k,X,X,data,i,j,p,dim)
+            dK[i,j] = dKij_dθp(kthread,X,X,data,i,j,p,dim)
             dK[j,i] = dK[i,j]
         end
     end
@@ -114,13 +120,16 @@ function grad_slice!(dK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::Abst
     dim1==dim2 || throw(ArgumentError("X1 and X2 must have same dimension"))
     (nobs1,nobs2) == size(dK) || throw(ArgumentError("dK has size $(size(dK)) X1 $(size(X1)) and X2 $(size(X2))"))
     dim=dim1
-    @inbounds for i in 1:nobs1
+    kcopies = [deepcopy(k) for _ in 1:Threads.nthreads()]
+    @inbounds Threads.@threads for i in 1:nobs1
+        kthread = kcopies[Threads.threadid()]
         @simd for j in 1:nobs2
-            dK[i,j] = dKij_dθp(k,X1,X2,data,i,j,p,dim)
+            dK[i,j] = dKij_dθp(kthread,X1,X2,data,i,j,p,dim)
         end
     end
     return dK
 end
+
 
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients
 function grad_stack!(stack::AbstractArray, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData)
