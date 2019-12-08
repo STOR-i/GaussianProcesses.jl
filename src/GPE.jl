@@ -223,9 +223,11 @@ function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::Ke
     @assert nparams == length(dmll)
     dK_buffer = Vector{Float64}(undef, nparams)
     dmll[:] .= 0.0
+    # make a copy per thread for objects that are potentially not thread-safe:
     kcopies = [deepcopy(k) for _ in 1:Threads.nthreads()]
     buffercopies = [similar(dK_buffer) for _ in 1:Threads.nthreads()]
     dmllcopies = [deepcopy(dmll) for _ in 1:Threads.nthreads()]
+
     @inbounds Threads.@threads for j in 1:nobs
         kthread = kcopies[Threads.threadid()]
         bufthread = buffercopies[Threads.threadid()]
@@ -243,7 +245,8 @@ function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::Ke
             end
         end
     end
-    dmll[:] = sum(dmllcopies)
+
+    dmll[:] = sum(dmllcopies) # sum up the results from all threads
     return dmll
 end
 
