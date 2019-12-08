@@ -2,7 +2,6 @@ using GaussianProcesses
 using GaussianProcesses: update_mll_and_dmll!, update_cK!, FullCovariancePrecompute
 using BenchmarkTools
 using DataFrames
-using JLD
 using Random
 using CSV
 using LinearAlgebra
@@ -25,9 +24,9 @@ kerns = Dict(
     
 function benchmark_kernel(group, kern)
     XY_df = CSV.read("simdata.csv")
-    Xt = XY_df[:,[:x1, :x2, :x3, :x4, :x5, :x6, :x7, :x8, :x9, :x10]]
+    Xt = XY_df[!,[:x1, :x2, :x3, :x4, :x5, :x6, :x7, :x8, :x9, :x10]]
     X = Matrix(transpose(Matrix(Xt)))
-    Y = XY_df[:Y]
+    Y = XY_df[!,:Y]
     @assert length(Y) == nt
     buffer = FullCovariancePrecompute(nt)
     gp = GP(X, Y, MeanConst(0.0), kern, 0.3)
@@ -41,7 +40,7 @@ Random.seed!(1)
 X = randn(d, nt) # Training data
 Y = randn(nt)
 XY_df = DataFrame(X')
-XY_df[:Y] = Y
+XY_df[!,:Y] = Y
 XY_df
 CSV.write("simdata.csv", XY_df; writeheader=true)
 
