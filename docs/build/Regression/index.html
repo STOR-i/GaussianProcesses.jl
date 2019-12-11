@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Simple GP Regression · GaussianProcesses.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GaussianProcesses.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Introduction</a></li><li><span class="tocitem">Basic usage</span><ul><li class="is-active"><a class="tocitem" href>Simple GP Regression</a><ul class="internal"><li><a class="tocitem" href="#D-regression-example-1"><span>1D regression example</span></a></li><li><a class="tocitem" href="#Multi-dimensional-regression-1"><span>Multi-dimensional regression</span></a></li></ul></li><li><a class="tocitem" href="../plotting_gps/">Plotting with GaussianProcesses.jl</a></li></ul></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../classification_example/">Binary classification</a></li><li><a class="tocitem" href="../sparse_example/">Sparse GPs</a></li><li><a class="tocitem" href="../mauna_loa/">Time series example with Mauna Loa data</a></li><li><a class="tocitem" href="../poisson_regression/">Poisson Regression example</a></li></ul></li><li><span class="tocitem">Reference</span><ul><li><a class="tocitem" href="../gp/">Gaussian Processes</a></li><li><a class="tocitem" href="../kernels/">Kernels</a></li><li><a class="tocitem" href="../mean/">Means</a></li><li><a class="tocitem" href="../lik/">Likelihoods</a></li><li><a class="tocitem" href="../optimization/">Optimization</a></li><li><a class="tocitem" href="../sparse/">Sparse GPs</a></li><li><a class="tocitem" href="../crossvalidation/">Cross Validation</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Basic usage</a></li><li class="is-active"><a href>Simple GP Regression</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Simple GP Regression</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/STOR-i/GaussianProcesses.jl/blob/master/docs/src/Regression.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Simple-GP-Regression-1"><a class="docs-heading-anchor" href="#Simple-GP-Regression-1">Simple GP Regression</a><a class="docs-heading-anchor-permalink" href="#Simple-GP-Regression-1" title="Permalink"></a></h1><p>Gaussian processes are a powerful tool for nonlinear regression models. </p><p>Assume that we have <strong>predictor</strong> variables <span>$\mathbf{X} = \{\mathbf{x_i}\}_{i=1}^N \in \mathbb{R}^d$</span> and <strong>response</strong> variables <span>$\mathbf{y}=\{y_i \in \mathbb{R}\}_{i=1}^N$</span>.</p><p>The response variables <span>$\mathbf{y}$</span> are assumed to dependent on the predictors <span>$\mathbf{X}$</span>,</p><div>\[y_i \sim \mathcal{N}(f(\mathbf{x}_i),\sigma^2), \ i=1,\ldots,n,  \]</div><p>where <span>$f$</span> is a mapping function. Treating <span>$f$</span> as a random function, we assume that the distribution over <span>$f$</span> is a <strong>Gaussian process</strong>,</p><div>\[f \sim \mathcal{GP}(m(\mathbf{x}),k(\mathbf{x},\mathbf{x}&#39;)),\]</div><p>where <span>$m(\cdot)$</span> and <span>$k(\cdot,\cdot)$</span> are the mean and kernel functions respectively.</p><h2 id="D-regression-example-1"><a class="docs-heading-anchor" href="#D-regression-example-1">1D regression example</a><a class="docs-heading-anchor-permalink" href="#D-regression-example-1" title="Permalink"></a></h2><p>We start by simulating some data</p><pre><code class="language-julia">using GaussianProcesses
+using Random
+
+Random.seed!(20140430)
+# Training data
+n=10;                          #number of training points
+x = 2π * rand(n);              #predictors
+y = sin.(x) + 0.05*randn(n);   #regressors</code></pre><p>The first step in modelling with Gaussian Processes is to choose mean functions and kernels which describe the process. </p><p><strong>Note</strong> that all hyperparameters for the <strong>mean</strong> and <strong>kernel</strong> functions and <span>$\sigma$</span> are given on the log scale. This is true for all strictly positive hyperparameters. Gaussian Processes are represented by objects of type &#39;GP&#39; and constructed from observation data, a mean function and kernel, and optionally the amount of observation noise.</p><pre><code class="language-julia">#Select mean and covariance function
+mZero = MeanZero()                   #Zero mean function
+kern = SE(0.0,0.0)                   #Sqaured exponential kernel (note that hyperparameters are on the log scale)
+
+logObsNoise = -1.0                        # log standard deviation of observation noise (this is optional)
+gp = GP(x,y,mZero,kern,logObsNoise)       #Fit the GP</code></pre><pre><code class="language-none">GP Exact object:
+  Dim = 1
+  Number of observations = 10
+  Mean function:
+    Type: MeanZero, Params: Float64[]
+  Kernel:
+    Type: SEIso{Float64}, Params: [0.0, 0.0]
+  Input observations = 
+[4.85461 5.17653 … 1.99412 3.45676]
+  Output observations = [-0.967293, -1.00705, -1.0904, 0.881121, -0.333213, -0.976965, 0.915934, 0.736218, 0.950849, -0.306432]
+  Variance of observation noise = 0.1353352832366127
+  Marginal Log-Likelihood = -6.335</code></pre><p>Once we&#39;ve fit the <code>GP</code> function to the data, we can calculate the <strong>predicted mean</strong> and <strong>variance</strong> of the function at unobserved points <span>$\{\mathbf{x}^\ast,y^\ast\}$</span>, conditional on the observed data <span>$\mathcal{D}=\{\mathbf{y},\mathbf{X}\}$</span>. This is done with the <code>predict_y</code> function.</p><p>The <code>predict_y</code> function returns the mean vector <span>$\mu(\mathbf{x}^\ast)$</span> and covariance matrix (variance vector if <code>full_cov=false</code>) <span>$\Sigma(\mathbf{x}^\ast,\mathbf{x}^{\ast^\top})$</span> of the predictive distribution,</p><div>\[    y^\ast|\mathbf{x}^\ast,\mathcal{D} \sim \mathcal{N}(\mu(\mathbf{x}^\ast),\Sigma(\mathbf{x}^\ast,\mathbf{x}^{\ast^\top})+\sigma^2\mathbf{I}),\]</div><p>where</p><div>\[\begin{aligned}
+\mu(\mathbf{x}^\ast) &amp;= k(\mathbf{x}^\ast,\mathbf{X})(k(\mathbf{X}, \mathbf{X}) + \sigma_n^2 \mathbf{I})^{-1}\mathbf{y} \\ 
+\Sigma(\mathbf{x}^\ast,\mathbf{x}^{\ast}) &amp;= k(\mathbf{x}^\ast,\mathbf{x}^\ast) -k(\mathbf{x}^\ast,\mathbf{X})(k(\mathbf{X}, \mathbf{X})+ \sigma_n^2 \mathbf{I})^{-1} k(\mathbf{X},\mathbf{x}^\ast).
+\end{aligned}\]</div><p><strong>Note</strong> you can use the <code>predict_f</code> function to predict the latent function <span>$\mathbf{f}^\ast$</span>.</p><pre><code class="language-julia">μ, σ² = predict_y(gp,range(0,stop=2π,length=100));</code></pre><pre><code class="language-none">([0.357625, 0.384852, 0.412943, 0.441807, 0.471344, 0.501442, 0.53198, 0.562826, 0.593838, 0.624867  …  -0.669223, -0.63363, -0.597926, -0.562345, -0.527104, -0.492406, -0.458434, -0.425355, -0.393315, -0.362442], [0.603651, 0.557693, 0.512299, 0.468128, 0.425831, 0.386031, 0.349295, 0.316113, 0.286872, 0.261843  …  0.434056, 0.473396, 0.514594, 0.557168, 0.600593, 0.644326, 0.68782, 0.730548, 0.772021, 0.811799])</code></pre><p>Plotting GPs is straightforward and utilises the recipes approach to plotting from the <a href="https://github.com/JuliaPlots/Plots.jl">Plots.jl</a> package. More information about plotting GPs and the available functionality can be found in this <a href="http://stor-i.github.io/GaussianProcesses.jl/latest/plotting_gps.html">Plotting with GaussianProcesses.jl</a>.</p><p>The default plot function <code>plot(gp)</code> outputs the predicted mean and variance of the function (i.e. uses <code>predict_f</code> in the background), with the uncertainty in the function represented by a confidence ribbon (set to 95% by default). All optional plotting arguments are given after <code>;</code>.</p><pre><code class="language-julia">using Plots  #Load Plots.jl package
+
+plot(gp; xlabel=&quot;x&quot;, ylabel=&quot;y&quot;, title=&quot;Gaussian process&quot;, legend=false, fmt=:png)      # Plot the GP</code></pre><p><img src="../Regression_files/Regression_10_0.png" alt="png"/></p><p>The hyperparameters are optimized using the <a href="https://github.com/JuliaOpt/Optim.jl">Optim.jl</a> package. This offers users a range of optimization algorithms which can be applied to estimate the hyperparameters using type II maximum likelihood estimation. Gradients are available for all mean and kernel functions used in the package and therefore it is recommended that the user utilizes gradient based optimization techniques. As a default, the <code>optimize!</code> function uses the <code>L-BFGS</code> solver, however, alternative solvers can be applied. </p><pre><code class="language-julia">using Optim
+optimize!(gp; method=ConjugateGradient())   # Optimise the hyperparameters</code></pre><pre><code class="language-none">Results of Optimization Algorithm
+ * Algorithm: Conjugate Gradient
+ * Starting Point: [-1.0,0.0,0.0]
+ * Minimizer: [-2.992856448832551,0.4636861230870647, ...]
+ * Minimum: -3.275745e+00
+ * Iterations: 27
+ * Convergence: false
+   * |x - x&#39;| ≤ 0.0e+00: false 
+     |x - x&#39;| = 4.62e-09 
+   * |f(x) - f(x&#39;)| ≤ 0.0e+00 |f(x)|: false
+     |f(x) - f(x&#39;)| = -4.12e-14 |f(x)|
+   * |g(x)| ≤ 1.0e-08: false 
+     |g(x)| = 5.69e-08 
+   * Stopped by an increasing objective: true
+   * Reached Maximum Number of Iterations: false
+ * Objective Calls: 66
+ * Gradient Calls: 41</code></pre><pre><code class="language-julia">plot(gp; legend=false, fmt=:png)   #Plot the GP after the hyperparameters have been optimised </code></pre><p><img src="../Regression_files/Regression_13_0.png" alt="png"/></p><p>By default all hyperparameters or optimized. But the function <code>optimize!</code> allows also to force hyperparameters to remain constant or optimize them in a box.</p><pre><code class="language-julia">optimize!(gp; kern = false)   # Don&#39;t optimize kernel hyperparameters
+optimize!(gp; kernbounds = [[-1, -1], [1, 1]]) # Optimize the kernel parameters in a box with lower bounds [-1, -1] and upper bounds [1, 1]</code></pre><pre><code class="language-none">Results of Optimization Algorithm
+ * Algorithm: Fminbox with L-BFGS
+ * Starting Point: [-2.992856448832551,0.4636861230870647, ...]
+ * Minimizer: [-2.992856448832551,0.4636861230870647, ...]
+ * Minimum: -3.275745e+00
+ * Iterations: 1
+ * Convergence: true
+   * |x - x&#39;| ≤ 0.0e+00: true 
+     |x - x&#39;| = 0.00e+00 
+   * |f(x) - f(x&#39;)| ≤ 0.0e+00 |f(x)|: true
+     |f(x) - f(x&#39;)| = 0.00e+00 |f(x)|
+   * |g(x)| ≤ 1.0e-08: false 
+     |g(x)| = 6.32e-08 
+   * Stopped by an increasing objective: true
+   * Reached Maximum Number of Iterations: false
+ * Objective Calls: 3
+ * Gradient Calls: 3</code></pre><p>MCMC, specifically a Hamiltonian Monte Carlo in this instance, can be run on the GPE hyperparameters through the <code>mcmc</code> function. Priors for hyperparameters of the mean and kernel parameters can be set through the <code>set_priors!</code> function. The log noise parameter of the GPE is a Uniform(0,1) distribution and currently can&#39;t be changed.</p><pre><code class="language-julia">using Distributions
+
+set_priors!(kern, [Normal(), Normal()]) # Uniform(0,1) distribution assumed by default if priors not specified
+chain = mcmc(gp)
+plot(chain&#39;, label=[&quot;Noise&quot;, &quot;SE log length&quot;, &quot;SE log scale&quot;]; fmt=:png)</code></pre><pre><code class="language-none">Number of iterations = 1000, Thinning = 1, Burn-in = 1 
+Step size = 0.100000, Average number of leapfrog steps = 9.786000 
+Number of function calls: 9787
+Acceptance rate: 0.959000</code></pre><p><img src="../Regression_files/Regression_17_1.png" alt="png"/></p><p>There is additional support for inference to be done in a fully Bayesian fashion through the use of an <a href="http://proceedings.mlr.press/v9/murray10a/murray10a.pdf">elliptical slice sampler</a>. While a HMC sampler can often be shown to be highly efficient, the sampler&#39;s efficiency can be highly dependent upon good initial choice of the sampler&#39;s hyperparameters. Conversely, ESS has no free parameters and is designed to be highly efficient in tightly correlated Gaussian posteriors: a geometry commonly found in Gaussian process models.</p><p><strong>Note</strong> currently, inference via an ESS is only supported when the likelihood is Gaussian. </p><p>For advice on how to fit Gaussian processes with non-Gaussian data, see our documentation on <a href="http://stor-i.github.io/GaussianProcesses.jl/latest/poisson_regression.html">Poisson regression</a> or <a href="http://stor-i.github.io/GaussianProcesses.jl/latest/classification_example.html">classification</a>.</p><pre><code class="language-julia">mhmc = mean(chain, dims=2)
+mess = mean(ess_chain, dims=2)
+</code></pre><pre><code class="language-none">3×1 Array{Float64,2}:
+ -2.444901016768212  
+  0.3721835201083439 
+ -0.10584635335452222</code></pre><pre><code class="language-julia">for (a, b) in zip(mhmc, mess)
+    eq = abs(a-b)
+    idx = max(abs(a), abs(b))
+    return eq &lt; idx/5
+end</code></pre><pre><code class="language-none">true</code></pre><pre><code class="language-julia">mZero = MeanZero()                   #Zero mean function
+kern = SE(0.0,0.0)                   #Sqaured exponential kernel (note that hyperparameters are on the log scale)
+logObsNoise = -1.0                        # log standard deviation of observation noise (this is optional)
+
+gpess = GP(x, y, mZero, kern, )       #Fit the GP
+
+set_priors!(kern, [Normal(), Normal()]) # Uniform(0,1) distribution assumed by default if priors not specified
+set_priors!(gpess.logNoise, [Distributions.Normal(-1.0, 1.0)])
+ess_chain = ess(gpess)
+plot(chain&#39;, label=[&quot;Noise&quot;, &quot;SE log length&quot;, &quot;SE log scale&quot;]; fmt=:png)</code></pre><pre><code class="language-none">Number of iterations = 1000, Thinning = 1, Burn-in = 1 
+Number of function calls: 6115
+Acceptance rate: 0.195503</code></pre><p><img src="../Regression_files/Regression_21_1.png" alt="png"/></p><h2 id="Multi-dimensional-regression-1"><a class="docs-heading-anchor" href="#Multi-dimensional-regression-1">Multi-dimensional regression</a><a class="docs-heading-anchor-permalink" href="#Multi-dimensional-regression-1" title="Permalink"></a></h2><p>The regression example above can be easily extended to higher dimensions. For the purpose of visualisation, and without loss of generality, we consider a 2 dimensional regression example.</p><pre><code class="language-julia">#Training data
+d, n = 2, 50;         #Dimension and number of observations
+x = 2π * rand(d, n);                               #Predictors
+y = vec(sin.(x[1,:]).*sin.(x[2,:])) + 0.05*rand(n);  #Responses</code></pre><p>For problems of dimension&gt;1 we can use isotropic (<code>Iso</code>) kernels or automatic relevance determination (<code>ARD</code>) kernels. For <code>Iso</code> kernels, the length scale parameter <span>$\ell$</span> is the same for all dimensions. For <code>ARD</code> kernels, each dimension has different length scale parameter.</p><p>The <code>Iso</code> and <code>ARD</code> kernels are implemented automatically by replacing the single length scale parameter with a vector of parameters. For example, below we use the Matern 5/2 <code>ARD</code> kernel, if we wanted to use the <code>Iso</code> alternative then we would set the kernel as <code>kern=Mat(5/2,0.0,0.0)</code>.</p><p>In this example we use a composite kernel represented as the sum of a Matern 5/2 ARD kernel and a Squared Exponential isotropic kernel. This is easily implemented using the <code>+</code> symbol, or in the case of a product kernel, using the <code>*</code> symbol (i.e. <code>kern = Mat(5/2,[0.0,0.0],0.0) * SE(0.0,0.0)</code>).</p><pre><code class="language-julia">mZero = MeanZero()                             # Zero mean function
+kern = Matern(5/2,[0.0,0.0],0.0) + SE(0.0,0.0)    # Sum kernel with Matern 5/2 ARD kernel 
+                                               # with parameters [log(ℓ₁), log(ℓ₂)] = [0,0] and log(σ) = 0
+                                               # and Squared Exponential Iso kernel with
+                                               # parameters log(ℓ) = 0 and log(σ) = 0</code></pre><pre><code class="language-none">Type: SumKernel{Mat52Ard{Float64},SEIso{Float64}}
+  Type: Mat52Ard{Float64}, Params: [-0.0, -0.0, 0.0]  Type: SEIso{Float64}, Params: [0.0, 0.0]</code></pre><p>Fit the Gaussian process to the data using the prespecfied mean and covariance functions.</p><pre><code class="language-julia">gp = GP(x,y,mZero,kern,-2.0)          # Fit the GP</code></pre><pre><code class="language-none">GP Exact object:
+  Dim = 2
+  Number of observations = 50
+  Mean function:
+    Type: MeanZero, Params: Float64[]
+  Kernel:
+    Type: SumKernel{Mat52Ard{Float64},SEIso{Float64}}
+      Type: Mat52Ard{Float64}, Params: [-0.0, -0.0, 0.0]      Type: SEIso{Float64}, Params: [0.0, 0.0]
+  Input observations = 
+[3.05977 4.74752 … 2.82127 5.38224; 2.02102 4.27258 … 6.13114 1.56497]
+  Output observations = [0.08509, 0.924505, 0.275745, -0.448035, -0.784758, -0.316803, -0.823483, -0.886726, 0.0059149, 0.414951  …  -0.413905, -0.347505, 0.46108, -0.204102, -0.538689, 0.554203, -0.874479, -0.0506017, -0.0215167, -0.745944]
+  Variance of observation noise = 0.01831563888873418
+  Marginal Log-Likelihood = -29.547</code></pre><p>Using the <a href="https://github.com/JuliaOpt/Optim.jl">Optim</a> package we have the option to choose from a range of optimize functions including conjugate gradients. It is also possible to fix the hyperparameters in either the mean function, kernel function or observation noise, by settting them to false in <code>optimize!</code> (e.g. <code>optimize!(...,domean=false)</code>).</p><pre><code class="language-julia">optimize!(gp)                         # Optimize the hyperparameters</code></pre><pre><code class="language-none">Results of Optimization Algorithm
+ * Algorithm: L-BFGS
+ * Starting Point: [-2.0,-0.0,-0.0,0.0,0.0,0.0]
+ * Minimizer: [-4.277211995773057,5.536664077544042, ...]
+ * Minimum: -5.023830e+01
+ * Iterations: 34
+ * Convergence: false
+   * |x - x&#39;| ≤ 0.0e+00: false 
+     |x - x&#39;| = 4.74e-02 
+   * |f(x) - f(x&#39;)| ≤ 0.0e+00 |f(x)|: false
+     |f(x) - f(x&#39;)| = -1.36e-14 |f(x)|
+   * |g(x)| ≤ 1.0e-08: false 
+     |g(x)| = 1.87e-05 
+   * Stopped by an increasing objective: true
+   * Reached Maximum Number of Iterations: false
+ * Objective Calls: 115
+ * Gradient Calls: 115</code></pre><p>A range of plotting options are availbe through the <a href="https://github.com/JuliaPlots/Plots.jl">Plots.jl</a> package.</p><pre><code class="language-julia">plot(contour(gp) ,heatmap(gp); fmt=:png)</code></pre><p><img src="../Regression_files/Regression_33_0.png" alt="png"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Introduction</a><a class="docs-footer-nextpage" href="../plotting_gps/">Plotting with GaussianProcesses.jl »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 11 December 2019 16:01">Wednesday 11 December 2019</span>. Using Julia version 1.1.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

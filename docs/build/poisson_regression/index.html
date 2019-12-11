@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Poisson Regression example · GaussianProcesses.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GaussianProcesses.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Introduction</a></li><li><span class="tocitem">Basic usage</span><ul><li><a class="tocitem" href="../Regression/">Simple GP Regression</a></li><li><a class="tocitem" href="../plotting_gps/">Plotting with GaussianProcesses.jl</a></li></ul></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../classification_example/">Binary classification</a></li><li><a class="tocitem" href="../sparse_example/">Sparse GPs</a></li><li><a class="tocitem" href="../mauna_loa/">Time series example with Mauna Loa data</a></li><li class="is-active"><a class="tocitem" href>Poisson Regression example</a></li></ul></li><li><span class="tocitem">Reference</span><ul><li><a class="tocitem" href="../gp/">Gaussian Processes</a></li><li><a class="tocitem" href="../kernels/">Kernels</a></li><li><a class="tocitem" href="../mean/">Means</a></li><li><a class="tocitem" href="../lik/">Likelihoods</a></li><li><a class="tocitem" href="../optimization/">Optimization</a></li><li><a class="tocitem" href="../sparse/">Sparse GPs</a></li><li><a class="tocitem" href="../crossvalidation/">Cross Validation</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Poisson Regression example</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Poisson Regression example</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/STOR-i/GaussianProcesses.jl/blob/master/docs/src/poisson_regression.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Poisson-Regression-example-1"><a class="docs-heading-anchor" href="#Poisson-Regression-example-1">Poisson Regression example</a><a class="docs-heading-anchor-permalink" href="#Poisson-Regression-example-1" title="Permalink"></a></h1><p>Gaussian process models can be incredibly flexbile for modelling non-Gaussian data. One such example is in the case of count data <span>$\mathbf{y}$</span>, which can be modelled with a <strong>Poisson model</strong> with a latent Gaussian process.</p><div>\[\mathbf{y} \ | \ \mathbf{f} \sim \prod_{i=1}^{n} \frac{\lambda_i^{y_i}\exp\{-\lambda_i\}}{y_i!},\]</div><p>where <span>$\lambda_i=\exp(f_i)$</span> and <span>$f_i$</span> is the latent Gaussian process.</p><pre><code class="language-julia">#Load the package
+using GaussianProcesses, Random, Distributions
+
+#Simulate the data
+Random.seed!(203617)
+n = 20
+X = collect(range(-3,stop=3,length=n));
+f = 2*cos.(2*X);
+Y = [rand(Poisson(exp.(f[i]))) for i in 1:n];
+
+#Plot the data using the Plots.jl package with the GR backend
+using Plots
+gr()
+scatter(X,Y,leg=false, fmt=:png)</code></pre><p><img src="../Poisson_regression_files/Poisson_regression_1_0.png" alt="png"/></p><pre><code class="language-julia">#GP set-up
+k = Matern(3/2,0.0,0.0)   # Matern 3/2 kernel
+l = PoisLik()             # Poisson likelihood
+gpmc = GP(X, vec(Y), MeanZero(), k, l)
+gpvi = GP(X, vec(Y), MeanZero(), k, l)</code></pre><pre><code class="language-none">GP Approximate object:
+  Dim = 1
+  Number of observations = 20
+  Mean function:
+    Type: MeanZero, Params: Float64[]
+  Kernel:
+    Type: Mat32Iso{Float64}, Params: [0.0, 0.0]
+  Likelihood:
+    Type: PoisLik, Params: Any[]
+  Input observations =
+[-3.0 -2.68421 … 2.68421 3.0]
+  Output observations = [3, 3, 1, 0, 0, 0, 0, 0, 3, 4, 7, 3, 1, 0, 0, 1, 0, 3, 4, 4]
+  Log-posterior = -65.397</code></pre><pre><code class="language-julia">set_priors!(gpmc.kernel,[Normal(-2.0,4.0),Normal(-2.0,4.0)])
+@time samples = mcmc(gpmc; nIter=10000);</code></pre><pre><code class="language-none">Number of iterations = 10000, Thinning = 1, Burn-in = 1
+Step size = 0.100000, Average number of leapfrog steps = 10.029000
+Number of function calls: 100291
+Acceptance rate: 0.801400
+  4.052686 seconds (24.20 M allocations: 2.026 GiB, 8.23% gc time)</code></pre><pre><code class="language-julia">#Sample predicted values
+xtest = range(minimum(gpmc.x),stop=maximum(gpmc.x),length=50);
+ymean = [];
+fsamples = Array{Float64}(undef,size(samples,2), length(xtest));
+for i in 1:size(samples,2)
+    set_params!(gpmc,samples[:,i])
+    update_target!(gpmc)
+    push!(ymean, predict_y(gpmc,xtest)[1])
+    fsamples[i,:] = rand(gpmc, xtest)
+end
+
+#Predictive plots
+
+q10 = [quantile(fsamples[:,i], 0.1) for i in 1:length(xtest)]
+q50 = [quantile(fsamples[:,i], 0.5) for i in 1:length(xtest)]
+q90 = [quantile(fsamples[:,i], 0.9) for i in 1:length(xtest)]
+plot(xtest,exp.(q50),ribbon=(exp.(q10), exp.(q90)),leg=true, fmt=:png, label=&quot;quantiles&quot;)
+plot!(xtest,mean(ymean), label=&quot;posterior mean&quot;)
+xx = range(-3,stop=3,length=1000);
+f_xx = 2*cos.(2*xx);
+plot!(xx, exp.(f_xx), label=&quot;truth&quot;)
+scatter!(X,Y, label=&quot;data&quot;)</code></pre><p><img src="../Poisson_regression_files/Poisson_regression_4_0.png" alt="png"/></p><h3 id="Alternatives-to-MCMC-1"><a class="docs-heading-anchor" href="#Alternatives-to-MCMC-1">Alternatives to MCMC</a><a class="docs-heading-anchor-permalink" href="#Alternatives-to-MCMC-1" title="Permalink"></a></h3><p>As an alternative to MCMC, the practioner is also able to compute the approximate posterior using variational inference. This is done through the approach described in <a href="http://papers.nips.cc/paper/4535-fast-bayesian-inference-for-non-conjugate-gaussian-process-regression">Khan et. al.</a>. An approximate density <span>$q(\mathbf{x})=(2 \pi)^{-N / 2}|\mathbf{\Sigma}|^{-\frac{1}{2}} e^{-\frac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^{\top} \boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu})}$</span> is used to replace the true posterior.</p><p>Syntactically, this can be found in a similar vein to mcmc by simply using the following statements.</p><pre><code class="language-julia">@time Q = vi(gpvi);</code></pre><pre><code class="language-none">Number of iterations = 1, Thinning = 1, Burn-in = 1
+Step size = 0.100000, Average number of leapfrog steps = 7.000000
+Number of function calls: 8
+Acceptance rate: 0.000000
+  1.517399 seconds (1.09 M allocations: 471.231 MiB, 6.14% gc time)</code></pre><pre><code class="language-julia">nsamps = 500
+ymean = [];
+visamples = Array{Float64}(undef, nsamps, size(xtest, 1))
+
+for i in 1:nsamps
+    visamples[i, :] = rand(gpvi, xtest, Q)
+    push!(ymean, predict_y(gpvi, xtest)[1])
+end
+
+q10 = [quantile(visamples[:, i], 0.1) for i in 1:length(xtest)]
+q50 = [quantile(visamples[:, i], 0.5) for i in 1:length(xtest)]
+q90 = [quantile(visamples[:, i], 0.9) for i in 1:length(xtest)]
+plot(xtest, exp.(q50), ribbon=(exp.(q10), exp.(q90)), leg=true, fmt=:png, label=&quot;quantiles&quot;)
+plot!(xtest, mean(ymean), label=&quot;posterior mean&quot;, w=2)
+xx = range(-3,stop=3,length=1000);
+f_xx = 2*cos.(2*xx);
+plot!(xx, exp.(f_xx), label=&quot;truth&quot;)
+scatter!(X,Y, label=&quot;data&quot;)</code></pre><p><img src="../Poisson_regression_files/Poisson_regression_7_0.png" alt="png"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../mauna_loa/">« Time series example with Mauna Loa data</a><a class="docs-footer-nextpage" href="../gp/">Gaussian Processes »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 11 December 2019 16:01">Wednesday 11 December 2019</span>. Using Julia version 1.1.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

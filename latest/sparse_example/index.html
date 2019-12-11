@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Sparse GPs · GaussianProcesses.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GaussianProcesses.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Introduction</a></li><li><span class="tocitem">Basic usage</span><ul><li><a class="tocitem" href="../Regression/">Simple GP Regression</a></li><li><a class="tocitem" href="../plotting_gps/">Plotting with GaussianProcesses.jl</a></li></ul></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../classification_example/">Binary classification</a></li><li class="is-active"><a class="tocitem" href>Sparse GPs</a><ul class="internal"><li><a class="tocitem" href="#Simulated-data-1"><span>Simulated data</span></a></li><li><a class="tocitem" href="#Exact-GP-inference-1"><span>Exact GP inference</span></a></li><li><a class="tocitem" href="#Sparse-approximations-1"><span>Sparse approximations</span></a></li><li><a class="tocitem" href="#Under-the-hood-1"><span>Under the hood</span></a></li></ul></li><li><a class="tocitem" href="../mauna_loa/">Time series example with Mauna Loa data</a></li><li><a class="tocitem" href="../poisson_regression/">Poisson Regression example</a></li></ul></li><li><span class="tocitem">Reference</span><ul><li><a class="tocitem" href="../gp/">Gaussian Processes</a></li><li><a class="tocitem" href="../kernels/">Kernels</a></li><li><a class="tocitem" href="../mean/">Means</a></li><li><a class="tocitem" href="../lik/">Likelihoods</a></li><li><a class="tocitem" href="../optimization/">Optimization</a></li><li><a class="tocitem" href="../sparse/">Sparse GPs</a></li><li><a class="tocitem" href="../crossvalidation/">Cross Validation</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Sparse GPs</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Sparse GPs</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/STOR-i/GaussianProcesses.jl/blob/master/docs/src/sparse_example.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Sparse-GPs-1"><a class="docs-heading-anchor" href="#Sparse-GPs-1">Sparse GPs</a><a class="docs-heading-anchor-permalink" href="#Sparse-GPs-1" title="Permalink"></a></h1><p>This notebook demonstrates the sparse GP approximations implemented in the <code>GaussianProcesses.jl</code>. We will simulate a dataset, fit if first using the exact representation, then fit it using sparse GPs. For each approximation, this will show the tradeoffs involved, and the performance gains.</p><pre><code class="language-julia"># imports and set up plots
+using Distributions
+using LinearAlgebra: diag
+using Random
+using GaussianProcesses
+import Statistics
+
+import PyPlot; plt=PyPlot
+using LaTeXStrings
+cbbPalette = [&quot;#E69F00&quot;, &quot;#56B4E9&quot;, &quot;#009E73&quot;,
+                &quot;#F0E442&quot;, &quot;#0072B2&quot;, &quot;#D55E00&quot;,
+                &quot;#CC79A7&quot;];</code></pre><h2 id="Simulated-data-1"><a class="docs-heading-anchor" href="#Simulated-data-1">Simulated data</a><a class="docs-heading-anchor-permalink" href="#Simulated-data-1" title="Permalink"></a></h2><p>We start by simulating some arbitrary data, with large noise and a fairly large sample size (n=5,000) so the effects of the approximations are clear.</p><pre><code class="language-julia">&quot;&quot;&quot; The true function we will be simulating from. &quot;&quot;&quot;
+function fstar(x::Float64)
+    return abs(x-5)*cos(2*x)
+end
+
+σy = 10.0
+n=5000
+
+Random.seed!(1) # for reproducibility
+Xdistr = Beta(7,7)
+ϵdistr = Normal(0,σy)
+x = rand(Xdistr, n)*10
+X = Matrix(x&#39;)
+Y = fstar.(x) .+ rand(ϵdistr,n)
+;</code></pre><pre><code class="language-julia">xx = range(0, stop=10, length=200)
+plt.plot(x, Y, &quot;.&quot;, color=cbbPalette[1], label=&quot;simulated data&quot;, alpha=0.1)
+plt.plot(xx, fstar.(xx), color=cbbPalette[2], label=L&quot;f^\star(X)&quot;, linewidth=2)
+plt.xlabel(L&quot;X&quot;)
+plt.ylabel(L&quot;Y&quot;)
+plt.title(&quot;Simulated Data&quot;)
+plt.legend(loc=&quot;lower center&quot;, fontsize=&quot;small&quot;)
+;</code></pre><p><img src="../Sparse_Approximations_files/Sparse_Approximations_4_0.png" alt="png"/></p><h2 id="Exact-GP-inference-1"><a class="docs-heading-anchor" href="#Exact-GP-inference-1">Exact GP inference</a><a class="docs-heading-anchor-permalink" href="#Exact-GP-inference-1" title="Permalink"></a></h2><pre><code class="language-julia">k = SEIso(log(0.3), log(5.0))
+GPE(X, Y, MeanConst(mean(Y)), k, log(σy)) # warm-up
+# time the second run (so the time doesn&#39;t include compilation):
+@time gp_full = GPE(X, Y, MeanConst(mean(Y)), k, log(σy))</code></pre><pre><code class="language-none">  1.618708 seconds (40 allocations: 572.320 MiB, 14.35% gc time)
+
+
+
+
+
+GP Exact object:
+  Dim = 1
+  Number of observations = 5000
+  Mean function:
+    Type: MeanConst, Params: [0.56185]
+  Kernel:
+    Type: SEIso{Float64}, Params: [-1.20397, 1.60944]
+  Input observations =
+[4.92176 5.27531 … 3.48002 5.43604]
+  Output observations = [-19.283, -6.07098, 3.33402, 12.6241, -14.5596, 20.8922, -7.86136, -3.41118, -0.686436, 9.39745  …  0.160936, 10.2597, -6.34116, 0.669071, -3.28242, 4.95583, 0.739365, 2.82739, 12.3229, 11.3255]
+  Variance of observation noise = 100.00000000000004
+  Marginal Log-Likelihood = -18640.795</code></pre><pre><code class="language-julia"># extract predictions
+predict_f(gp_full, xx; full_cov=true) # warm-up
+@time μ_exact, Σ_exact = predict_f(gp_full, xx; full_cov=true)
+;</code></pre><pre><code class="language-none">  0.161568 seconds (79 allocations: 15.880 MiB)</code></pre><pre><code class="language-julia">xx = range(0, stop=10, length=200)
+plt.plot(x,Y, &quot;.&quot;, color=&quot;black&quot;, markeredgecolor=&quot;None&quot;, alpha=0.1, label=&quot;simulated data&quot;)
+plt.plot(xx, fstar.(xx), color=cbbPalette[2], label=L&quot;f^\star(X)&quot;, linewidth=2)
+plt.plot(xx, μ_exact, color=cbbPalette[3], label=L&quot;$f(x) \mid Y, \hat\theta$&quot;)
+plt.fill_between(xx, μ_exact.-sqrt.(diag(Σ_exact)), μ_exact.+sqrt.(diag(Σ_exact)),
+                 color=cbbPalette[3], alpha=0.5)
+plt.xlabel(L&quot;X&quot;)
+plt.ylabel(L&quot;Y&quot;)
+plt.title(&quot;Exact GP&quot;)
+plt.legend(loc=&quot;lower center&quot;, fontsize=&quot;small&quot;)
+plt.ylim(-7.5,7.5)
+;</code></pre><p><img src="../Sparse_Approximations_files/Sparse_Approximations_8_0.png" alt="png"/></p><p>The sparse Gaussian Process approximations implemented rely on the concept of inducing points, which we denote <span>$X_u$</span> (an <span>$p \times m$</span> matrix of inducing points, where the dimensionality <span>$p=1$</span> in this example). See the following article for a helpful introduction, from which we also use the naming conventions for the approximations:</p><p>Quiñonero-Candela, Joaquin, and Carl Edward Rasmussen. &quot;A unifying view of sparse approximate Gaussian process regression.&quot; <em>Journal of Machine Learning Research</em> 6, no. Dec (2005): 1939-1959.</p><p>The inducing points can be randomly chosen from the data, or laid out on a grid, or even optimized as part of fitting the hyperparameters [Note: this feature is not yet available in GaussianProcesses.jl]. For illustration in this notebook, we will use quantiles of the covariate <span>$x$</span>:</p><pre><code class="language-julia">Xu = Matrix(quantile(x, [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.98])&#39;)</code></pre><pre><code class="language-none">1×12 Array{Float64,2}:
+ 3.82567  4.06404  4.25939  4.4478  …  5.33994  5.53788  5.73281  7.64571</code></pre><p>We will reuse the same inducing points for all methods.</p><h2 id="Sparse-approximations-1"><a class="docs-heading-anchor" href="#Sparse-approximations-1">Sparse approximations</a><a class="docs-heading-anchor-permalink" href="#Sparse-approximations-1" title="Permalink"></a></h2><h3 id="Subset-of-Regressors-1"><a class="docs-heading-anchor" href="#Subset-of-Regressors-1">Subset of Regressors</a><a class="docs-heading-anchor-permalink" href="#Subset-of-Regressors-1" title="Permalink"></a></h3><p>We first demonstrate the subset of regressors method, the simplest and quickest approximation offered in the package. The shortcut function <code>SoR(X, Xu, Y, m, k, logNoise)</code> creates a Gaussian process object</p><pre><code class="language-julia">gp_SOR = GaussianProcesses.SoR(X, Xu, Y, MeanConst(mean(Y)), k, log(σy));
+@time gp_SOR = GaussianProcesses.SoR(X, Xu, Y, MeanConst(mean(Y)), k, log(σy));</code></pre><pre><code class="language-none">  0.002714 seconds (68 allocations: 2.032 MiB)</code></pre><p>In this example, we see a more than 500-fold speed-up, and similarly reduced memory footprint. Generating predictions (below) is also immensely faster. But is the approximation any good? We show the prediction alongside the exact solution for comparison.</p><pre><code class="language-julia">predict_f(gp_SOR, xx; full_cov=true)
+@time predict_f(gp_SOR, xx; full_cov=true);</code></pre><pre><code class="language-none">  0.000266 seconds (37 allocations: 492.828 KiB)</code></pre><pre><code class="language-julia">function plot_approximation(gp_exact, gp_approx, approx_label)
+    μ_exact, Σ_exact = predict_f(gp_full, xx; full_cov=true)
+    μapprox, Σapprox = predict_f(gp_approx, xx; full_cov=true)
+    plt.plot(x,Y, &quot;.&quot;, color=&quot;black&quot;, markeredgecolor=&quot;None&quot;, alpha=0.1, label=&quot;simulated data&quot;)
+    plt.plot(xx, fstar.(xx), color=cbbPalette[2], label=L&quot;f^\star(X)&quot;, linewidth=2)
+    plt.plot(xx, μ_exact, color=cbbPalette[3], label=L&quot;$f(x) \mid Y, \hat\theta$&quot;)
+    plt.fill_between(xx, μ_exact.-sqrt.(diag(Σ_exact)), μ_exact.+sqrt.(diag(Σ_exact)),
+                     color=cbbPalette[3], alpha=0.3)
+    plt.plot(xx, μapprox, color=cbbPalette[6], label=L&quot;$f(x) \mid Y, \hat\theta$&quot;*approx_label)
+    y_err = sqrt.(diag(Σapprox))
+    plt.fill_between(xx, μapprox.-y_err, μapprox.+y_err,
+                     color=cbbPalette[6], alpha=0.5)
+    plt.xlabel(L&quot;X&quot;)
+    plt.ylabel(L&quot;Y&quot;)
+    plt.plot(vec(Xu), fill(0.0, length(Xu)).-5, linestyle=&quot;None&quot;,
+        marker=6, markersize=12, color=&quot;black&quot;, label=L&quot;inducing points $X_\mathbf{u}$&quot;)
+    plt.legend(loc=&quot;upper center&quot;, fontsize=&quot;small&quot;)
+    plt.ylim(-10, 10)
+end
+plot_approximation(gp_full, gp_SOR, &quot;SoR&quot;)
+plt.title(&quot;Subset of Regressors&quot;)
+;</code></pre><p><img src="../Sparse_Approximations_files/Sparse_Approximations_18_0.png" alt="png"/></p><p>The locations of the inducing points are shown with black triangles (their y-coordinate is arbitrary). The approximation is seen as the difference between the exact (green) mean prediction and credible envelop, and the predictions from SoR (orange). We can readily see that the approximation is reasonably good near the inducing points, but degrades quickly away from them. Most worryingly, the extrapolation behaviour is dangerous: the posterior variance is vastly underestimated (it goes to zero), which would lead to very misleading inference results. This is in line with the academic literature, like the Q&amp;R 2005 article cited above.</p><h3 id="Deterministic-Training-Conditionals-1"><a class="docs-heading-anchor" href="#Deterministic-Training-Conditionals-1">Deterministic Training Conditionals</a><a class="docs-heading-anchor-permalink" href="#Deterministic-Training-Conditionals-1" title="Permalink"></a></h3><p>We move on to the next approximation, “Deterministic Training Conditionals”, which does not approximate the prior variance as zero away from inducing points, and therefore should lead to better inference.</p><pre><code class="language-julia">gp_DTC = GaussianProcesses.DTC(X, Xu, Y, MeanConst(mean(Y)), k, log(σy));
+@time gp_DTC = GaussianProcesses.DTC(X, Xu, Y, MeanConst(mean(Y)), k, log(σy));</code></pre><pre><code class="language-none">  0.003959 seconds (70 allocations: 2.033 MiB)</code></pre><pre><code class="language-julia">μDTCgp, ΣDTCgp = predict_f(gp_DTC, xx; full_cov=true)
+@time predict_f(gp_DTC, xx; full_cov=true);</code></pre><pre><code class="language-none">  0.002262 seconds (61 allocations: 2.064 MiB)</code></pre><pre><code class="language-julia">plot_approximation(gp_full, gp_DTC, &quot;DTC&quot;)
+plt.title(&quot;Deterministic Training Conditionals&quot;)
+;</code></pre><p><img src="../Sparse_Approximations_files/Sparse_Approximations_23_0.png" alt="png"/></p><p>It is just as fast as SoR, but has <em>conservative</em> predictive variance away from the inducing points, which reflects the information removed by the sparse approximation, and which is safer for inference. The mean prediction is in fact mathematically the same as in SoR, so there is no improvement there. For these reasons, in general DTC should be preferred over SoR.</p><h3 id="Fully-Independent-Training-Conditionals-1"><a class="docs-heading-anchor" href="#Fully-Independent-Training-Conditionals-1">Fully Independent Training Conditionals</a><a class="docs-heading-anchor-permalink" href="#Fully-Independent-Training-Conditionals-1" title="Permalink"></a></h3><p>The Fully Independent Training Conditionals (FITC) sparse approximation goes one step further, and adds a diagonal correction to the sparse covariance approximation of SoR and DTC (see Q&amp;R 2005 for details).</p><pre><code class="language-julia">gp_FITC = GaussianProcesses.FITC(X, Xu, Y, MeanConst(mean(Y)), k, log(σy));
+@time gp_FITC = GaussianProcesses.FITC(X, Xu, Y, MeanConst(mean(Y)), k, log(σy));</code></pre><pre><code class="language-none">  0.017552 seconds (10.09 k allocations: 3.902 MiB, 60.36% gc time)</code></pre><pre><code class="language-julia">predict_f(gp_FITC, xx; full_cov=true)
+@time predict_f(gp_FITC, xx; full_cov=true);</code></pre><pre><code class="language-none">  0.002084 seconds (63 allocations: 2.064 MiB)</code></pre><pre><code class="language-julia">plot_approximation(gp_full, gp_FITC, &quot;FITC&quot;)
+plt.title(&quot;Fully Independent Training Conditionals&quot;)
+;</code></pre><p><img src="../Sparse_Approximations_files/Sparse_Approximations_28_0.png" alt="png"/></p><p>As anticipated in Q&amp;R 2005, the improvement over DTC is actually fairly minimal. However, the computational time is significantly higher (though still much lower than the exact GP). Consequently, for most applications, DTC may be preferable to FITC.</p><h3 id="Full-Scale-Approximation-1"><a class="docs-heading-anchor" href="#Full-Scale-Approximation-1">Full Scale Approximation</a><a class="docs-heading-anchor-permalink" href="#Full-Scale-Approximation-1" title="Permalink"></a></h3><p>The Full Scale Approximation (FSA) using the sparse approximation for long-range covariances, but is exact within smaller local blocks. The blocks need to be chosen in addition to the inducing points. In this notebook, we will create as many blocks as there are inducing points, and assign each observation to the block with the nearest inducing points.</p><pre><code class="language-julia">inearest = [argmin(abs.(xi.-Xu[1,:])) for xi in x]
+blockindices = [findall(isequal(i), inearest) for i in 1:size(Xu,2)]
+
+GaussianProcesses.FSA(X, Xu, blockindices, Y, MeanConst(mean(Y)), k, log(σy));
+@time gp_FSA = GaussianProcesses.FSA(X, Xu, blockindices, Y, MeanConst(mean(Y)), k, log(σy));</code></pre><pre><code class="language-none">  0.260956 seconds (593 allocations: 156.025 MiB, 43.57% gc time)</code></pre><p>For predictions, we also need to provide the block indices.</p><pre><code class="language-julia">iprednearest = [argmin(abs.(xi.-Xu[1,:])) for xi in xx]
+blockindpred = [findall(isequal(i), iprednearest)
+                for i in 1:size(Xu,2)]
+
+predict_f(gp_FSA, xx, blockindpred; full_cov=true)
+@time predict_f(gp_FSA, xx, blockindpred; full_cov=true);</code></pre><pre><code class="language-none">  0.126982 seconds (616 allocations: 92.226 MiB, 6.72% gc time)</code></pre><pre><code class="language-julia">function plot_approximation(gp_exact, gp_approx, approx_label, blockindpred)
+    μ_exact, Σ_exact = predict_f(gp_full, xx; full_cov=true)
+    μapprox, Σapprox = predict_f(gp_approx, xx, blockindpred; full_cov=true)
+    plt.plot(x,Y, &quot;.&quot;, color=&quot;black&quot;, markeredgecolor=&quot;None&quot;, alpha=0.1, label=&quot;simulated data&quot;)
+    plt.plot(xx, fstar.(xx), color=cbbPalette[2], label=L&quot;f^\star(X)&quot;, linewidth=2)
+    plt.plot(xx, μ_exact, color=cbbPalette[3], label=L&quot;$f(x) \mid Y, \hat\theta$&quot;)
+    plt.fill_between(xx, μ_exact.-sqrt.(diag(Σ_exact)), μ_exact.+sqrt.(diag(Σ_exact)),
+                     color=cbbPalette[3], alpha=0.3)
+    plt.plot(xx, μapprox, color=cbbPalette[6], label=L&quot;$f(x) \mid Y, \hat\theta$&quot;*approx_label)
+    y_err = sqrt.(diag(Σapprox))
+    plt.fill_between(xx, μapprox.-y_err, μapprox.+y_err,
+                     color=cbbPalette[6], alpha=0.5)
+    plt.xlabel(L&quot;X&quot;)
+    plt.ylabel(L&quot;Y&quot;)
+    plt.plot(vec(Xu), fill(0.0, length(Xu)).-5, linestyle=&quot;None&quot;,
+        marker=6, markersize=12, color=&quot;black&quot;, label=L&quot;inducing points $X_\mathbf{u}$&quot;)
+    plt.legend(loc=&quot;top left&quot;, fontsize=&quot;small&quot;)
+    plt.ylim(-10, 10)
+end
+# from StatsBase.jl:
+midpoints(v::AbstractVector) = [Statistics.middle(v[i - 1], v[i]) for i in 2:length(v)]
+plt.axvline.(midpoints(vec(Xu)), alpha=0.9, color=cbbPalette[7], zorder=-1)
+plot_approximation(gp_full, gp_FSA, &quot;FSA&quot;, blockindpred)
+;</code></pre><p><img src="../Sparse_Approximations_files/Sparse_Approximations_34_0.png" alt="png"/></p><p>We also show the dividing lines between blocks. As you can see, the approximation is much improved compared to the previous approaches. It is only at the dividing lines between blocks (shown as pink vertical lines) that information does not travel, and so we can see jumps in the predictions if the block division is also far away from an inducing points. The downside is that we pay the computational cost of the full inference within blocks, so the speed-up compared to the full analytic solution is less impressive.</p><h2 id="Under-the-hood-1"><a class="docs-heading-anchor" href="#Under-the-hood-1">Under the hood</a><a class="docs-heading-anchor-permalink" href="#Under-the-hood-1" title="Permalink"></a></h2><p>When we use the shortcut functions shown in this notebook — <code>SoR</code>, <code>DTC</code>, <code>FITC</code> and <code>FSA</code> — a Gaussian process object is created with a special <code>CovarianceStrategy</code> structure, which stores the sparse approximation choice and parameters. Julia&#39;s multiple dispatch mechanism is then used in relevant GP methods to adapt the GP functionality according to which covariance strategy is used. It is therefore relatively straightforward for users to implement new approximations by creating a custom <code>CovarianceStrategy</code> structure, and implementing the methods that are affected by the approximation.</p><pre><code class="language-julia">gp_SOR = GaussianProcesses.SoR(X, Xu, Y, MeanConst(mean(Y)), k, log(σy));
+gp_SOR.covstrat</code></pre><pre><code class="language-none">GaussianProcesses.SubsetOfRegsStrategy{Array{Float64,2}}([3.82567 4.06404 … 5.73281 7.64571])</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../classification_example/">« Binary classification</a><a class="docs-footer-nextpage" href="../mauna_loa/">Time series example with Mauna Loa data »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 11 December 2019 16:01">Wednesday 11 December 2019</span>. Using Julia version 1.1.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
