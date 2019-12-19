@@ -6,13 +6,10 @@ using Distances, Statistics
 Runs Stein variational gradient descent to estimate the posterior distribution of the hyperparameters of Gaussian process `GPE` and the latent function in the case of `GPA`.
 """
 function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1,
-              bandwidth::Float64=-1, α::Float64 = 0.9, lik::Bool=true,
+              bandwidth::Float64=-1.0, α::Float64 = 0.9, lik::Bool=true,
               noise::Bool=true, domean::Bool=true, kern::Bool=true)
-    precomp = init_precompute(gp)
-    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
-    count = 0
+    
     function calc_dtarget!(gp::GPBase, θ::AbstractVector) #log-target and its gradient
-        count += 1
         try
             set_params!(gp, θ; params_kwargs...)
             update_dtarget!(gp, precomp; params_kwargs...)
@@ -30,8 +27,8 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         end
     end
 
-    function svgd_kernel(θ::Matrix{Float64},h::Float64=-1)  # function to calculate the kernel
-        pairwise_dist = Distance.pairwise(Euclidean(),θ')
+    function svgd_kernel(θ::Matrix{Float64};h::Float64=-1)  # function to calculate the kernel
+        pairwise_dist = pairwise(Euclidean(),θ',dims=2)
         if h<0
             h = median(pairwise_dist)
             h = sqrt(0.5*h/log(size(θ,1)+1))
@@ -47,21 +44,23 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         return Kxy, dxkxy
     end
         
+    precomp = init_precompute(gp)
+    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
 
     θ_cur = get_params(gp; params_kwargs...)
     D = length(θ_cur)
-    θ_particles =   θ_cur + randn(nParticles,D)
-    grad_particles = zeros(nParticles,D)
+    θ_particles =   θ_cur .+ randn(D,nParticles)
+    grad_particles = zeros(D,nParticles)
 
     fudge_factor = 1e-6
     historical_grad = 0
 
     for t in 1:nIter
         for i in 1:nParticles
-            calc_dtarget!(gp, θ_particles[i])
-            grad_particles[i] = gp.dtarget
+            calc_dtarget!(gp, θ_particles[:,i])
+            grad_particles[:,i] = gp.dtarget
         end
-        kxy, dxkxy = svgd_kernel(θ_particles, h = bandwidth)
+        kxy, dxkxy = svgd_kernel(θ_particles; h = bandwidth)
         grad_θ = (kxy*grad_particles + dxkxy) / nParticles
 
         #adagrad
