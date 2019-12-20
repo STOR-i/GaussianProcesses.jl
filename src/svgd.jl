@@ -64,7 +64,7 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         grad_θ = (kxy*grad_particles + dxkxy) / nParticles
 
         #adagrad
-        if t==0
+        if t==1
             historical_grad = historical_grad .+ grad_θ.^2
         else
             historical_grad = α*historical_grad .+ (1-α)*grad_θ.^2
