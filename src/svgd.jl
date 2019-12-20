@@ -49,16 +49,16 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
 
     θ_cur = get_params(gp; params_kwargs...)
     D = length(θ_cur)
-    θ_particles =   θ_cur .+ randn(D,nParticles)
-    grad_particles = zeros(D,nParticles)
+    θ_particles =   θ_cur .+ randn(D,nParticles)   #set-up the particles
+    grad_particles = zeros(D,nParticles)           #set-up the gradients
 
-    fudge_factor = 1e-6
+    fudge_factor = 1e-6   #this is for adagrad
     historical_grad = 0
 
-    for t in 1:nIter
+    for t in 1:nIter  
         for i in 1:nParticles
-            calc_dtarget!(gp, θ_particles[:,i])
-            grad_particles[:,i] = gp.dtarget
+            calc_dtarget!(gp, θ_particles[:,i])   #update gradient of log-target 
+            grad_particles[:,i] = gp.dtarget      
         end
         kxy, dxkxy = svgd_kernel(θ_particles; h = bandwidth)
         grad_θ = (kxy*grad_particles + dxkxy) / nParticles
@@ -71,13 +71,12 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         end
         new_grad = grad_θ./(fudge_factor .+ sqrt.(historical_grad))
         θ_particles = θ_particles + ε*new_grad
+        
+        if LinearAlgebra.norm(new_grad)<10e-6  #early stopping if converged
+            println("Converged at iterations ", t)
+            break
+        end
     end
-
-    # set_params!(gp, θ_cur; params_kwargs...)
-    # @printf("Number of iterations = %d, Thinning = %d, Burn-in = %d \n", nIter,thin,burn)
-    # @printf("Step size = %f, Average number of leapfrog steps = %f \n", ε,leapSteps/nIter)
-    # println("Number of function calls: ", count)
-    # @printf("Acceptance rate: %f \n", num_acceptances/nIter)
     return θ_particles
 end
 
