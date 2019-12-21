@@ -4,7 +4,7 @@
 
 Routine for computing the effective sample size as in,
 
-Gelman, Andrew, et al., 2013. Bayesian Data Analysis. Third.
+Gelman, Andrew, et al., 2013. Bayesian Data Analysis. 3rd.
 
 The samples are assuemd to be in column major order.
 """
@@ -27,10 +27,75 @@ function effective_sample_size(X::AbstractMatrix)
     N = size(X, 1)
     lags = collect(1:N-1)
     ρ = zeros(length(lags), size(X, 2))
-    StatsBase.autocor!(ρ, X, lags)
-    return [compute_ess(ρ[:,i]) for i = 1:size(X,2)] .* N 
+    autocor!(ρ, X, lags)
+    return N * [compute_ess(ρ[:,i]) for i = 1:size(X,2)]
 end
 
+function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=100, thin::Int=1, ε::Float64=0.1,
+              Lmin::Int=5, Lmax::Int=15, lik::Bool=true, noise::Bool=true,
+              domean::Bool=true, kern::Bool=true)
+    return hmc(gp, nIter=nIter, burn=burn, thin=thin, ε=ε, Lmin=Lmin, Lmax=Lmax,
+               lik=lik, noise=noise, domean=domean, kern=kern)
+end
+
+"""
+    nuts_hamiltonian(gp::GPBase, metric::AdvancedHMC.AbstractMetric)
+
+Generate Hamiltonian for the GP target. A stupid API hack but it works?
+"""
+function nuts_hamiltonian(gp::GPBase; lik::Bool=true, noise::Bool=true, domean::Bool=true, kern::Bool=true,
+                          metric=DiagEuclideanMetric(num_params(gp; get_params_kwargs(gp, domean=domean, kern=kern, noise=noise, lik=lik)...)))
+    precomp = init_precompute(gp)
+    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
+    function calc_target_and_dtarget!(θ::AbstractVector)
+        set_params!(gp, θ; params_kwargs...)
+        # Cholesky exceptions are handled by DynamicHMC
+        update_target_and_dtarget!(gp, precomp; params_kwargs...)
+        return (gp.target, gp.dtarget)
+    end
+
+    function calc_target!(θ::AbstractVector)
+        set_params!(gp, θ; params_kwargs...)
+        update_target!(gp; params_kwargs...)
+        return gp.target
+    end
+    return Hamiltonian(metric, calc_target!, calc_target_and_dtarget!)
+end
+
+"""
+    nuts(gp::GPBase; kwargs...)
+
+Runs Hamiltonian Monte Carlo algorithm for estimating the hyperparameters of 
+Gaussian process `GPE` and the latent function in the case of `GPA`.
+Refer to AdvancedHMC.jl for more info about the keyword options.
+"""
+function nuts(gp::GPBase; nIter::Int=1000, burn::Int=100, thin::Int=1,
+              lik::Bool=true, noise::Bool=true, domean::Bool=true, kern::Bool=true,
+              metric=DiagEuclideanMetric(num_params(gp; get_params_kwargs(gp, domean=domean, kern=kern, noise=noise, lik=lik)...)),
+              hamiltonian=nuts_hamiltonian(gp; metric=metric),
+              ε::Float64=find_good_eps(hamiltonian, get_params(gp; get_params_kwargs(gp, domean=domean, kern=kern, noise=noise, lik=lik)...)),
+              maxDepth::Int64=10, δ::Float64=0.8, integrator=Leapfrog(ε),
+              proposals=NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator, maxDepth),
+              adaptor=StanHMCAdaptor(burn, Preconditioner(metric), NesterovDualAveraging(δ, integrator)),
+              progress=true)
+    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
+    θ_init = get_params(gp; params_kwargs...)
+    dim = length(θ_init)
+    post, stats = sample(hamiltonian, proposals, θ_init, nIter - burn, adaptor,
+                         burn; drop_warmup=true, progress=progress, verbose=false)
+    post = hcat(post...)
+    post = post[:,1:thin:end]
+    set_params!(gp, θ_init; params_kwargs...)
+
+    step_stats = [[step_stat.acceptance_rate, step_stat.tree_depth] for step_stat in stats]
+    avg_accept, avg_depth = mean(step_stats)
+    ε = stats[end-1].step_size
+    @printf("Number of iterations = %d, Thinning = %d, Burn-in = %d \n", nIter,thin,burn)
+    @printf("Step size = %f, Average tree depth = %f \n", ε,avg_depth)
+    @printf("Acceptance rate: %f \n", avg_accept)
+    @printf("Average effective sample size: %f\n", mean(effective_sample_size(post')))
+    return post
+end
 
 """
     hmc(gp::GPBase; kwargs...)
@@ -38,7 +103,7 @@ end
 Runs Hamiltonian Monte Carlo algorithm for estimating the hyperparameters of 
 Gaussian process `GPE` and the latent function in the case of `GPA`.
 """
-function hmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64=0.1,
+function hmc(gp::GPBase; nIter::Int=1000, burn::Int=100, thin::Int=1, ε::Float64=0.1,
              Lmin::Int=5, Lmax::Int=15, lik::Bool=true, noise::Bool=true,
              domean::Bool=true, kern::Bool=true)
     precomp = init_precompute(gp)
@@ -114,7 +179,7 @@ function hmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64=
     @printf("Step size = %f, Average number of leapfrog steps = %f \n", ε,leapSteps/nIter)
     println("Number of function calls: ", count)
     @printf("Acceptance rate: %f \n", num_acceptances/nIter)
-    println("Effective sample size: ", effective_sample_size(post))
+    @printf("Average effective sample size: %f\n", mean(effective_sample_size(post')))
     return post
 end
 
@@ -128,7 +193,7 @@ Journal of Machine Learning Research 9 (2010): 541-548.
 
 Requires hyperparameter priors to be Gaussian.
 """
-function ess(gp::GPE; nIter::Int=1000, burn::Int=1, thin::Int=1, lik::Bool=true,
+function ess(gp::GPE; nIter::Int=1000, burn::Int=100, thin::Int=1, lik::Bool=true,
              noise::Bool=true, domean::Bool=true, kern::Bool=true)
     params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     count = 0
@@ -187,7 +252,7 @@ function ess(gp::GPE; nIter::Int=1000, burn::Int=1, thin::Int=1, lik::Bool=true,
     @printf("Number of iterations = %d, Thinning = %d, Burn-in = %d \n", nIter,thin,burn)
     println("Number of function calls: ", count)
     @printf("Acceptance rate: %f \n", nIter / total_proposals)
-    println("Effective sample size: ", effective_sample_size(post))
+    @printf("Average effective sample size: %f\n", mean(effective_sample_size(post')))
     return post
 end
 
