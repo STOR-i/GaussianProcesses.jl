@@ -6,6 +6,7 @@ using StatsFuns, SpecialFunctions
 
 using LinearAlgebra, Printf, Random, Statistics
 import Statistics: mean, cov
+import StatsBase: autocor!
 import Base: size
 import PDMats: dim, Matrix, diag, pdadd!, *, \, inv, logdet, eigmax, eigmin, whiten!, unwhiten!, quad, quad!, invquad, invquad!, X_A_Xt, Xt_A_X, X_invA_Xt, Xt_invA_X
 
