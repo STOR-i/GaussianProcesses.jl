@@ -1,4 +1,3 @@
-using ProgressMeter
 using Distances, Statistics
 """
     svgd(gp::GPBase; kwargs...)
@@ -12,7 +11,7 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
     function calc_dtarget!(gp::GPBase, θ::AbstractVector) #log-target and its gradient
         try
             set_params!(gp, θ; params_kwargs...)
-            update_dtarget!(gp, precomp; params_kwargs...)
+            update_target_and_dtarget!(gp; params_kwargs...)
             return true
         catch err
             if !all(isfinite.(θ))
@@ -27,14 +26,14 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         end
     end
 
-    function svgd_kernel(θ::Matrix{Float64};h::Float64=-1)  # function to calculate the kernel
-        pairwise_dist = pairwise(Euclidean(),θ',dims=2)
+    function svgd_kernel(θ::Matrix{Float64};h::Float64=-1.0)  # function to calculate the kernel
+        pairwise_dist = pairwise(Euclidean(),θ,dims=1)
         if h<0
             h = median(pairwise_dist)
             h = sqrt(0.5*h/log(size(θ,1)+1))
         end
         #compute the kernel
-        Kxy = exp(-pairwise_dist/(2*h^2))
+        Kxy = exp.(-pairwise_dist/(2*h^2))
         dxkxy = -Kxy*θ
         sumkxy = sum(Kxy; dims=1)
         for i in 1:size(θ,2)
@@ -43,7 +42,8 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         dxkxy = dxkxy/(h^2)
         return Kxy, dxkxy
     end
-        
+    
+    optimize!(gp)      #find the MAP/MLE as a starting point
     precomp = init_precompute(gp)
     params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
 
@@ -72,8 +72,8 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         new_grad = grad_θ./(fudge_factor .+ sqrt.(historical_grad))
         θ_particles = θ_particles + ε*new_grad
         
-        if LinearAlgebra.norm(new_grad)<10e-6  #early stopping if converged
-            println("Converged at iterations ", t)
+        if LinearAlgebra.norm(grad_θ)<10e-6  #early stopping if converged
+            println("Converged at iteration ", t)
             break
         end
     end
