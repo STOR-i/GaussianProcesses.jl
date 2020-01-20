@@ -1,4 +1,4 @@
-using ProgressMeter
+using ProgressBars
 
 """
     mcmc(gp::GPBase; kwargs...)
@@ -40,7 +40,7 @@ function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64
     target_cur, grad_cur = gp.target, gp.dtarget
 
     num_acceptances = 0
-    for t in 1:nIter
+    for t in ProgressBar(1:nIter)
         θ, target, grad = θ_cur, target_cur, grad_cur
 
         ν_cur = randn(D)
@@ -90,7 +90,7 @@ end
 
 Sample GP hyperparameters using the elliptical slice sampling algorithm described in,
 
-Murray, Iain, Ryan P. Adams, and David JC MacKay. "Elliptical slice sampling." 
+Murray, Iain, Ryan P. Adams, and David JC MacKay. "Elliptical slice sampling."
 Journal of Machine Learning Research 9 (2010): 541-548.
 
 Requires hyperparameter priors to be Gaussian.
@@ -143,7 +143,7 @@ function ess(gp::GPE; nIter::Int=1000, burn::Int=1, thin::Int=1, lik::Bool=true,
     D = length(θ_cur)
     post = Array{Float64}(undef, nIter, D)
 
-    for i = 1:nIter
+    for i = ProgressBar(1:nIter)
         θ_cur, num_proposals = sample!(θ_cur)
         post[i,:] = θ_cur
         total_proposals += num_proposals
@@ -156,5 +156,3 @@ function ess(gp::GPE; nIter::Int=1000, burn::Int=1, thin::Int=1, lik::Bool=true,
     @printf("Acceptance rate: %f \n", nIter / total_proposals)
     return post'
 end
-
-

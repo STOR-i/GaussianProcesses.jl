@@ -1,4 +1,4 @@
-using Distances, Statistics
+using Distances, Statistics, ProgressBars
 """
     svgd(gp::GPBase; kwargs...)
 
@@ -6,8 +6,9 @@ Runs Stein variational gradient descent to estimate the posterior distribution o
 """
 function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1,
               bandwidth::Float64=-1.0, α::Float64 = 0.9, lik::Bool=true,
-              noise::Bool=true, domean::Bool=true, kern::Bool=true)
-    
+              noise::Bool=true, domean::Bool=true, kern::Bool=true,
+              trace::Bool=true)
+
     function calc_dtarget!(gp::GPBase, θ::AbstractVector) #log-target and its gradient
         set_params!(gp, θ; params_kwargs...)
         update_target_and_dtarget!(gp; params_kwargs...)
@@ -34,7 +35,7 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         dxkxy = dxkxy/(h^2)
         return Kxy, dxkxy
     end
-    
+
     #optimize!(gp)      #find the MAP/MLE as a starting point
     params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
 
@@ -46,12 +47,12 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
     fudge_factor = 1e-6   #this is for adagrad
     historical_grad = 0
 
-    for t in 1:nIter  
+    for t in ProgressBar(1:nIter)
         for i in 1:nParticles
             while !calc_dtarget!(gp,θ_particles[:,i]) #this is a bit of a hack at the minute and need to think of a better solution. Essentially, if calculating the gradient at one of the particles leads to an instability, then we reset that particle. There's probably a better way of solving this and it's likely and initialisation issue.
                 θ_particles[:,i] = randn(D,1)
             end
-            grad_particles[:,i] = gp.dtarget      
+            grad_particles[:,i] = gp.dtarget
         end
         kxy, dxkxy = svgd_kernel(θ_particles; h = bandwidth)
         grad_θ = (kxy*grad_particles' + dxkxy) / nParticles
@@ -64,7 +65,7 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         end
         new_grad = grad_θ#./(fudge_factor .+ sqrt.(historical_grad))
         θ_particles += ε*new_grad'
-        
+
         if LinearAlgebra.norm(grad_θ)<10e-6  #early stopping if converged
             println("Converged at iteration ", t)
             break
@@ -72,5 +73,3 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
     end
     return θ_particles
 end
-
-
