@@ -1,4 +1,5 @@
-using Distances, Statistics, ProgressBars
+# using Distances, Statistics, ProgressBars
+# import GaussianProcesses: get_params_kwargs, get_params, update_target_and_dtarget, update_target, update_Q
 """
     svgd(gp::GPBase; kwargs...)
 
@@ -7,11 +8,11 @@ Runs Stein variational gradient descent to estimate the posterior distribution o
 function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1,
               bandwidth::Float64=-1.0, α::Float64 = 0.9, lik::Bool=true,
               noise::Bool=true, domean::Bool=true, kern::Bool=true,
-              trace::Bool=true)
+              trace::Bool=true, hist_tracker::Bool=false, log_interval::Int=10)
 
     function calc_dtarget!(gp::GPBase, θ::AbstractVector) #log-target and its gradient
         set_params!(gp, θ; params_kwargs...)
-        update_target_and_dtarget!(gp; params_kwargs...)
+        GaussianProcesses.update_target_and_dtarget!(gp; params_kwargs...)
         pass = true
         if !all(isfinite.(gp.dtarget))
             pass = false
@@ -44,6 +45,10 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
     θ_particles =   randn(D,nParticles)   #set-up the particles - might be better to sample from the priors
     grad_particles = zeros(D,nParticles)           #set-up the gradients
 
+    if hist_tracker
+        particle_tracker = chain(θ_particles, grad_particles)
+    end
+
     fudge_factor = 1e-6   #this is for adagrad
     historical_grad = 0
 
@@ -66,10 +71,44 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         new_grad = grad_θ#./(fudge_factor .+ sqrt.(historical_grad))
         θ_particles += ε*new_grad'
 
-        if LinearAlgebra.norm(grad_θ)<10e-6  #early stopping if converged
-            println("Converged at iteration ", t)
-            break
+        if hist_tracker
+            if t % log_interval == 0
+                push!(particle_tracker, θ_particles)
+                push!(particle_tracker, grad_θ'; grads=true)
+            end
         end
+
+        # if LinearAlgebra.norm(grad_θ)<10e-6  #early stopping if converged
+        #     println("Converged at iteration ", t)
+        #     break
+        # end
     end
-    return θ_particles
+    if hist_tracker
+        return θ_particles, particle_tracker
+    else
+        return θ_particles
+    end
 end
+#
+#
+# using Random, Distributions
+# import Plots: plot, plot!
+# import GaussianProcesses.svgd
+# Random.seed!(13579)               # Set the seed using the 'Random' package
+# n = 20;                           # number of training points
+# x = 2π * rand(n);                 # predictors
+# y = sin.(x) + 0.05*randn(n);      # regressors
+#
+# # Select mean and covariance function
+# mZero = MeanZero()                  # Zero mean function
+# kern = SE(0.0,0.0)                  # Sqaured exponential kernel
+# logObsNoise = -1.0                  # log standard deviation of observation noise
+# gp = GP(x,y,mZero,kern,logObsNoise) # Fit the GP
+# optimize!(gp) #Optimise the parameters
+#
+# # Uniform priors are used as default if priors are not specified
+# set_priors!(kern, [Normal(0,1), Normal(0,1)])
+#
+# # Historical samples is of size (n_params * n_particles * nIter/log_interval)
+# particles, history = svgd(gp;nIter=1000,nParticles=10, ε=0.1, hist_tracker=true)
+# plot(history)

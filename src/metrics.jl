@@ -114,3 +114,56 @@ function evaluate(probs::AbstractArray, yTest::AbstractArray)
 end
 
 rmse(pred, truth) = sqrt(mean((truth.-pred').^2))
+
+mutable struct Chain{T<:AbstractArray, V<:AbstractArray}
+    samples::T
+    grads::T
+    hist_samples::V
+    hist_grads::V
+end
+
+function chain(samples::AbstractArray, grads::AbstractArray)
+    s = [i for i in size(samples)]
+    append!(s, 1)
+    s = tuple(s...)
+    hist_samples = reshape(samples, s)
+    hist_grads = reshape(grads, s)
+    return Chain(samples, grads, hist_samples, hist_grads)
+end
+
+function chain(samples::AbstractArray)
+    grads = zeros(size(samples))
+    return chain(samples, grads)
+end
+
+function push!(a::Chain, b::AbstractArray; grads::Bool=false)
+    last_dim = ndims(a.hist_samples)
+    if grads
+        a.grads = b
+        a.hist_grads = cat(a.hist_grads, b, dims=last_dim)
+    else
+        a.samples = b
+        a.hist_samples = cat(a.hist_samples, b, dims=last_dim)
+    end
+end
+
+function _plot_history(vals::AbstractArray, loop_axis::Int; title::String="")
+    ndim = ndims(vals)
+    idxs = collect(1:ndim)
+    filter!(e->e ≠ loop_axis, idxs)
+    append!(idxs, loop_axis)
+    vals = permutedims(vals, tuple(idxs...))
+    val_set = selectdim(vals, ndim, 1)
+    p = plot(val_set', linecolor=[:blue :green :red], xlabel="Iteration", ylabel="Parameter value", title=title, alpha=0.5, leg=false)
+    for i in 2:size(vals, ndim)
+        val_set = selectdim(vals, ndim, i)
+        p = plot!(val_set', linecolor=[:blue :green :red], alpha=0.5, leg=false)
+    end
+    return p
+end
+
+function plot(a::Chain)
+    p1 = _plot_history(a.hist_grads, 2; title="Gradient history")
+    p2 = _plot_history(a.hist_samples, 2; title="Parameter value history")
+    plot(p1, p2)
+end
