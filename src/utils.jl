@@ -58,3 +58,15 @@ function map_column_pairs!(D::AbstractMatrix, f, X::AbstractMatrix)
     end
     return D
 end
+
+function train_test_split(X::AbstractArray, y::AbstractArray; train_prop::Float64=0.8)
+    n = size(X, 1)
+    idx = shuffle(1:n)
+    train_idx = view(idx, 1:floor(Int, train_prop*n))
+    test_idx = view(idx, (floor(Int, train_prop*n)+1):n)
+    Xtr = X[train_idx, :]
+    Xte = X[test_idx, :]
+    ytr = y[train_idx]
+    yte = y[test_idx]
+    return Xtr, Xte, ytr, yte
+end

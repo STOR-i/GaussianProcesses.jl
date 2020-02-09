@@ -8,7 +8,8 @@ Runs Stein variational gradient descent to estimate the posterior distribution o
 function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1,
               bandwidth::Float64=-1.0, α::Float64 = 0.9, lik::Bool=true,
               noise::Bool=true, domean::Bool=true, kern::Bool=true,
-              trace::Bool=true, hist_tracker::Bool=false, log_interval::Int=10)
+              trace::Bool=true, hist_tracker::Bool=false, log_interval::Int=10,
+              inspect_bw::Bool=false)
 
     function calc_dtarget!(gp::GPBase, θ::AbstractVector) #log-target and its gradient
         set_params!(gp, θ; params_kwargs...)
@@ -20,21 +21,26 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         return pass
     end
 
-    function svgd_kernel(θ::Matrix{Float64};h::Float64=-1.0)  # function to calculate the kernel
+    function svgd_kernel(θ::Matrix{Float64};h::Float64=-1.0, inspect_bw::Bool=false)  # function to calculate the kernel
         pairwise_dist = pairwise(Euclidean(),θ,dims=2).^2  #check that the squared term is correct
         if h<0
             h = median(pairwise_dist)
             h = sqrt(0.5*h/log(size(θ,1)+1))
         end
+
         #compute the kernel
         Kxy = exp.(-pairwise_dist/(2*h^2))
         dxkxy = -Kxy*θ'
         sumkxy = sum(Kxy; dims=1)
-        for i in 1:size(θ,1)
+        for i in 1:size(θ, 1)
             dxkxy[:,i] = dxkxy[:,i] + θ[i,:].*vec(sumkxy)
         end
         dxkxy = dxkxy/(h^2)
-        return Kxy, dxkxy
+        if inspect_bw
+            return Kxy, dxkxy, h
+        else
+            return Kxy, dxkxy
+        end
     end
 
     #optimize!(gp)      #find the MAP/MLE as a starting point
@@ -48,7 +54,9 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
     if hist_tracker
         particle_tracker = chain(θ_particles, grad_particles)
     end
-
+    if inspect_bw
+        h_set = Array{Float64}(undef, nIter, 1)
+    end
     fudge_factor = 1e-6   #this is for adagrad
     historical_grad = 0
 
@@ -59,7 +67,13 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
             end
             grad_particles[:,i] = gp.dtarget
         end
-        kxy, dxkxy = svgd_kernel(θ_particles; h = bandwidth)
+        if inspect_bw
+            kxy, dxkxy, h = svgd_kernel(θ_particles; h = bandwidth, inspect_bw=true)
+            h_set[t] = h
+        else
+            kxy, dxkxy = svgd_kernel(θ_particles; h = bandwidth)
+        end
+
         grad_θ = (kxy*grad_particles' + dxkxy) / nParticles
 
         #adagrad
@@ -68,6 +82,7 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         else
             historical_grad = α*historical_grad .+ (1-α)*grad_θ.^2
         end
+
         new_grad = grad_θ#./(fudge_factor .+ sqrt.(historical_grad))
         θ_particles += ε*new_grad'
 
@@ -84,31 +99,12 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         # end
     end
     if hist_tracker
-        return θ_particles, particle_tracker
+        if inspect_bw
+            return θ_particles, particle_tracker, h_set
+        else
+            return θ_particles, particle_tracker
+        end
     else
         return θ_particles
     end
 end
-#
-#
-# using Random, Distributions
-# import Plots: plot, plot!
-# import GaussianProcesses.svgd
-# Random.seed!(13579)               # Set the seed using the 'Random' package
-# n = 20;                           # number of training points
-# x = 2π * rand(n);                 # predictors
-# y = sin.(x) + 0.05*randn(n);      # regressors
-#
-# # Select mean and covariance function
-# mZero = MeanZero()                  # Zero mean function
-# kern = SE(0.0,0.0)                  # Sqaured exponential kernel
-# logObsNoise = -1.0                  # log standard deviation of observation noise
-# gp = GP(x,y,mZero,kern,logObsNoise) # Fit the GP
-# optimize!(gp) #Optimise the parameters
-#
-# # Uniform priors are used as default if priors are not specified
-# set_priors!(kern, [Normal(0,1), Normal(0,1)])
-#
-# # Historical samples is of size (n_params * n_particles * nIter/log_interval)
-# particles, history = svgd(gp;nIter=1000,nParticles=10, ε=0.1, hist_tracker=true)
-# plot(history)

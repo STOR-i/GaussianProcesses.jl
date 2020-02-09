@@ -16,7 +16,7 @@ export GPBase, GP, GPE, GPA, ElasticGPE, ClfMetric, Chain, Approx, predict_f, pr
     MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, MeanPeriodic, #mean functions
     GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
     mcmc, svgd, ess, lss, optimize!, vi, var_exp, dv_var_exp, elbo, initialise_Q,    #inference functions
-    set_priors!,set_params!, update_target!, autodiff, update_Q!, evaluate, proba, accuracy, precision, recall, rmse, mode, classification, plot, chain, push!, plot
+    set_priors!,set_params!, update_target!, autodiff, update_Q!, evaluate, proba, accuracy, precision, recall, rmse, mode, classification, plot, chain, push!, plot, train_test_split
 using ForwardDiff: GradientConfig, Dual, partials, copyto!, Chunk
 import ForwardDiff: seed!
 
