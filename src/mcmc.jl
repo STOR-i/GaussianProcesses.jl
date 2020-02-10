@@ -1,4 +1,3 @@
-using ProgressMeter
 
 """
     mcmc(gp::GPBase; kwargs...)
@@ -85,6 +84,30 @@ function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=1, thin::Int=1, ε::Float64
 end
 
 
+function get_joint_priors(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
+    priors = UnivariateDistribution[]
+    if noise && num_params(gp.logNoise) != 0
+        noise_priors = get_priors(gp.logNoise)
+        @assert !isempty(noise_priors) "prior distributions of logNoise should be set"
+        append!(priors, noise_priors)
+    end
+    if domean && num_params(gp.mean) != 0
+        mean_priors = get_priors(gp.mean)
+        @assert !isempty(mean_priors) "prior distributions of mean should be set"
+        append!(priors, mean_priors)
+    end
+    if kern && num_params(gp.kernel) != 0
+        kernel_priors = get_priors(gp.kernel)
+        @assert !isempty(kernel_priors) "prior distributions of kernel should be set"
+        append!(priors, kernel_priors)
+    end
+    @assert all([typeof(prior) <: Normal for prior in priors]) "ess requires prior distributions to be Normal"
+    mu = mean.(priors)
+    sigma = std.(priors)
+    joint_prior = MvNormal(mu, sigma)
+    return joint_prior
+end
+
 """
     ess(gp::GPBase; kwargs...)
 
@@ -95,10 +118,13 @@ Journal of Machine Learning Research 9 (2010): 541-548.
 
 Requires hyperparameter priors to be Gaussian.
 """
-function ess(gp::GPE; nIter::Int=1000, burn::Int=1, thin::Int=1, lik::Bool=true,
-             noise::Bool=true, domean::Bool=true, kern::Bool=true)
-    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
+function ess(gp::GPE; nIter::Int=1000, burn::Int=1, thin::Int=1, noise::Bool=true,
+             domean::Bool=true, kern::Bool=true, lik::Bool=false)
+    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=false)
     count = 0
+    prior = get_joint_priors(gp; params_kwargs...)
+    means = mean(prior)
+
     function calc_target!(θ::AbstractVector)
         count += 1
         try
@@ -117,15 +143,15 @@ function ess(gp::GPE; nIter::Int=1000, burn::Int=1, thin::Int=1, lik::Bool=true,
     end
 
     function sample!(f::AbstractVector)
-        v     = sample_params(gp; params_kwargs...)
+        v     = rand(prior) - means
         u     = rand()
         logy  = calc_target!(f) + log(u);
         θ     = rand()*2*π;
         θ_min = θ - 2*π;
         θ_max = θ;
-        f_prime = f * cos(θ) + v * sin(θ);
+        f_prime = (f - means) * cos(θ) + v * sin(θ);
         props = 1
-        while calc_target!(f_prime) <= logy
+        while calc_target!(f_prime + means) <= logy
             props += 1
             if θ < 0
                 θ_min = θ;
@@ -133,9 +159,9 @@ function ess(gp::GPE; nIter::Int=1000, burn::Int=1, thin::Int=1, lik::Bool=true,
                 θ_max = θ;
             end
             θ = rand() * (θ_max - θ_min) + θ_min;
-            f_prime = f * cos(θ) + v * sin(θ);
+            f_prime = (f - means) * cos(θ) + v * sin(θ);
         end
-        return f_prime, props
+        return f_prime + means, props
     end
 
     total_proposals = 0
