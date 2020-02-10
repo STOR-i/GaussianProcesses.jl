@@ -1,36 +1,4 @@
 
-"""
-    effective_sample_size(chain::AbstractMatrix)
-
-Routine for computing the effective sample size as in,
-
-Gelman, Andrew, et al., 2013. Bayesian Data Analysis. 3rd.
-
-The samples are assuemd to be in column major order.
-"""
-
-function effective_sample_size(X::AbstractMatrix)
-    function compute_ess(ρ_scalar)
-        τ_inv = 1 + 2 * ρ_scalar[1]
-        K = 2
-        for k = 2:2:N-2
-            Δ = ρ_scalar[k] + ρ_scalar[k + 1]
-            if all(Δ < 0)
-                break
-            else
-                τ_inv += 2*Δ
-            end
-        end
-        return min(1 / τ_inv, one(τ_inv))
-    end
-
-    N = size(X, 1)
-    lags = collect(1:N-1)
-    ρ = zeros(length(lags), size(X, 2))
-    autocor!(ρ, X, lags)
-    return N * [compute_ess(ρ[:,i]) for i = 1:size(X,2)]
-end
-
 function mcmc(gp::GPBase; nIter::Int=1000, burn::Int=100, thin::Int=1, ε::Float64=0.1,
               Lmin::Int=5, Lmax::Int=15, lik::Bool=true, noise::Bool=true,
               domean::Bool=true, kern::Bool=true)
@@ -93,7 +61,6 @@ function nuts(gp::GPBase; nIter::Int=1000, burn::Int=100, thin::Int=1,
     @printf("Number of iterations = %d, Thinning = %d, Burn-in = %d \n", nIter,thin,burn)
     @printf("Step size = %f, Average tree depth = %f \n", ε,avg_depth)
     @printf("Acceptance rate: %f \n", avg_accept)
-    @printf("Average effective sample size: %f\n", mean(effective_sample_size(post')))
     return post
 end
 
@@ -179,7 +146,6 @@ function hmc(gp::GPBase; nIter::Int=1000, burn::Int=100, thin::Int=1, ε::Float6
     @printf("Step size = %f, Average number of leapfrog steps = %f \n", ε,leapSteps/nIter)
     println("Number of function calls: ", count)
     @printf("Acceptance rate: %f \n", num_acceptances/nIter)
-    @printf("Average effective sample size: %f\n", mean(effective_sample_size(post')))
     return post
 end
 
@@ -252,7 +218,6 @@ function ess(gp::GPE; nIter::Int=1000, burn::Int=100, thin::Int=1, lik::Bool=tru
     @printf("Number of iterations = %d, Thinning = %d, Burn-in = %d \n", nIter,thin,burn)
     println("Number of function calls: ", count)
     @printf("Acceptance rate: %f \n", nIter / total_proposals)
-    @printf("Average effective sample size: %f\n", mean(effective_sample_size(post')))
     return post
 end
 
