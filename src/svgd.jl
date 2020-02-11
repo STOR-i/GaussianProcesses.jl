@@ -5,6 +5,9 @@
 
 Runs Stein variational gradient descent to estimate the posterior distribution of the hyperparameters of Gaussian process `GPE` and the latent function in the case of `GPA`.
 """
+rbf(τ::Float64; ℓ::Float64=0.1, σ::Float64=1.0) = exp(-τ/(2*ℓ^2))
+rbf(x::Float64, y::Float64; ℓ::Float64=0.1, σ::Float64=1.0) = exp(-abs(x-y)/(2*ℓ^2))
+
 function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1,
               bandwidth::Float64=-1.0, α::Float64 = 0.9, lik::Bool=true,
               noise::Bool=true, domean::Bool=true, kern::Bool=true,
@@ -21,14 +24,19 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         return pass
     end
 
-    function svgd_kernel(θ::Matrix{Float64};h::Float64=-1.0, inspect_bw::Bool=false)  # function to calculate the kernel
-        pairwise_dist = pairwise(Euclidean(),θ,dims=2).^2  #check that the squared term is correct
+    function svgd_kernel(θ::Matrix{Float64}; h::Float64=-1.0, inspect_bw::Bool=false)  # function to calculate the kernel
+        pairwise_dist = pairwise(Euclidean(),θ, dims=2).^2  #check that the squared term is correct
         if h<0
             h = median(pairwise_dist)
             h = sqrt(0.5*h/log(size(θ,1)+1))
         end
 
         #compute the kernel
+        Kxy = Array{Float64}(undef, size(θ, 1), size(θ, 1)) # TODO: This may have to be size(θ, 2)
+        for i in size(θ, 1)
+            for j in size(θ, 2)
+                τ = \theta[]
+                Kxy[i, j] = rbf()
         Kxy = exp.(-pairwise_dist/(2*h^2))
         dxkxy = -Kxy*θ'
         sumkxy = sum(Kxy; dims=1)
