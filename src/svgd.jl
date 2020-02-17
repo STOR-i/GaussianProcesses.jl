@@ -32,11 +32,8 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         end
 
         #compute the kernel
-        Kxy = Array{Float64}(undef, size(θ, 1), size(θ, 1)) # TODO: This may have to be size(θ, 2)
-        for i in size(θ, 1)
-            for j in size(θ, 2)
-                τ = \theta[]
-                Kxy[i, j] = rbf()
+        # Kxy = Array{Float64}(undef, size(θ, 1), size(θ, 1)) # TODO: This may have to be size(θ, 2)
+
         Kxy = exp.(-pairwise_dist/(2*h^2))
         dxkxy = -Kxy*θ'
         sumkxy = sum(Kxy; dims=1)
