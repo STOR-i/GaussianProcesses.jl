@@ -1,10 +1,8 @@
-using Debugger
-
-
+# using Debugger
 mutable struct RFF
     dimension::Int64
-    ω::AbstractMatrix
-    ωs::AbstractMatrix
+    ω::AbstractArray
+    ωs::AbstractArray
     # Number of features
     M::Int64
     # Number of obs.
@@ -52,6 +50,13 @@ scale(ω::AbstractArray, ℓ::AbstractArray) = (1/ℓ).*ω
 
 Update the Fourier approximating parameters
 """
+function update!(F::RFF, params::AbstractArray)
+    update_σ(F, params[1])
+    update_ℓ(F, params[2])
+    n_ω = size(f.ω, 1)
+    update_ω(F, params[3:(2+n_ω)])
+end
+
 function update_ℓ(F::RFF, p::Float64)
     F.ℓ = p
     scale!(F)
@@ -69,7 +74,9 @@ end
 function update_σ(F::RFF, p::AbstractArray)
     F.σ = p
 end
-
+function update_ω(F::RFF, p::AbstractArray)
+    F.ω = p
+end
 """
     build_design_mat(F, X)
 
@@ -78,45 +85,8 @@ Build the design matrix that is of dimension N x 2*M, where N is the number of o
 # TODO: Might be best to have RFF and SSGP as one struct - can just load that in then as it'll contain, N, M, X and ω
 function build_design_mat(F::RFF, X::AbstractMatrix)
     N = size(X, 2)
-    # @bp
     ϕ_x = zeros(N, 2*F.M) # Need 2*M rows for Cos and sin. Of shape N x 2m
     ϕ_x[:, 1:F.M] = cos.(F.ω * X)' # RHS Should output an N x m matrix
     ϕ_x[:, (F.M + 1):end] = sin.(F.ω * X)'
     return ϕ_x
 end
-
-# # ----------------------------------------------------------------------------
-# # SSGP Struct
-# # ----------------------------------------------------------------------------
-# mutable struct SSGPR
-#     # Data
-#     X::AbstractMatrix
-#     y::AbstractArray
-#     noise::Float64
-#     N::Int64
-#     d::Int64
-#     # Fourier struct and no. features
-#     fourier::RFF
-#     M::Int64
-#     # No. optimisation steps.
-#     counter::Int64
-# end
-#
-# function SSGPR(X::AbstractMatrix, y::AbstractArray, K::Kernel; M::Int64=20, noise::Float64=1.0)
-#     d = size(X, 2)
-#     N = size(X, 1)
-#     features = RFF(d, M, K, N)
-#     GP = SSGPR(X, y, noise, N, d, features, M, 0)
-# end
-#
-#
-#
-# function ∇l(X, gp::SSGPR)
-#     N = size(X, 0)
-#     if gp.counter == 0
-#         gp.fourier.∇mat[:, 1:gp.M] = -sin.(gp.X*gp.fourier.ω)
-#         gp.fourier.∇mat[:, (gp.M+1):end] = cos.(gp.X*gp.fourier.ω)
-#     end
-#     ∂l = zeros(gp.d)
-#     # ∂l
-# end

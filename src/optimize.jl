@@ -17,14 +17,14 @@ Optimise the hyperparameters of Gaussian process `gp` based on type II maximum l
     * `kwargs`: Keyword arguments for the optimize function from the Optim package
 """
 function optimize!(gp::GPBase; method = LBFGS(), domean::Bool = true, kern::Bool = true,
-                   noise::Bool = true, lik::Bool = true, 
-                   meanbounds = nothing, kernbounds = nothing, 
+                   noise::Bool = true, lik::Bool = true,
+                   meanbounds = nothing, kernbounds = nothing,
                    noisebounds = nothing, likbounds = nothing, kwargs...)
     params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     # println(params_kwargs)
     func = get_optim_target(gp; params_kwargs...)
     init = get_params(gp; params_kwargs...)  # Initial hyperparameter values
-    if meanbounds == kernbounds == noisebounds == likbounds == nothing 
+    if meanbounds == kernbounds == noisebounds == likbounds == nothing
         results = optimize(func, init; method=method, kwargs...)     # Run optimizer
     else
         lb, ub = bounds(gp, noisebounds, meanbounds, kernbounds, likbounds;
@@ -94,4 +94,35 @@ function get_optim_target(gp::GPBase; params_kwargs...)
     xinit = get_params(gp; params_kwargs...)
     func = OnceDifferentiable(ltarget, dltarget!, ltarget_and_dltarget!, xinit)
     return func
+end
+
+function optimize!(gp::SSGP; method = LBFGS(), domean::Bool = true, kern::Bool = true,
+                   noise::Bool = true, lik::Bool = true,
+                   meanbounds = nothing, kernbounds = nothing,
+                   noisebounds = nothing, likbounds = nothing, kwargs...)
+    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
+    # println(params_kwargs)
+    func = get_optim_target(gp; params_kwargs...)
+    init = get_params(gp; params_kwargs...)  # Initial hyperparameter values
+    if meanbounds == kernbounds == noisebounds == likbounds == nothing
+        results = optimize(func, init; method=method, kwargs...)     # Run optimizer
+    else
+        lb, ub = bounds(gp, noisebounds, meanbounds, kernbounds, likbounds;
+                        domean = domean, kern = kern, noise = noise, lik = lik)
+        results = optimize(func.f, func.df, lb, ub, init, Fminbox(method))
+    end
+    set_params!(gp, Optim.minimizer(results); params_kwargs...)
+    update_target!(gp)
+    return results
+end
+
+function marginal_ll(gp::SSGP, x::AbstractArray)
+    ϕ = build_design_mat(gp.fourier, x)
+    norm = ((gp.fourier.σ^2)/gp.fourier.M) # Constant
+    # TODO: Add a conditional in to prevent repetitive computation of R
+    R = cholesky(norm * (ϕ * ϕ') + (I(gp.nobs) * 1e-10))
+    gp.R = R
+    Ry = reshape(R\gp.y, (size(R, 1), 1))
+    mll = 0.5*sum(Ry.^2) + sum(log.(diag(R.L*R.U))) + 0.5*gp.nobs*log(2π)
+    return mll
 end

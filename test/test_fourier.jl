@@ -1,4 +1,4 @@
-using Optim, Distributions, Random, RDatasets, PyCall, Debugger
+using Optim, Distributions, Random, RDatasets, PyCall
 using Revise
 using GaussianProcesses
 Random.seed!(203617)
@@ -30,8 +30,13 @@ function test_ssgp(X, y)
     m = 20 # Number of features
     F = RFF(d, m, kern, n)
     gp = SSGP(Xtr', ytr, F, mZero, kern, l)
-    pred = predict_y(gp, Xte')
+    mll = marginal_ll(gp, Xtr')
+    println("MLL: ", mll)
+    mll = marginal_ll(gp, Xtr')
+    println("MLL: ", mll)
+    μ, Σ = predict_y(gp, Xte')
 end
 
 # @run test_ssgp(X, y)
-test_ssgp(X, y)
+
+μ, Σ = test_ssgp(X, y)

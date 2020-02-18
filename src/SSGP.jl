@@ -36,6 +36,8 @@ mutable struct SSGP{X<:AbstractMatrix,Y<:AbstractVector{<:Real}, F<:RFF, M<:Mean
     target::Float64
     "Gradient of log-target (gradient of marginal log-likelihood + gradient of log priors)"
     dtarget::Vector{Float64}
+    "Cholesky of the scaled ϕ⋅ϕ''"
+    R::Cholesky
 
     function SSGP{X,Y,F,M,K,L,CS,D}(x::X, y::Y, fourier::F, mean::M, kernel::K, lik::L, covstrat::CS, data::D) where {X,Y,F,M,K,L,CS,D}
         dim, nobs = size(x)
@@ -255,16 +257,29 @@ returned instead of only variances.
 function predict_y(gp::SSGP, x::AbstractMatrix)
     ϕ = build_design_mat(gp.fourier, gp.x) # N x M matric
     norm = ((gp.fourier.σ^2)/gp.fourier.M) # Constant
+    # TODO: Add a conditional in to prevent repetitive computation of R
     R = cholesky(norm * (ϕ * ϕ') + (I(gp.nobs) * 1e-10))
-    Ry = R\gp.y
-    α = R.L\gp.y
+    gp.R = R
+    Ry = reshape(R\gp.y, (size(R, 1), 1))
+    α = reshape(R.L\gp.y, size(R, 1), 1)
+    # println("X: ", size(x))
+    # println("α: ", size(α))
+    # println("norm: ", norm)
+    # println("R: ", size(R))
+    # println("Ry: ", size(Ry))
+    # println("ϕ: ", size(ϕ))
     ϕs = build_design_mat(gp.fourier, x)
-    println("ϕ: ", size(ϕs*ϕs'))
-    println("α: ", size(α))
-    println("norm: ", norm)
-    μ = norm * ((ϕs* ϕs') * α)
+    # println("ϕs: ", size(ϕs))
+    # println("ϕ * ϕs': ", size(ϕ*ϕs'))
+    μ = norm * ((ϕ* ϕs')' * α)
+    # println("μ: ", size(μ))
     β = R\(ϕ *ϕs')
-    Σ = √(norm * diag(ϕs * ϕs') - norm*(β' * β))
+    # println("β: ", size(β))
+    # println("ϕs: ", size(ϕs))
+    # println("ϕs * ϕs': ", size(ϕs * ϕs'))
+    # println("β' * β: ", size(β' * β))
+    # println("norm * diag: ",  size((norm * diag(ϕs * ϕs'))))
+    Σ = sqrt.(norm * diag((ϕs * ϕs') - norm*(β' * β))) # want 30 x 30
     return μ, Σ
 end
 
