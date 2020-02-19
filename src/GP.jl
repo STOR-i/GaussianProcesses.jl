@@ -33,7 +33,7 @@ end
         predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector,
                    kernel::Kernel, meanf::Mean, alpha::AbstractVector,
                    covstrat::CovarianceStrategy, Ktrain::AbstractPDMat)
-        
+
 Compute predictions using the standard multivariate normal conditional distribution formulae.
 """
 function predictMVN(xpred::AbstractMatrix, xtrain::AbstractMatrix, ytrain::AbstractVector,
