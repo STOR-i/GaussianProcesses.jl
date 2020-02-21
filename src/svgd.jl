@@ -12,7 +12,7 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
               bandwidth::Float64=-1.0, α::Float64 = 0.9, lik::Bool=true,
               noise::Bool=true, domean::Bool=true, kern::Bool=true,
               trace::Bool=true, hist_tracker::Bool=false, log_interval::Int=10,
-              inspect_bw::Bool=false)
+              inspect_bw::Bool=false, clip = (-Inf, Inf))
 
     function calc_dtarget!(gp::GPBase, θ::AbstractVector) #log-target and its gradient
         set_params!(gp, θ; params_kwargs...)
@@ -80,6 +80,10 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
         end
 
         grad_θ = (kxy*grad_particles' + dxkxy) / nParticles
+        if clip[1] > -Inf
+            if clip[2] < Inf
+                grad_θ[grad_θ .< clip[1]] .= clip[1]
+                grad_θ[grad_θ .> clip[2]] .= clip[2]
 
         #adagrad
         if t==1
