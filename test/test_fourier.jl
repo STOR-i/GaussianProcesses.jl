@@ -1,4 +1,4 @@
-using Optim, Distributions, Random, RDatasets, PyCall
+using Optim, Distributions, Random, RDatasets, PyCall, Logging
 using Revise
 using GaussianProcesses
 Random.seed!(203617)
@@ -34,6 +34,7 @@ function test_ssgp(X, y)
     println("MLL: ", mll)
     mll = marginal_ll(gp, Xtr')
     println("MLL: ", mll)
+    fit!(gp)
     μ, Σ = predict_y(gp, Xte')
 end
 

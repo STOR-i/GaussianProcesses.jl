@@ -16,7 +16,7 @@ export GPBase, GP, GPE, GPA, ElasticGPE, Approx, predict_f, predict_y, Kernel, L
     GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
     mcmc, ess, lss, optimize!, vi, var_exp, dv_var_exp, elbo, initialise_Q,    #inference functions
     set_priors!,set_params!, update_target!, autodiff, update_Q!,
-    build_design_mat, RFF, SSGP, marginal_ll
+    build_design_mat, RFF, SSGP, marginal_ll, fit!
 using ForwardDiff: GradientConfig, Dual, partials, copyto!, Chunk
 import ForwardDiff: seed!
 

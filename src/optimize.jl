@@ -126,3 +126,32 @@ function marginal_ll(gp::SSGP, x::AbstractArray)
     mll = 0.5*sum(Ry.^2) + sum(log.(diag(R.L*R.U))) + 0.5*gp.nobs*log(2π)
     return mll
 end
+
+marginal_ll(gp::SSGP) = marginal_ll(gp, gp.x)
+
+function objective_function(params::AbstractArray, gp::SSGP)
+    update(gp.fourier, params)
+    return marginal_ll(gp)
+end
+
+function fit!(gp::SSGP; nIter::Int=100)
+    evaluation = Inf
+    # Find initial values
+    for i in 1:100
+        ω = rand(Normal(), gp.dim * gp.fourier.M)
+        update_ω!(gp.fourier, ω)
+        scale!(gp.fourier, gp.kernel.iℓ2[1]) # TODO: Work out how to do array division here
+        ml = marginal_ll(gp, gp.x)
+        if ml < opt_ml
+            ω_opt = ω
+        end
+    init_params = ones(gp.dim * gp.fourier.M + gp.dim + 2)
+    init_params[1] = gp.fourier.σ
+    nℓ = length(gp.kernel.iℓ2)
+    init_params[2:(1+nℓ)] = gp.kerenl.iℓ2
+    init_params[(1+nℓ):end] = ω_opt
+
+    opt = minimize(p -> objective_function(p, gp), params, ConjugateGradient(); autodiff=:forward)
+    print(opt)
+    end
+end
