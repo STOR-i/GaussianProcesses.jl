@@ -84,6 +84,8 @@ function svgd(gp::GPBase; nIter::Int=1000, nParticles::Int = 10, ε::Float64=0.1
             if clip[2] < Inf
                 grad_θ[grad_θ .< clip[1]] .= clip[1]
                 grad_θ[grad_θ .> clip[2]] .= clip[2]
+            end
+        end
 
         #adagrad
         if t==1
