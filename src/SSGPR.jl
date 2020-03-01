@@ -1,0 +1,420 @@
+# Main GaussianProcess type
+mutable struct SSGPR{X<:AbstractMatrix,Y<:AbstractVector, F<:RFF, M<:Mean,K<:Kernel,CS<:CovarianceStrategy,D<:KernelData,P<:AbstractPDMat} <: GPBase
+    # Observation data
+    "Input observations"
+    x::X
+    "Output observations"
+    y::Y
+    fourier::F
+    # Model
+    "Mean object"
+    mean::M
+    "Kernel object"
+    kernel::K
+    "Log standard deviation of observation noise"
+    logNoise::Scalar
+    "Strategy for computing or approximating covariance matrices"
+    covstrat::CS
+
+    # Auxiliary data
+    "Dimension of inputs"
+    dim::Int
+    "Number of observations"
+    nobs::Int
+    "Auxiliary observation data (to speed up calculations)"
+    data::D
+    "`(k + exp(2*obsNoise))`"
+    cK::P
+    "`(k + exp(2*obsNoise))⁻¹y`"
+    alpha::Vector{Float64}
+    "Marginal log-likelihood"
+    mll::Float64
+    "Log target (marginal log-likelihood + log priors)"
+    target::Float64
+    "Gradient of marginal log-likelihood"
+    dmll::Vector{Float64}
+    "Gradient of log-target (gradient of marginal log-likelihood + gradient of log priors)"
+    dtarget::Vector{Float64}
+
+    function SSGPR{X,Y,F,M,K,CS,D,P}(x::X, y::Y, fourier::F, mean::M, kernel::K, logNoise::Float64, covstrat::CS, data::D, cK::P) where {X,Y,F,M,K,CS,D,P}
+        dim, nobs = size(x)
+        length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
+        gp = new{X,Y,F, M,K,CS,D,P}(x, y, fourier, mean, kernel, Scalar(logNoise), covstrat, dim, nobs, data, cK)
+        initialise_target!(gp)
+    end
+    function SSGPR{X,Y,F,M,K,CS,D,P}(x::X, y::Y,fourier::F, mean::M, kernel::K, logNoise::Scalar, covstrat::CS, data::D, cK::P) where {X,Y,F,M,K,CS,D,P}
+        dim, nobs = size(x)
+        length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
+        gp = new{X,Y,F,M,K,CS,D,P}(x, y, fourier,mean, kernel, logNoise, covstrat, dim, nobs, data, cK)
+        initialise_target!(gp)
+    end
+end
+
+function SSGPR(x::AbstractMatrix, y::AbstractVector, F::RFF, mean::Mean, kernel::Kernel, logNoise::AbstractFloat, covstrat::CovarianceStrategy, kerneldata::KernelData, cK::AbstractPDMat)
+    SSGPR{typeof(x),typeof(y), typeof(F),typeof(mean),typeof(kernel),typeof(covstrat),typeof(kerneldata),typeof(cK)}(x, y, F, mean, kernel, logNoise, covstrat,kerneldata, cK)
+end
+function SSGPR(x::AbstractMatrix, y::AbstractVector, F::RFF, mean::Mean, kernel::Kernel, logNoise::AbstractFloat, covstrat::CovarianceStrategy, kerneldata::KernelData)
+    nobs = length(y)
+    cK = alloc_cK(covstrat, nobs)
+    SSGPR(x, y, F, mean, kernel, logNoise, covstrat, kerneldata, cK)
+end
+function SSGPR(x::AbstractMatrix, y::AbstractVector, F::RFF, mean::Mean, kernel::Kernel, logNoise::AbstractFloat, covstrat::CovarianceStrategy)
+    kerneldata = KernelData(kernel, x, x, covstrat)
+    SSGPR(x, y, F, mean, kernel, logNoise, covstrat, kerneldata)
+end
+function SSGPR(x::AbstractMatrix, y::AbstractVector, F::RFF, mean::Mean, kernel::Kernel, logNoise::AbstractFloat, kerneldata::KernelData)
+    covstrat = FullCovariance()
+    SSGPR(x, y, F, mean, kernel, logNoise, covstrat, kerneldata)
+end
+"""
+    SSGPR(x, y, mean, kernel[, logNoise])
+
+Fit a Gaussian process to a set of training points. The Gaussian process is defined in
+terms of its user-defined mean and covariance (kernel) functions. As a default it is
+assumed that the observations are noise free.
+
+# Arguments:
+- `x::AbstractVecOrMat{Float64}`: Input observations
+- `y::AbstractVector{Float64}`: Output observations
+- `mean::Mean`: Mean function
+- `kernel::Kernel`: Covariance function
+- `logNoise::Float64`: Natural logarithm of the standard deviation for the observation
+  noise. The default is -2.0, which is equivalent to assuming no observation noise.
+"""
+function SSGPR(x::AbstractMatrix, y::AbstractVector, F::RFF, mean::Mean, kernel::Kernel, logNoise::AbstractFloat = -2.0)
+    covstrat = FullCovariance()
+    SSGPR(x, y, F, mean, kernel, logNoise, covstrat)
+end
+SSGPR(x::AbstractVector, y::AbstractVector, F::RFF, mean::Mean, kernel::Kernel, logNoise::AbstractFloat = -2.0) =
+    SSGPR(x', y, F, mean, kernel, logNoise)
+
+"""
+    GP(x, y, mean::Mean, kernel::Kernel[, logNoise::AbstractFloat=-2.0])
+
+Fit a Gaussian process that is defined by its `mean`, its `kernel`, and the logarithm
+`logNoise` of the standard deviation of its observation noise to a set of training points
+`x` and `y`.
+
+See also: [`SSGPR`](@ref)
+"""
+GP(x::AbstractVecOrMat{Float64}, y::AbstractVector, F::RFF, mean::Mean, kernel::Kernel,
+   logNoise::AbstractFloat = -2.0) = SSGPR(x, y, F, mean, kernel, logNoise)
+
+"""
+    fit!(gp::SSGPR{X,Y}, x::X, y::Y)
+
+Fit Gaussian process `SSGPR` to a training data set consisting of input observations `x` and
+output observations `y`.
+"""
+function fit!(gp::SSGPR, X::AbstractArray, y::AbstractArray)
+    N = gp.nobs
+    Z, ω, B, β = compute_ω(gp.fourier.dimension, gp.logNoise, X)
+    Σ = gp.logNoise * I(N)
+    k = (Z * Z') + Σ
+    L = cholesky(k)
+    α = L\y
+    gp.fourier.α = α
+    gp.fourier.L = L
+    gp.fourier.β = β
+    gp.fourier.ω = ω
+    gp.fourier.Ztr = Z
+end
+
+function compute_ω(gp::SSGPR, X::AbstractArray)
+    ω = gp.fourier.ω
+    β = gp.fourier.β
+    return _compute_ω(gp.m, gp.logNoise, X, ω, β)
+end
+
+function fit!(gp::SSGPR{X,Y}, x::X, y::Y) where {X,Y}
+    length(y) == size(x,2) || throw(ArgumentError("Input and output observations must have consistent dimensions."))
+    gp.x = x
+    gp.y = y
+    gp.data = KernelData(gp.kernel, x, x, gp.covstrat)
+    gp.cK = alloc_cK(gp.covstrat, length(y))
+    gp.dim, gp.nobs = size(x)
+    initialise_target!(gp)
+end
+
+fit!(gp::SSGPR, x::AbstractVector, y::AbstractVector) = fit!(gp, x', y)
+
+#———————————————————————————————————————————————————————————
+# All the below can probably go
+#———————————————————————————————————————————————————————————
+
+"""
+    update_cK!(gp::SSGPR)
+
+Update the covariance matrix and its Cholesky decomposition of Gaussian process `gp`.
+"""
+function update_cK!(gp::SSGPR)
+    gp.cK = update_cK!(gp.cK, gp.x, gp.kernel, gp.logNoise, gp.data, gp.covstrat)
+end
+
+"""
+    update_mll!(gp::SSGPR)
+
+Modification of initialise_target! that reuses existing matrices to avoid unnecessary memory allocations, which speeds things up significantly.
+"""
+function update_mll!(gp::SSGPR; noise::Bool=true, domean::Bool=true, kern::Bool=true)
+    if kern | noise
+        update_cK!(gp)
+    end
+    μ = mean(gp.mean, gp.x)
+    y = gp.y - μ
+    gp.alpha = gp.cK \ y
+    # Marginal log-likelihood
+    gp.mll = - (dot(y, gp.alpha) + logdet(gp.cK) + log2π * gp.nobs) / 2
+    gp
+end
+
+"""
+     update_dmll!(gp::SSGPR, ...)
+
+Update the gradient of the marginal log-likelihood of Gaussian process `gp`.
+"""
+function update_dmll!(gp::SSGPR, precomp::AbstractGradientPrecompute;
+    noise::Bool=true, # include gradient component for the logNoise term
+    domean::Bool=true, # include gradient components for the mean parameters
+    kern::Bool=true, # include gradient components for the spatial kernel parameters
+    )
+    n_mean_params = num_params(gp.mean)
+    n_kern_params = num_params(gp.kernel)
+    gp.dmll = Array{Float64}(undef, noise + domean * n_mean_params + kern * n_kern_params)
+    precompute!(precomp, gp)
+
+    i=1
+    if noise
+        gp.dmll[i] = dmll_noise(gp, precomp, gp.covstrat)
+        i += 1
+    end
+
+    if domean && n_mean_params>0
+        dmll_m = @view(gp.dmll[i:i+n_mean_params-1])
+        dmll_mean!(dmll_m, gp, precomp)
+        i += n_mean_params
+    end
+    if kern
+        dmll_k = @view(gp.dmll[i:end])
+        dmll_kern!(dmll_k, gp, precomp, gp.covstrat)
+    end
+end
+
+"""
+    update_mll_and_dmll!(gp::SSGPR, ...)
+
+Update the gradient of the marginal log-likelihood of a Gaussian
+process `gp`.
+"""
+function update_mll_and_dmll!(gp::SSGPR, precomp::AbstractGradientPrecompute; kwargs...)
+    update_mll!(gp; kwargs...)
+    update_dmll!(gp, precomp; kwargs...)
+end
+
+"""
+    initialise_target!(gp::SSGPR)
+
+Initialise the log-posterior
+```math
+\\log p(θ | y) ∝ \\log p(y | θ) +  \\log p(θ)
+```
+of a Gaussian process `gp`.
+"""
+function initialise_target!(gp::SSGPR)
+    update_mll!(gp)
+    gp.target = gp.mll + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel) + prior_logpdf(gp.logNoise)
+    gp
+end
+
+"""
+    update_target!(gp::SSGPR, ...)
+
+Update the log-posterior
+```math
+\\log p(θ | y) ∝ \\log p(y | θ) +  \\log p(θ)
+```
+of a Gaussian process `gp`.
+"""
+function update_target!(gp::SSGPR; noise::Bool=true, domean::Bool=true, kern::Bool=true)
+    update_mll!(gp; noise=noise, domean=domean, kern=kern)
+    gp.target = gp.mll  + prior_logpdf(gp.mean) + prior_logpdf(gp.kernel) + prior_logpdf(gp.logNoise)
+    gp
+end
+
+function update_dtarget!(gp::SSGPR, precomp::AbstractGradientPrecompute; kwargs...)
+    update_dmll!(gp, precomp; kwargs...)
+    gp.dtarget = gp.dmll + prior_gradlogpdf(gp; kwargs...)
+    gp
+end
+
+"""
+    update_target_and_dtarget!(gp::SSGPR, ...)
+
+Update the log-posterior
+```math
+\\log p(θ | y) ∝ \\log p(y | θ) +  \\log p(θ)
+```
+of a Gaussian process `gp` and its derivative.
+"""
+function update_target_and_dtarget!(gp::SSGPR, precomp::AbstractGradientPrecompute; kwargs...)
+    update_target!(gp; kwargs...)
+    update_dtarget!(gp, precomp; kwargs...)
+end
+
+function update_target_and_dtarget!(gp::SSGPR; kwargs...)
+    precomp = init_precompute(gp)
+    update_target!(gp; kwargs...)
+    update_dmll!(gp, precomp; kwargs...)
+    gp.dtarget = gp.dmll + prior_gradlogpdf(gp; kwargs...)
+end
+
+
+#——————————————————————#
+# Predict observations #
+#——————————————————————#
+
+predict_full(gp::SSGPR, xpred::AbstractMatrix) = predictMVN(xpred, gp.x, gp.y, gp.kernel, gp.mean, gp.alpha, gp.covstrat, gp.cK)
+"""
+    predict_full(gp::SSGPR, x::Union{Vector{Float64},Matrix{Float64}}[; full_cov::Bool=false])
+
+Return the predictive mean and variance of Gaussian Process `gp` at specfic points which
+are given as columns of matrix `x`. If `full_cov` is `true`, the full covariance matrix is
+returned instead of only variances.
+"""
+
+function predict_y(gp::SSGPR, x::AbstractMatrix; full_cov::Bool=false)
+    μ, σ2 = predict_f(gp, x; full_cov=full_cov)
+    if full_cov
+        npred = size(x, 2)
+        return μ, σ2 + ScalMat(npred, exp(2*gp.logNoise))
+    else
+        return μ, σ2 .+ exp(2*gp.logNoise)
+    end
+end
+
+#—————————————————————————————————————————————————————–
+# Function for sampling from the prior of the GP object hyperparameters.
+
+function sample_params(gp::SSGPR; noise::Bool=true, domean::Bool=true, kern::Bool=true)
+    samples = Float64[]
+    if noise && num_params(gp.logNoise) != 0
+        noise_priors = get_priors(gp.logNoise)
+        @assert !isempty(noise_priors) "prior distributions of logNoise should be set"
+        noise_sample = rand(Product(noise_priors))
+        append!(samples, noise_sample)
+    end
+    if domean && num_params(gp.mean) != 0
+        mean_priors = get_priors(gp.mean)
+        @assert !isempty(mean_priors) "prior distributions of mean should be set"
+        mean_sample = rand(Product(mean_priors))
+        append!(samples, mean_sample)
+    end
+    if kern && num_params(gp.kernel) != 0
+        kernel_priors = get_priors(gp.kernel)
+        @assert !isempty(kernel_priors) "prior distributions of kernel should be set"
+        kernel_sample = rand(Product(kernel_priors))
+        append!(samples, kernel_sample)
+    end
+    return samples
+end
+
+#—————————————————————————————————————————————————————–
+#Functions for setting and calling the parameters of the GP object
+
+function get_params(gp::SSGPR; noise::Bool=true, domean::Bool=true, kern::Bool=true)
+    params = Float64[]
+    if noise; push!(params, gp.logNoise.value); end
+    if domean
+        append!(params, get_params(gp.mean))
+    end
+    if kern
+        append!(params, get_params(gp.kernel))
+    end
+    return params
+end
+
+function num_params(gp::SSGPR; noise::Bool=true, domean::Bool=true, kern::Bool=true)
+    n = 0
+    noise && (n += 1)
+    domean && (n += num_params(gp.mean))
+    kern && (n += num_params(gp.kernel))
+    n
+end
+
+appendnoisebounds!(lb, ub, gp::SSGPR, bounds) = appendbounds!(lb, ub, 1, bounds)
+function set_params!(gp::SSGPR, hyp::AbstractVector;
+                     noise::Bool=true, domean::Bool=true, kern::Bool=true)
+    n_mean_params = num_params(gp.mean)
+    n_kern_params = num_params(gp.kernel)
+
+    i = 1
+    if noise
+        gp.logNoise.value = hyp[1];
+        i+=1
+    end
+
+    if domean && n_mean_params>0
+        set_params!(gp.mean, hyp[i:i+n_mean_params-1])
+        i += n_mean_params
+    end
+    if kern
+        set_params!(gp.kernel, hyp[i:i+n_kern_params-1])
+        i += n_kern_params
+    end
+end
+
+function prior_gradlogpdf(gp::SSGPR; noise::Bool=true, domean::Bool=true, kern::Bool=true)
+    grad = Float64[]
+    if noise
+        append!(grad, prior_gradlogpdf(gp.logNoise))
+    end
+    if domean
+        append!(grad, prior_gradlogpdf(gp.mean))
+    end
+    if kern
+        append!(grad, prior_gradlogpdf(gp.kernel))
+    end
+    return grad
+end
+
+#———————————————————————————————————————————————————————————-
+# Push function
+function Base.push!(gp::SSGPR, x::AbstractMatrix, y::AbstractVector)
+    @warn "push! method is currently inefficient as it refits all observations"
+    if gp.nobs == 0
+        GaussianProcesses.fit!(gp, x, y)
+    elseif size(x,1) != size(gp.x,1)
+        error("New input observations must have dimensions consistent with existing observations")
+    else
+        GaussianProcesses.fit!(gp, cat(2, gp.x, x), cat(1, gp.y, y))
+    end
+end
+
+Base.push!(gp::SSGPR, x::AbstractVector, y::AbstractVector) = push!(gp, x', y)
+Base.push!(gp::SSGPR, x::Float64, y::Float64) = push!(gp, [x], [y])
+Base.push!(gp::SSGPR, x::AbstractVector, y::Float64) = push!(gp, reshape(x, length(x), 1), [y])
+
+
+# —————————————————————————————————————————————————————————————
+# Show function
+function Base.show(io::IO, gp::SSGPR)
+    println(io, "Sparse spectrum GP object:")
+    println(io, "  Dim = ", gp.dim)
+    println(io, "  Number of observations = ", gp.nobs)
+        println(io, "  Number of Fourier features = ", gp.fourier.dimension)
+    println(io, "  Mean function:")
+    show(io, gp.mean, 2)
+    println(io, "\n  Kernel:")
+    show(io, gp.kernel, 2)
+    if gp.nobs == 0
+        println("\n  No observation data")
+    else
+        println(io, "\n  Input observations = ")
+        show(io, gp.x)
+        print(io, "\n  Output observations = ")
+        show(io, gp.y)
+        print(io, "\n  Variance of observation noise = ", exp(2 * gp.logNoise))
+        print(io, "\n  Marginal Log-Likelihood = ")
+        show(io, round(gp.target; digits = 3))
+    end
+end

@@ -16,7 +16,7 @@ export GPBase, GP, GPE, GPA, ElasticGPE, Approx, predict_f, predict_y, Kernel, L
     GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
     mcmc, ess, lss, optimize!, vi, var_exp, dv_var_exp, elbo, initialise_Q,    #inference functions
     set_priors!,set_params!, update_target!, autodiff, update_Q!,
-    build_design_mat, RFF, SSGP, marginal_ll, fit!
+    RFF, SSGPR, fit!
 using ForwardDiff: GradientConfig, Dual, partials, copyto!, Chunk
 import ForwardDiff: seed!
 
@@ -37,7 +37,7 @@ include("GPE.jl")
 include("GPEelastic.jl")
 include("GPA.jl")
 include("fourier.jl")
-include("SSGP.jl")
+include("SSGPR.jl")
 include("vi.jl")
 include("mcmc.jl")
 include("optimize.jl")

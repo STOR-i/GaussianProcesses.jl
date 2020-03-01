@@ -95,63 +95,63 @@ function get_optim_target(gp::GPBase; params_kwargs...)
     func = OnceDifferentiable(ltarget, dltarget!, ltarget_and_dltarget!, xinit)
     return func
 end
-
-function optimize!(gp::SSGP; method = LBFGS(), domean::Bool = true, kern::Bool = true,
-                   noise::Bool = true, lik::Bool = true,
-                   meanbounds = nothing, kernbounds = nothing,
-                   noisebounds = nothing, likbounds = nothing, kwargs...)
-    params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
-    # println(params_kwargs)
-    func = get_optim_target(gp; params_kwargs...)
-    init = get_params(gp; params_kwargs...)  # Initial hyperparameter values
-    if meanbounds == kernbounds == noisebounds == likbounds == nothing
-        results = optimize(func, init; method=method, kwargs...)     # Run optimizer
-    else
-        lb, ub = bounds(gp, noisebounds, meanbounds, kernbounds, likbounds;
-                        domean = domean, kern = kern, noise = noise, lik = lik)
-        results = optimize(func.f, func.df, lb, ub, init, Fminbox(method))
-    end
-    set_params!(gp, Optim.minimizer(results); params_kwargs...)
-    update_target!(gp)
-    return results
-end
-
-function marginal_ll(gp::SSGP, x::AbstractArray)
-    ϕ = build_design_mat(gp.fourier, x)
-    norm = ((gp.fourier.σ^2)/gp.fourier.M) # Constant
-    # TODO: Add a conditional in to prevent repetitive computation of R
-    R = cholesky(norm * (ϕ * ϕ') + (I(gp.nobs) * 1e-10))
-    gp.R = R
-    Ry = reshape(R\gp.y, (size(R, 1), 1))
-    mll = 0.5*sum(Ry.^2) + sum(log.(diag(R.L*R.U))) + 0.5*gp.nobs*log(2π)
-    return mll
-end
-
-marginal_ll(gp::SSGP) = marginal_ll(gp, gp.x)
-
-function objective_function(params::AbstractArray, gp::SSGP)
-    update(gp.fourier, params)
-    return marginal_ll(gp)
-end
-
-function fit!(gp::SSGP; nIter::Int=100)
-    evaluation = Inf
-    # Find initial values
-    for i in 1:100
-        ω = rand(Normal(), gp.dim * gp.fourier.M)
-        update_ω!(gp.fourier, ω)
-        scale!(gp.fourier, gp.kernel.iℓ2[1]) # TODO: Work out how to do array division here
-        ml = marginal_ll(gp, gp.x)
-        if ml < opt_ml
-            ω_opt = ω
-        end
-    init_params = ones(gp.dim * gp.fourier.M + gp.dim + 2)
-    init_params[1] = gp.fourier.σ
-    nℓ = length(gp.kernel.iℓ2)
-    init_params[2:(1+nℓ)] = gp.kerenl.iℓ2
-    init_params[(1+nℓ):end] = ω_opt
-
-    opt = minimize(p -> objective_function(p, gp), params, ConjugateGradient(); autodiff=:forward)
-    print(opt)
-    end
-end
+#
+# function optimize!(gp::SSGP; method = LBFGS(), domean::Bool = true, kern::Bool = true,
+#                    noise::Bool = true, lik::Bool = true,
+#                    meanbounds = nothing, kernbounds = nothing,
+#                    noisebounds = nothing, likbounds = nothing, kwargs...)
+#     params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
+#     # println(params_kwargs)
+#     func = get_optim_target(gp; params_kwargs...)
+#     init = get_params(gp; params_kwargs...)  # Initial hyperparameter values
+#     if meanbounds == kernbounds == noisebounds == likbounds == nothing
+#         results = optimize(func, init; method=method, kwargs...)     # Run optimizer
+#     else
+#         lb, ub = bounds(gp, noisebounds, meanbounds, kernbounds, likbounds;
+#                         domean = domean, kern = kern, noise = noise, lik = lik)
+#         results = optimize(func.f, func.df, lb, ub, init, Fminbox(method))
+#     end
+#     set_params!(gp, Optim.minimizer(results); params_kwargs...)
+#     update_target!(gp)
+#     return results
+# end
+#
+# function marginal_ll(gp::SSGP, x::AbstractArray)
+#     ϕ = build_design_mat(gp.fourier, x)
+#     norm = ((gp.fourier.σ^2)/gp.fourier.M) # Constant
+#     # TODO: Add a conditional in to prevent repetitive computation of R
+#     R = cholesky(norm * (ϕ * ϕ') + (I(gp.nobs) * 1e-10))
+#     gp.R = R
+#     Ry = reshape(R\gp.y, (size(R, 1), 1))
+#     mll = 0.5*sum(Ry.^2) + sum(log.(diag(R.L*R.U))) + 0.5*gp.nobs*log(2π)
+#     return mll
+# end
+#
+# marginal_ll(gp::SSGP) = marginal_ll(gp, gp.x)
+#
+# function objective_function(params::AbstractArray, gp::SSGP)
+#     update(gp.fourier, params)
+#     return marginal_ll(gp)
+# end
+#
+# function fit!(gp::SSGP; nIter::Int=100)
+#     evaluation = Inf
+#     # Find initial values
+#     for i in 1:100
+#         ω = rand(Normal(), gp.dim * gp.fourier.M)
+#         update_ω!(gp.fourier, ω)
+#         scale!(gp.fourier, gp.kernel.iℓ2[1]) # TODO: Work out how to do array division here
+#         ml = marginal_ll(gp, gp.x)
+#         if ml < opt_ml
+#             ω_opt = ω
+#         end
+#     init_params = ones(gp.dim * gp.fourier.M + gp.dim + 2)
+#     init_params[1] = gp.fourier.σ
+#     nℓ = length(gp.kernel.iℓ2)
+#     init_params[2:(1+nℓ)] = gp.kerenl.iℓ2
+#     init_params[(1+nℓ):end] = ω_opt
+#
+#     opt = minimize(p -> objective_function(p, gp), params, ConjugateGradient(); autodiff=:forward)
+#     print(opt)
+#     end
+# end
