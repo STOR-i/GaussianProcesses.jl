@@ -16,7 +16,7 @@ Optimise the hyperparameters of Gaussian process `gp` based on type II maximum l
     * `noisebounds`: [lowerbound, upperbound] for the noise hyperparameter
     * `args/kwargs`: Arguments and keyword arguments for the optimize function from the Optim package https://julianlsolvers.github.io/Optim.jl/stable/#user/config/
 """
-function optimize!(gp::GPBase, args...; method = LBFGS(), domean::Bool = true, kern::Bool = true,
+function optimize!(gp::GPBase, method = LBFGS(), args...; domean::Bool = true, kern::Bool = true,
                    noise::Bool = true, lik::Bool = true,
                    meanbounds = nothing, kernbounds = nothing,
                    noisebounds = nothing, likbounds = nothing, kwargs...)
@@ -25,7 +25,7 @@ function optimize!(gp::GPBase, args...; method = LBFGS(), domean::Bool = true, k
     func = get_optim_target(gp; params_kwargs...)
     init = get_params(gp; params_kwargs...)  # Initial hyperparameter values
     if meanbounds == kernbounds == noisebounds == likbounds == nothing
-        results = optimize(func, init, args...; method=method, kwargs...)     # Run optimizer
+        results = optimize(func, init, method, args...; kwargs...)     # Run optimizer
     else
         lb, ub = bounds(gp, noisebounds, meanbounds, kernbounds, likbounds;
                         domean = domean, kern = kern, noise = noise, lik = lik)
