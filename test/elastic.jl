@@ -1,11 +1,11 @@
 module TestElastic
-using Test, GaussianProcesses
+using Test, GaussianProcesses ,Optim
 
 @testset "elastic" begin
     N = 2; nobs = 20;
     for m in [MeanLin(rand(N)), MeanZero(), MeanConst(rand())]
-        for k in [Mat52Iso(rand(), rand()), SEIso(rand(), rand()), 
-                  Mat32Ard(rand(N), rand()), RQArd(rand(N), rand(), rand()), 
+        for k in [Mat52Iso(rand(), rand()), SEIso(rand(), rand()),
+                  Mat32Ard(rand(N), rand()), RQArd(rand(N), rand(), rand()),
                   LinIso(rand()), LinArd(rand(N))]
             x0 = Array{Float64, 2}(undef, N, 0); y0 = Array{Float64, 1}(undef, 0);
             x = rand(N, nobs); y = rand(nobs);
@@ -27,8 +27,8 @@ using Test, GaussianProcesses
             @test gp1.mll ≈ gp2.mll          atol = 1e-6
             @test gp1.alpha ≈ gp2.alpha      atol = 1e-6
             @test gp1.dtarget ≈ gp2.dtarget  atol=1e-6
-            optimize!(gp1, f_tol=1e-12, x_tol=1e-12)
-            optimize!(gp2, f_tol=1e-12, x_tol=1e-12)
+            optimize!(gp1, Optim.Options(f_tol=1e-12, x_tol=1e-12))
+            optimize!(gp2, Optim.Options(f_tol=1e-12, x_tol=1e-12))
             @test isapprox(gp1.mll, gp2.mll, atol = 1e-4)
             @test isapprox(gp1.alpha, gp2.alpha, atol = 1e-4)
         end
