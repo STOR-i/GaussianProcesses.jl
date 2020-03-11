@@ -44,7 +44,7 @@ function nuts(gp::GPBase; nIter::Int=1000, burn::Int=100, thin::Int=1,
               ε::Float64=find_good_eps(hamiltonian, get_params(gp; get_params_kwargs(gp, domean=domean, kern=kern, noise=noise, lik=lik)...)),
               maxDepth::Int64=10, δ::Float64=0.8, integrator=Leapfrog(ε),
               proposals=NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator, maxDepth),
-              adaptor=StanHMCAdaptor(burn, Preconditioner(metric), NesterovDualAveraging(δ, integrator)),
+              adaptor=StanHMCAdaptor(Preconditioner(metric), NesterovDualAveraging(δ, integrator)),
               progress=true)
     params_kwargs = get_params_kwargs(gp; domean=domean, kern=kern, noise=noise, lik=lik)
     θ_init = get_params(gp; params_kwargs...)
