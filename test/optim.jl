@@ -6,19 +6,19 @@ Random.seed!(1)
 
 @testset "Optim" begin
     d, n = 2, 20
-    X = 2π * rand(d, n)
+    X = rand(d, n) # uniform in unit square
 
     mean = MeanLin(zeros(d))
-    kern = SE(1.0, 1.0)
+    kern = SE(log(0.5), 1.0)
 
     @testset "Without likelihood" begin
-        y = X'rand(d) + 0.1*randn(n)
+        y = X'rand(d) .+ sin.(X[1,:]*2π) .+ 0.1*randn(n)
         noise = 0.0
 
         # Just checks that it doesn't crash
         # and that the final mll is better that the initial value
         @testset "Basic" begin
-	          gp = GPE(X, y, mean, kern, -3.0)
+	          gp = GPE(X, y, mean, deepcopy(kern), -3.0)
 	          init_target = gp.target
 	          optimize!(gp)
 	          @test gp.target > init_target
@@ -26,7 +26,7 @@ Random.seed!(1)
 
         @testset "Fixed kernel" begin
             init_param = GaussianProcesses.get_params(kern)[1]
-            fixed = fix(kern, GaussianProcesses.get_param_names(kern)[1])
+            fixed = fix(deepcopy(kern), GaussianProcesses.get_param_names(kern)[1])
             gp = GP(X, y, MeanZero(), fixed, -1.0)
             init_target = gp.target
             optimize!(gp)
@@ -35,7 +35,7 @@ Random.seed!(1)
         end
 
         @testset "priors" begin
-            gp = GPE(X, y, MeanConst(0.), SE(1.0, 1.0), noise)
+            gp = GPE(X, y, MeanConst(0.), deepcopy(kern), noise)
             init_params = GaussianProcesses.get_params(gp; domean=true, kern=true,
                                                        noise=true)
             optimize!(gp)
@@ -52,7 +52,7 @@ Random.seed!(1)
         end
 
         @testset "Keyword arguments" begin
-            gp = GPE(X, y, MeanLin(zeros(d)), SE(1.0, 1.0), noise)
+            gp = GPE(X, y, MeanLin(zeros(d)), deepcopy(kern), noise)
             init_params = GaussianProcesses.get_params(gp; domean=true, kern=true,
                                                        noise=true)
 
@@ -96,21 +96,21 @@ Random.seed!(1)
     end
 
     @testset "With likelihood" begin
-        f = X'rand(d) + 0.1*randn(n)
+        f = X'rand(d) .+ sin.(X[1,:]*2π)
         y = collect(rand(n) .< normcdf.(f)) # Binary data
         lik = BernLik()  # Bernoulli likelihood for binary data {0,1}
 
         # Just checks that it doesn't crash
         # and that the final mll is better that the initial value
         @testset "Basic" begin
-            gp = GPA(X, y, MeanLin(zeros(d)), SE(1.0, 1.0), BernLik())
+            gp = GPA(X, y, MeanLin(zeros(d)), deepcopy(kern), BernLik())
             init_target = gp.target
             optimize!(gp)
             @test gp.target > init_target
         end
 
         @testset "Keyword arguments" begin
-            gp = GPA(X, y, MeanLin(zeros(d)), SE(1.0, 1.0), BernLik())
+            gp = GPA(X, y, MeanLin(zeros(d)), deepcopy(kern), BernLik())
             init_params = GaussianProcesses.get_params(gp; domean=true, kern=true, lik=true)
 
             # Check mean fixed
