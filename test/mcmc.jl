@@ -11,7 +11,7 @@ Random.seed!(1)
     X = 2π * rand(d, n)
     y = randn(n) .+ 0.5
 
-    kern = RQ(1.0, 1.0, 1.0)
+    kern = RQ(-1.0, -1.0, -1.0)
 
     # Just checks that it doesn't crash
     @testset "Legacy MCMC" begin
