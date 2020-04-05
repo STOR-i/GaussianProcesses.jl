@@ -211,6 +211,20 @@ function update_mll!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tr
     gp
 end
 
+function _dmll_kern_row!(dmll, buf, k, ααinvcKI, X, data, j, dim, nparams)
+    # diagonal
+    dKij_dθ!(buf, k, X, X, data, j, j, dim, nparams)
+    @inbounds for iparam in 1:nparams
+        dmll[iparam] += buf[iparam] * ααinvcKI[j, j] / 2.0
+    end
+    # off-diagonal
+    @inbounds for i in 1:j-1
+        dKij_dθ!(buf, k, X, X, data, i, j, dim, nparams)
+        @simd for iparam in 1:nparams
+            dmll[iparam] += buf[iparam] * ααinvcKI[i, j]
+        end
+    end
+end
 """
     dmll_kern!((dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::KernelData, ααinvcKI::AbstractMatrix))
 
@@ -232,18 +246,8 @@ function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::Ke
         kthread = kcopies[Threads.threadid()]
         bufthread = buffercopies[Threads.threadid()]
         dmllthread = dmllcopies[Threads.threadid()]
-        # diagonal
-        dKij_dθ!(bufthread, kthread, X, X, data, j, j, dim, nparams)
-        for iparam in 1:nparams
-            dmllthread[iparam] += bufthread[iparam] * ααinvcKI[j, j] / 2.0
-        end
-        # off-diagonal
-        for i in j+1:nobs
-            dKij_dθ!(bufthread, kthread, X, X, data, i, j, dim, nparams)
-            @simd for iparam in 1:nparams
-                dmllthread[iparam] += bufthread[iparam] * ααinvcKI[i, j]
-            end
-        end
+        _dmll_kern_row!(dmllthread, bufthread, kthread, 
+                        ααinvcKI, X, data, j, dim, nparams)
     end
 
     dmll[:] = sum(dmllcopies) # sum up the results from all threads
