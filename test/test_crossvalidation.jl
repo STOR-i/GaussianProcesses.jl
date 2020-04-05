@@ -1,6 +1,6 @@
 module TestCV
     using GaussianProcesses
-    using GaussianProcesses: get_params, set_params!, update_mll!
+    using GaussianProcesses: get_params, set_params!, update_mll!, get_value
     using Test, Random
     using Distributions: Normal, Uniform, logpdf, MvNormal
     import Calculus
@@ -61,7 +61,7 @@ module TestCV
                 set_params!(gp, θprev; noise=true, kern=false, domean=false) # put it back
                 return CV
             end
-            grad_numerical = Calculus.gradient(target, Float64[gp.logNoise])
+            grad_numerical = Calculus.gradient(target, Float64[get_value(gp.logNoise)])
             update_mll!(gp)
             grad_analytical = GaussianProcesses.dlogpdθ_LOO(gp; noise=true, kern=false, domean=false)
             @test grad_numerical ≈ grad_analytical  atol=1e-6
@@ -125,7 +125,7 @@ module TestCV
                 set_params!(gp, θprev; noise=true, kern=false, domean=false) # put it back
                 return CV
             end
-            grad_numerical = Calculus.gradient(target, Float64[gp.logNoise])
+            grad_numerical = Calculus.gradient(target, Float64[get_value(gp.logNoise)])
             update_mll!(gp)
             grad_analytical = GaussianProcesses.dlogpdθ_CVfold(gp, folds; noise=true, kern=false, domean=false)
             @test grad_numerical ≈ grad_analytical  atol=1e-6

@@ -42,7 +42,7 @@ module TestSparse
         mx = mean(meanf, xtest)
         xtrain = gp_sparse.x
         alpha = gp_sparse.alpha
-        σ2 = exp(2*gp_sparse.logNoise)
+        σ2 = exp(2*gp_sparse.logNoise.value)
 
         μpred, Σpred = predict_f(gp_sparse, xtest; full_cov=true)
 
@@ -62,7 +62,7 @@ module TestSparse
         mx = mean(meanf, xtest)
         xtrain = gp_sparse.x
         alpha = gp_sparse.alpha
-        σ2 = exp(2*gp_sparse.logNoise)
+        σ2 = exp(2*gp_sparse.logNoise.value)
 
         μpred, Σpred = predict_f(gp_sparse, xtest; full_cov=true)
 
@@ -81,7 +81,7 @@ module TestSparse
         mx = mean(meanf, xtest)
         xtrain = gp_sparse.x
         alpha = gp_sparse.alpha
-        σ2 = exp(2*gp_sparse.logNoise)
+        σ2 = exp(2*gp_sparse.logNoise.value)
 
         iprednearest = [argmin(abs.(xi.-Xu[1,:])) for xi in vec(xtest)]
         blockindpred = [findall(isequal(i), iprednearest) 
@@ -147,16 +147,16 @@ module TestSparse
 
     @testset "Sparse Approximations" begin
         @testset "Subset of Regressors" begin
-            test_sparse(SoR(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3704.0847727395367)
+            test_sparse(SoR(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise.value), -3704.0847727395367)
         end
         @testset "Deterministic Training Conditionals" begin
-            test_sparse(DTC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3704.084703493389)
+            test_sparse(DTC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise.value), -3704.084703493389)
         end
         @testset "Fully Independent Training Conditionals" begin
-            test_sparse(FITC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3709.601737889645)
+            test_sparse(FITC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise.value), -3709.601737889645)
         end
         @testset "Full Scale Approximation" begin
-            test_sparse(FSA(x', Xu, blockindices, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise), -3706.2892293004734)
+            test_sparse(FSA(x', Xu, blockindices, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise.value), -3706.2892293004734)
         end
     end
 end
