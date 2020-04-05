@@ -12,7 +12,7 @@ end
 append!(gp, x::AbstractVector, y::Float64) = append!(gp, reshape(x, :, 1), [y])
 function append!(gp::GPE{X,Y,M,K,CS,D,P}, x::AbstractMatrix, y::AbstractVector) where {X,Y,M,K,CS,D,P <: ElasticPDMat}
     size(x, 2) == length(y) || error("$(size(x, 2)) observations, but $(length(y)) targets.")
-    newcov = [cov(gp.kernel, gp.x, x); cov(gp.kernel, x, x) + (exp(2*gp.logNoise) + eps())*I]
+    newcov = [cov(gp.kernel, gp.x, x); cov(gp.kernel, x, x) + (noise_variance(gp) + eps())*I]
     append!(gp.data, gp.kernel, gp.x, x)
     append!(gp.x, x)
     append!(gp.cK, newcov)
@@ -27,7 +27,7 @@ mat(cK::ElasticPDMat) = view(cK.mat)
 cholfactors(cK::ElasticPDMat) = view(cK.chol).factors
 
 function ElasticGPE(dim; mean::Mean = MeanZero(), kernel = SE(0.0, 0.0),
-                    logNoise::Float64 = -2.0, kwargs...)
+                    logNoise = -2.0, kwargs...)
     x = ElasticArray(Array{Float64}(undef, dim, 0))
     y = ElasticArray(Array{Float64}(undef, 0))
     ElasticGPE(x, y, mean, kernel, logNoise; kwargs...)
@@ -40,7 +40,7 @@ function alloc_cK(covstrat::ElasticCovStrat, nobs)
     return cK
 end
 function ElasticGPE(x::AbstractMatrix, y::AbstractVector, mean::Mean, kernel::Kernel, 
-                    logNoise::Float64 = -2.0;
+                    logNoise = -2.0;
                     capacity = 10^3, stepsize = 10^3)
     data = ElasticKernelData(kernel, x, x, capacity=capacity, stepsize=stepsize)
     nobs = length(y)

@@ -239,6 +239,21 @@ function dmll_kern!(dmll::AbstractVector, gp::GPBase, precomp::SoRPrecompute, co
                       covstrat)
 end
 
+function dmll_noise(logNoise::Real, cK::FullyIndepPDMat, alpha::AbstractVector)
+    Λ = cK.Λ
+    Lk = whiten(cK.ΣQR_PD, cK.Kuf) * inv(Λ)
+    # # DEBUG
+    # nobs = length(alpha)
+    # noiseT = sum(1 ./ Λ) - dot(Lk, Lk)
+    # Talt = tr(cK \ Matrix(1.0*I, nobs, nobs))
+    # @show noiseT, Talt # should be same
+    # # END DEBUG
+    return exp(2*logNoise) * ( # Jacobian
+        dot(alpha, alpha)
+        - tr(inv(Λ)) # sum(1 ./ Λ)
+        + dot(Lk, Lk)
+        )
+end
 """
     dmll_noise(gp::GPE, precomp::SoRPrecompute, covstrat::FullyIndepStrat)
 
@@ -256,20 +271,7 @@ where
     Lk ≡ ΣQR^(-1/2) Kuf Λ⁻¹
 """
 function dmll_noise(gp::GPE, precomp::SoRPrecompute, covstrat::FullyIndepStrat)
-    nobs = gp.nobs
-    cK = gp.cK
-    Λ = cK.Λ
-    Lk = whiten(cK.ΣQR_PD, cK.Kuf) * inv(Λ)
-    # # DEBUG
-    # noiseT = sum(1 ./ Λ) - dot(Lk, Lk)
-    # Talt = tr(cK \ Matrix(1.0*I, nobs, nobs))
-    # @show noiseT, Talt # should be same
-    # # END DEBUG
-    return exp(2*gp.logNoise) * ( # Jacobian
-        dot(gp.alpha, gp.alpha)
-        - tr(inv(Λ)) # sum(1 ./ Λ)
-        + dot(Lk, Lk)
-        )
+    dmll_noise(get_value(gp.logNoise), gp.cK, gp.alpha)
 end
 
 

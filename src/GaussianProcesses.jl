@@ -15,7 +15,7 @@ export GPBase, GP, GPE, GPA, ElasticGPE, Approx, predict_f, predict_y, Kernel, L
     MeanZero, MeanConst, MeanLin, MeanPoly, SumMean, ProdMean, MeanPeriodic, #mean functions
     GaussLik, BernLik, ExpLik, StuTLik, PoisLik, BinLik,       #likelihood functions
     mcmc, ess, lss, optimize!, vi, var_exp, dv_var_exp, elbo, initialise_Q,    #inference functions
-    set_priors!,set_params!, update_target!, autodiff, update_Q!
+    set_priors!,set_params!, update_target!, autodiff, update_Q!, noise_variance
 using ForwardDiff: GradientConfig, Dual, partials, copyto!, Chunk
 import ForwardDiff: seed!
 

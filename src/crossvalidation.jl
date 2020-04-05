@@ -153,7 +153,7 @@ function dlogpdθ_LOO(gp::GPE; noise::Bool, domean::Bool, kern::Bool)
     ∂logp∂θ = Vector{Float64}(undef, noise + domean*n_mean_params + kern*n_kern_params)
     i = 1
     if noise
-        ∂logp∂θ[i] = dlogpdσ2_LOO(invΣ, x, y, data, alpha)*2*exp(2 * gp.logNoise)
+        ∂logp∂θ[i] = dlogpdσ2_LOO(invΣ, x, y, data, alpha)*2*exp(2 * gp.logNoise.value)
         i += 1
     end
     if domean && n_mean_params>0
@@ -322,7 +322,7 @@ function dlogpdθ_CVfold(gp::GPE, folds::Folds; noise::Bool, domean::Bool, kern:
     ∂logp∂θ = Vector{Float64}(undef, noise + domean*n_mean_params + kern*n_kern_params)
     i = 1
     if noise
-        ∂logp∂θ[i] = dlogpdσ2_CVfold(invΣ, x, y, data, alpha, folds)*2*exp(2 * gp.logNoise)
+        ∂logp∂θ[i] = dlogpdσ2_CVfold(invΣ, x, y, data, alpha, folds)*2*exp(2 * gp.logNoise.value)
         i += 1
     end
     if domean && n_mean_params>0

@@ -1,21 +1,37 @@
-mutable struct Scalar <: AbstractFloat
-    value::Float64
+abstract type Param end
+
+mutable struct Scalar{T<:Real} <: Param
+    value::T
     priors::Array
 end
 Scalar(value) = Scalar(value, [])
+wrap_param(value::Real, args...) = Scalar(value, args...)
 get_params(s::Scalar) = [s.value]
+get_value(s::Scalar) = s.value
+function set_params!(s::Scalar, hyp::AbstractVector)
+    @assert length(hyp) == 1
+    s.value = hyp[1]
+end
 num_params(::Scalar) = 1
-Base.convert(::Type{T}, x::Scalar) where T <: Number = convert(T, x.value)
 
-mutable struct VectorParam
-    value::Vector{Float64}
+mutable struct VectorParam{T<:AbstractFloat} <: Param
+    value::Vector{T} # the type is allowed to change -> type unstable
     priors::Array
 end
 VectorParam(value) = VectorParam(value, [])
+function wrap_param(value::AbstractVector, args...)
+    T = eltype(value)
+    valvec = convert(Vector{T}, value)
+    return VectorParam(valvec, args...)
+end
 get_params(v::VectorParam) = v.value
+get_value(v::VectorParam) = v.value
+function set_params!(v::VectorParam, hyp::AbstractVector)
+    @assert length(hyp) == num_params(v)
+    v.value .= hyp
+end
 num_params(v::VectorParam) = length(v.value)
 Base.length(v::VectorParam) = length(v.value)
-Base.convert(::Type{V}, x::VectorParam) where V <: AbstractVector{<:Real} = convert(V, x.value)
 
 const MeanOrKernelOrLikelihood = Union{Mean,Kernel,Likelihood,Scalar,VectorParam}
 const CompositeMeanOrKernel = Union{CompositeMean,CompositeKernel}
