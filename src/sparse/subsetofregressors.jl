@@ -154,6 +154,15 @@ function dmll_kern!(dmll::AbstractVector, gp::GPBase, precomp::SoRPrecompute, co
                       precomp.∂Kuu, precomp.∂Kuf,
                       covstrat)
 end
+function dmll_noise(logNoise::Real, cK::SubsetOfRegsPDMat, alpha::AbstractVector)
+    nobs = length(alpha)
+    Lk = whiten(cK.ΣQR_PD, cK.Kuf)
+    return exp(2*logNoise) * (
+        dot(alpha, alpha)
+        - exp(-2*logNoise) * nobs
+        + exp(-4*logNoise)  * dot(Lk, Lk)
+        )
+end
 """
     dmll_noise(gp::GPE, precomp::SoRPrecompute)
 
@@ -167,14 +176,7 @@ end
     = σ⁻²I - σ⁻⁴ Kuf'(       ΣQR        )⁻¹ Kuf
 """
 function dmll_noise(gp::GPE, precomp::SoRPrecompute, covstrat::SubsetOfRegsStrategy)
-    nobs = gp.nobs
-    cK = gp.cK
-    Lk = whiten(cK.ΣQR_PD, cK.Kuf)
-    return exp(2*gp.logNoise) * (
-        dot(gp.alpha, gp.alpha)
-        - exp(-2*gp.logNoise) * nobs
-        + exp(-4*gp.logNoise)  * dot(Lk, Lk)
-        )
+    dmll_noise(get_value(gp.logNoise), gp.cK, gp.alpha)
 end
 
 """
