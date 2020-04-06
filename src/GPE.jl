@@ -272,13 +272,13 @@ end
 
 noise_variance(gp::GPE) = noise_variance(gp.logNoise)
 noise_variance(logNoise::Scalar) = exp(2 * get_value(logNoise))
-noise_variance(logNoise::VectorParam) = exp(2 .* get_value(logNoise))
+noise_variance(logNoise::VectorParam) = exp.(2 .* get_value(logNoise))
 
 function dmll_noise(logNoise::Real, precomp::FullCovariancePrecompute)
     return exp(2 * logNoise) * tr(precomp.ααinvcKI)
 end
 # function dmll_noise(logNoise::AbstractVector, precomp::FullCovariancePrecompute)
-    # return exp(2 .* logNoise) .* diag(precomp.ααinvcKI)
+    # return exp.(2 .* logNoise) .* diag(precomp.ααinvcKI)
 # end
 function dmll_noise(gp::GPE, precomp::FullCovariancePrecompute, covstrat::CovarianceStrategy)
     dmll_noise(get_value(gp.logNoise), precomp)
@@ -462,7 +462,7 @@ end
 
 function num_params(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=true)
     n = 0
-    noise && (n += 1)
+    noise && (n += num_params(gp.logNoise))
     domean && (n += num_params(gp.mean))
     kern && (n += num_params(gp.kernel))
     n
