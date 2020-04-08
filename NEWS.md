@@ -1,5 +1,12 @@
 # News
 
+## Version 0.12.0 (2020-04-09)
+* Optimisation interface now matches that of the `Optim.jl` package.
+* Added support for heteroscedastic noise in the exact inference case.
+* Added autodifferentiation support for kernels with fixed parameters.
+* Bug fixes in elliptical slice sampler.
+
+
 ## Version 0.11.0 (2019-11-08)
 * Introduced an alternative sampling method to Hamiltonian Monte-Carlo, namely an elliptical slice sampler
   * Performing inference via an ESS is more robust to poor hyperparameter initialisation
