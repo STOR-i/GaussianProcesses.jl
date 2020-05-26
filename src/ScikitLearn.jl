@@ -4,7 +4,7 @@ import ScikitLearnBase
 
 ScikitLearnBase.is_classifier(::GPE) = false
 
-ScikitLearnBase.fit!(gp::GPE, X::AbstractMatrix, y::AbstractVector) = fit!(gp, X', y)
+ScikitLearnBase.fit!(gp::GPE, X::AbstractMatrix, y::AbstractVector) = fit!(gp, permutedims(X), y)
 
 function ScikitLearnBase.predict(gp::GPE, X::AbstractMatrix; eval_MSE::Bool=false)
     mu, Sigma = predict_y(gp, X'; full_cov=false)
