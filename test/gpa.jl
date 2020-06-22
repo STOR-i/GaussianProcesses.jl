@@ -1,5 +1,7 @@
 module TestGPA
-using GaussianProcesses, Calculus, Distributions
+using GaussianProcesses
+import Calculus
+using Distributions: Bernoulli, Binomial, Exponential, Poisson, TDist
 using Test, Random
 
 Random.seed!(1)
@@ -12,12 +14,12 @@ Random.seed!(1)
 
     # Test Bernoulli, binomial, exponential, Gaussian, Poisson, and Student-t likelihood
     liks = (BernLik(), BinLik(n), ExpLik(), GaussLik(-1.0), PoisLik(), StuTLik(3, 0.1))
-    ys = ([Bool(rand(Distributions.Bernoulli(abs(f[i])))) for i in 1:n],
-          [rand(Distributions.Binomial(n,exp(f[i]) / (1 + exp(f[i])))) for i in 1:n],
-          [rand(Distributions.Exponential(f[i]^2)) for i in 1:n],
+    ys = ([Bool(rand(Bernoulli(abs(f[i])))) for i in 1:n],
+          [rand(Binomial(n,exp(f[i]) / (1 + exp(f[i])))) for i in 1:n],
+          [rand(Exponential(f[i]^2)) for i in 1:n],
           f,
-          [rand(Distributions.Poisson(exp(f[i]))) for i in 1:n],
-          f .+ rand(Distributions.TDist(3), n))
+          [rand(Poisson(exp(f[i]))) for i in 1:n],
+          f .+ rand(TDist(3), n))
 
     # Mean and kernel function
     mZero = MeanZero()
