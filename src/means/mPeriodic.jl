@@ -7,8 +7,7 @@ Periodic mean function
 ```math
 m(x) = a'cos(2πx/p) + b'sin(2πx/p)
 ```
-with polynomial coefficients ``βᵢⱼ`` of shape ``d × D`` where ``d`` is the dimension of
-observations and ``D`` is the degree of the polynomial.
+with amplitudes ``a`` and ``b``, and period ``p`` given as vectors of same length.
 """
 mutable struct MeanPeriodic <: Mean
     "Cosine and sine coefficients"
