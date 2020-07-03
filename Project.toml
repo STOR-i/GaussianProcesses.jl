@@ -27,7 +27,6 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 [compat]
 Distances = "0.7, 0.8, 0.9"
 Distributions = "0.16, 0.17, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23"
-Documenter = "0.24, 0.25"
 ElasticArrays = "0.2, 0.3, 0.4, 1.0"
 ElasticPDMats = "0.2"
 FastGaussQuadrature = "0.3, 0.4"
@@ -46,7 +45,6 @@ julia = "1"
 [extras]
 Calculus = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
-Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
