@@ -9,21 +9,26 @@ GPR{A, B}(mean_function, kernel) where {A, B} = GPR(mean_function, kernel)
 GPR(kernel::Kernel) = GPR(Zero(), kernel)
 
 function marginal_log_likelihood(gp::GPR, x::AbstractArray, y::AbstractArray)
-    N = size(x, 2) # TODO: Change if moving to column vectors
+    N = size(x, 1) # TODO: Change if moving to column vectors
     K = cov(gp.Kernel, x) + 1e-6*I(N)
     L = cholesky(K)
-    α = L.U\(L.L\y')
-    mll = -0.5*((y*α)[1]+ 2*sum(diag(L.UL)) - N*log(2π))
+    α = L.U\(L.L\y)
+    mll = -0.5*((y'*α)[1]+ 2*sum(diag(L.UL)) - N*log(2π))
 end
 
-function get_mll(gp::GPR, x::AbstractArray, y::AbstractArray)
-    function mll(x::AbstractArray, y::AbstractArray)
-        N = size(x, 2)
-        # TODO: Return function mll
-    end 
-    return mll 
-end
+function get_objective(gp::GPR, x::AbstractArray, y::AbstractArray)
+    function f(θ::AbstractArray)
+        kern = gp.Kernel
+        kern.lengthscale.value = θ[1]
+        kern.variance.value = θ[2]
 
+        mfunc = gp.MeanFunc
+
+        model = GPR(mfunc, kern)
+        return marginal_log_likelihood(model, x, y)
+    end
+    return f
+end
 
 """
 Sample from the GP prior

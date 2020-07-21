@@ -16,22 +16,17 @@ function SquaredExponential(lengthscale::Float64, variance::Float64)
 end
 
 function k(kernel::SquaredExponential)
-    f(τ) = kernel.variance.value*exp(-0.5*τ^2/kernel.lengthscale.value^2)
+    f(τ) = kernel.variance.value*exp.(-(τ.^2)/(2*kernel.lengthscale.value^2))
     return f
 end
 
 function cov(kernel::Stationary, x::AbstractArray, y::AbstractArray)
     @assert ndims(x) > 1 && ndims(y) > 1 
     kern_compute = k(kernel)
-    dim1, nobs1 = size(x)
-    dim2, nobs2 = size(y)
-    Gram = Array{Float64}(undef, nobs1, nobs2)
-    for (idx, xval) in enumerate(x)
-        for (jdx, yval) in enumerate(y)
-            τ = abs(xval-yval)
-            Gram[idx, jdx] = kern_compute(τ)
-        end
-    end
+    nobs1 = size(x, 1)
+    nobs2 = size(y, 1)
+    distance = pairwise(Euclidean(), x, dims =1)
+    Gram = kern_compute(distance)
     return Gram
 end
 
