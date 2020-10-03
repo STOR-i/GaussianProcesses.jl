@@ -14,6 +14,7 @@ mutable struct FullyIndepPDMat{T,M<:AbstractMatrix,PD<:AbstractPDMat{T},M2<:Abst
 end
 size(a::FullyIndepPDMat) = (size(a.Kuf,2), size(a.Kuf,2))
 size(a::FullyIndepPDMat, d::Int) = size(a.Kuf,2)
+dim(a::FullyIndepPDMat) = size(a,1)
 """
     We have
         Σ ≈ Kuf' Kuu⁻¹ Kuf + Λ
@@ -29,7 +30,7 @@ size(a::FullyIndepPDMat, d::Int) = size(a.Kuf,2)
         Σ⁻¹ = Λ⁻¹ - Λ⁻² Kuf'(Kuu + Kuf Λ⁻¹ Kuf')⁻¹ Kuf
             = Λ⁻¹ - Λ⁻² Kuf'(        ΣQR       )⁻¹ Kuf
 """
-function \(a::FullyIndepPDMat, x)
+function \(a::FullyIndepPDMat, x::DenseVecOrMat)
     Lk = whiten(a.ΣQR_PD, a.Kuf)
     return a.Λ \ (x .- Lk' * (Lk * (a.Λ \ x)))
 end
@@ -139,7 +140,7 @@ function update_cK!(cK::FullyIndepPDMat, X::AbstractMatrix, kernel::Kernel,
     Kuubuffer, chol = make_posdef!(Kuubuffer, cholfactors(cK.Kuu))
     Kuu_PD = wrap_cK(cK.Kuu, Kuubuffer, chol)
     Kuf = cov!(cK.Kuf, kernel, inducing, X)
-    Kfu = Kuf'
+    Kfu = Matrix(Kuf')
 
     dim, nobs = size(X)
     Kdiag = [cov_ij(kernel, X, X, EmptyData(), i, i, dim) for i in 1:nobs]

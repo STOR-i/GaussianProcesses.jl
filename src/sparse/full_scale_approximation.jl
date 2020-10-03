@@ -12,6 +12,7 @@ function BlockDiagPDMat(blockindices::BlockIndices)
 end
 size(a::BlockDiagPDMat) = (sum(length,a.blockindices), sum(length,a.blockindices))
 size(a::BlockDiagPDMat, d::Int) = sum(length,a.blockindices)
+dim(a::BlockDiagPDMat) = size(a,1)
 function \(a::BlockDiagPDMat, x::AbstractVector)
     out = similar(x)
     for (pd,ind) in zip(a.blockPD,a.blockindices)
@@ -85,6 +86,7 @@ mutable struct FullScalePDMat{T,M<:AbstractMatrix,PD<:AbstractPDMat{T},M2<:Abstr
 end
 size(a::FullScalePDMat) = (size(a.Kuf,2), size(a.Kuf,2))
 size(a::FullScalePDMat, d::Int) = size(a.Kuf,2)
+dim(a::FullScalePDMat) = size(a,1)
 """
     We have
         Σ ≈ Kuf' Kuu⁻¹ Kuf + Λ
@@ -100,7 +102,7 @@ size(a::FullScalePDMat, d::Int) = size(a.Kuf,2)
         Σ⁻¹ = Λ⁻¹ - Λ⁻¹ Kuf'(Kuu + Kuf Λ⁻¹ Kuf')⁻¹ Kuf Λ⁻¹
             = Λ⁻¹ - Λ⁻¹ Kuf'(        ΣQR       )⁻¹ Kuf Λ⁻¹
 """
-function \(a::FullScalePDMat, x)
+function \(a::FullScalePDMat, x::DenseVecOrMat)
     Lk = whiten(a.ΣQR_PD, a.Kuf)
     return a.Λ \ (x .- Lk' * (Lk * (a.Λ \ x)))
 end
@@ -440,7 +442,7 @@ function predictMVN(xpred::AbstractMatrix, blockindpred::BlockIndices,
     Qxf = getQab(Ktrain, kernel, xpred, xtrain, sparsedata)
     ΛplusQxf = Qxf + Λxf
     Σxx = cov(kernel, xpred, xpred)
-    Σ_FSA = Σxx - ΛplusQxf * (Ktrain \ ΛplusQxf')
+    Σ_FSA = Σxx - ΛplusQxf * (Ktrain \ collect(ΛplusQxf'))
     return mupred, Σ_FSA
 end
 

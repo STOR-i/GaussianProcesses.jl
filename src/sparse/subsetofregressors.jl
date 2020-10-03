@@ -39,6 +39,7 @@ function getQaa(cK::SparsePDMat, kernel::Kernel, Xa::AbstractMatrix)
 end
 size(a::SubsetOfRegsPDMat) = (size(a.Kuf,2), size(a.Kuf,2))
 size(a::SubsetOfRegsPDMat, d::Int) = size(a.Kuf,2)
+dim(a::SubsetOfRegsPDMat) = size(a,1)
 """
     We have
         Σ ≈ Kuf' Kuu⁻¹ Kuf + σ²I
@@ -46,7 +47,7 @@ size(a::SubsetOfRegsPDMat, d::Int) = size(a.Kuf,2)
         Σ⁻¹ = σ⁻²I - σ⁻⁴ Kuf'(Kuu + σ⁻² Kuf Kuf')⁻¹ Kuf
             = σ⁻²I - σ⁻⁴ Kuf'(       ΣQR        )⁻¹ Kuf
 """
-function \(a::SubsetOfRegsPDMat, x)
+function \(a::SubsetOfRegsPDMat, x::DenseVecOrMat)
     return exp(-2*a.logNoise)*x - exp(-4*a.logNoise)*a.Kuf'*(a.ΣQR_PD \ (a.Kuf * x))
 end
 logdet(a::SubsetOfRegsPDMat) = logdet(a.ΣQR_PD) - logdet(a.Kuu) + 2*a.logNoise*size(a,1)
@@ -141,10 +142,11 @@ function precompute!(precomp::SoRPrecompute, gp::GPBase)
     alpha = gp.alpha
     Kuf = cK.Kuf
     Kuu = cK.Kuu
+    Kfu = collect(cK.Kuf')# TODO: reduce memory allocations
 
     precomp.Kuu⁻¹Kuf[:,:] = Kuu \ Kuf # Kuu⁻¹Kuf
     precomp.Kuu⁻¹KufΣ⁻¹y[:] = vec(Kuu \ (Kuf * alpha)) # Kuu⁻¹Kuf Σ⁻1 y appears repeatedly, so pre-compute
-    precomp.Σ⁻¹Kfu[:,:] = cK \ (Kuf') # TODO: reduce memory allocations
+    precomp.Σ⁻¹Kfu[:,:] = cK \ Kfu
     return precomp
 end
 function dmll_kern!(dmll::AbstractVector, gp::GPBase, precomp::SoRPrecompute, covstrat::SubsetOfRegsStrategy)
@@ -230,7 +232,7 @@ function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK:
         V =  2 * dot(alpha, ∂Kuf' * (Kuu⁻¹KufΣ⁻¹y))    # = 2 y' Σ⁻¹ ∂Kuf Kuu⁻¹ Kuf Σ⁻¹y
         V -= dot(Kuu⁻¹KufΣ⁻¹y, ∂Kuu * (Kuu⁻¹KufΣ⁻¹y)) # = y' Σ⁻¹ Kfu ∂(Kuu⁻¹) Kuf Σ⁻¹ y
 
-        T = 2 * dot(cK \ ∂Kuf', Kuu⁻¹Kuf')              # = 2 tr(Kuu⁻¹ Kuf Σ⁻¹ ∂Kuf')
+        T = 2 * dot(cK \ collect(∂Kuf'), Kuu⁻¹Kuf')              # = 2 tr(Kuu⁻¹ Kuf Σ⁻¹ ∂Kuf')
         T -=    dot(Σ⁻¹Kfu',  (Kuu \ ∂Kuu) * Kuu⁻¹Kuf) # = tr(Kuu⁻¹ Kuf Σ⁻¹ Kfu Kuu⁻¹ ∂Kuu)
 
         # # BELOW FOR DEBUG ONLY
