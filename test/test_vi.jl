@@ -55,7 +55,7 @@ Random.seed!(203617)
     #     x = 2π * rand(n);              #predictors
     #     y = sin.(x) + 0.05*randn(n);   #regressors
     #     mZero = MeanZero()                   #Zero mean function
-    #     kern = SE(0.0,0.0)                   #Sqaured exponential kernel (note that hyperparameters are on the log scale)
+    #     kern = SE(0.0,0.0)                   #Squared exponential kernel (note that hyperparameters are on the log scale)
     #     l = GaussLik(0.1)             # Poisson likelihood
 
     #     logObsNoise = -1.0                        # log standard deviation of observation noise (this is optional)
