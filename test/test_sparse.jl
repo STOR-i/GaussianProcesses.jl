@@ -112,7 +112,7 @@ module TestSparse
 
     function test_sparse(gp_sparse, expect_mll)
         @test gp_sparse.mll ≈ gp_full.mll atol=10 # marginal loglik shouldn't be radically different
-        @test gp_sparse.mll ≈ expect_mll atol=1e-6 # from previous run, check this doesn't drift
+        @test gp_sparse.mll ≈ expect_mll atol=1e-3 # from previous run, check this doesn't drift
 
         cK = gp_sparse.cK
         cKmat = Matrix(cK)
