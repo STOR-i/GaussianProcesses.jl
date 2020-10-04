@@ -211,20 +211,6 @@ function update_mll!(gp::GPE; noise::Bool=true, domean::Bool=true, kern::Bool=tr
     gp
 end
 
-function _dmll_kern_row!(dmll, buf, k, ααinvcKI, X, data, j, dim, nparams)
-    # diagonal
-    dKij_dθ!(buf, k, X, X, data, j, j, dim, nparams)
-    @inbounds for iparam in 1:nparams
-        dmll[iparam] += buf[iparam] * ααinvcKI[j, j] / 2.0
-    end
-    # off-diagonal
-    @inbounds for i in 1:j-1
-        dKij_dθ!(buf, k, X, X, data, i, j, dim, nparams)
-        @simd for iparam in 1:nparams
-            dmll[iparam] += buf[iparam] * ααinvcKI[i, j]
-        end
-    end
-end
 """
     dmll_kern!((dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::KernelData, ααinvcKI::AbstractMatrix))
 
@@ -237,20 +223,20 @@ function dmll_kern!(dmll::AbstractVector, k::Kernel, X::AbstractMatrix, data::Ke
     @assert nparams == length(dmll)
     dK_buffer = Vector{Float64}(undef, nparams)
     dmll[:] .= 0.0
-    # make a copy per thread for objects that are potentially not thread-safe:
-    kcopies = [deepcopy(k) for _ in 1:Threads.nthreads()]
-    buffercopies = [similar(dK_buffer) for _ in 1:Threads.nthreads()]
-    dmllcopies = [deepcopy(dmll) for _ in 1:Threads.nthreads()]
-
-    @inbounds Threads.@threads for j in 1:nobs
-        kthread = kcopies[Threads.threadid()]
-        bufthread = buffercopies[Threads.threadid()]
-        dmllthread = dmllcopies[Threads.threadid()]
-        _dmll_kern_row!(dmllthread, bufthread, kthread, 
-                        ααinvcKI, X, data, j, dim, nparams)
+    @inbounds for j in 1:nobs
+        # diagonal
+        dKij_dθ!(dK_buffer, k, X, X, data, j, j, dim, nparams)
+        for iparam in 1:nparams
+            dmll[iparam] += dK_buffer[iparam] * ααinvcKI[j, j] / 2.0
+        end
+        # off-diagonal
+        for i in j+1:nobs
+            dKij_dθ!(dK_buffer, k, X, X, data, i, j, dim, nparams)
+            @simd for iparam in 1:nparams
+                dmll[iparam] += dK_buffer[iparam] * ααinvcKI[i, j]
+            end
+        end
     end
-
-    dmll[:] = sum(dmllcopies) # sum up the results from all threads
     return dmll
 end
 
