@@ -99,7 +99,7 @@ function update_cK!(cK::SubsetOfRegsPDMat, x::AbstractMatrix, kernel::Kernel,
     Kuu = cK.Kuu
     Kuubuffer = mat(Kuu)
     cov!(Kuubuffer, kernel, inducing, kerneldata.Kuu)
-    Kuubuffer, chol = make_posdef!(Kuubuffer, cholfactors(cK.Kuu))
+    Kuubuffer, chol = make_posdef!(Kuubuffer, cholfactors(cK.Kuu); nugget=1e-10)
     Kuu_PD = wrap_cK(cK.Kuu, Kuubuffer, chol)
     Kuf = cov!(cK.Kuf, kernel, inducing, x, kerneldata.Kux1)
     Kfu = Kuf'
@@ -107,7 +107,7 @@ function update_cK!(cK::SubsetOfRegsPDMat, x::AbstractMatrix, kernel::Kernel,
     ΣQR = exp(-2*logNoise) * Kuf * Kfu + Kuu
     LinearAlgebra.copytri!(ΣQR, 'U')
 
-    ΣQR, chol = make_posdef!(ΣQR, cholfactors(cK.ΣQR_PD))
+    ΣQR, chol = make_posdef!(ΣQR, cholfactors(cK.ΣQR_PD); nugget=1e-10)
     ΣQR_PD = wrap_cK(cK.ΣQR_PD, ΣQR, chol)
     return wrap_cK(cK, inducing, ΣQR_PD, Kuu_PD, Kuf, logNoise)
 end

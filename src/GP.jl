@@ -88,50 +88,36 @@ wrap_cK(cK::PDMat, Σbuffer, chol::Cholesky) = PDMat(Σbuffer, chol)
 mat(cK::PDMat) = cK.mat
 cholfactors(cK::PDMat) = cK.chol.factors
 """
-    make_posdef!(m::Matrix{Float64}, chol_factors::Matrix{Float64})
+    make_posdef!(m::AbstractMatrix, chol_factors::AbstractMatrix; nugget=0.0)
 
 Try to encode covariance matrix `m` as a positive definite matrix.
 The `chol_factors` matrix is recycled to store the cholesky decomposition,
 so as to reduce the number of memory allocations.
 
 Sometimes covariance matrices of Gaussian processes are positive definite mathematically
-but have negative eigenvalues numerically. To resolve this issue, small weights are added
-to the diagonal (and hereby all eigenvalues are raised by that amount mathematically)
-until all eigenvalues are positive numerically.
+but have negative eigenvalues numerically. The nugget keyword parameter can
+be used to add a small weight on the diagonal to prevent such numerical issues.
 """
-function make_posdef!(m::AbstractMatrix, chol_factors::AbstractMatrix)
+function make_posdef!(m::AbstractMatrix, chol_factors::AbstractMatrix; nugget=0.0)
     n = size(m, 1)
     size(m, 2) == n || throw(ArgumentError("Covariance matrix must be square"))
-    for _ in 1:10 # 10 chances
-        try
-            # return m, cholesky(m)
-            copyto!(chol_factors, m)
-            chol = cholesky!(Symmetric(chol_factors, :U))
-            return m, chol
-        catch err
-            if typeof(err)!=LinearAlgebra.PosDefException
-                throw(err)
-            end
-            # that wasn't (numerically) positive definite,
-            # so let's add some weight to the diagonal
-            ϵ = 1e-6 * tr(m) / n
-            @inbounds for i in 1:n
-                m[i, i] += ϵ
-            end
+    if nugget > 0
+        @inbounds for i in 1:n
+            m[i, i] += nugget
         end
     end
     copyto!(chol_factors, m)
     chol = cholesky!(Symmetric(chol_factors, :U))
     return m, chol
 end
-function make_posdef!(m::AbstractMatrix)
+function make_posdef!(m::AbstractMatrix; nugget=0.0)
     chol_buffer = similar(m)
-    return make_posdef!(m, chol_buffer)
+    return make_posdef!(m, chol_buffer; nugget=nugget)
 end
 
 #———————————————————————————————————————————————————————————
 # Sample random draws from the GP
-function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix)
+function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix; nugget=1e-10)
     nobs = size(x,2)
     n_sample = size(A,2)
 
@@ -139,12 +125,12 @@ function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix)
         # Prior mean and covariance
         μ = mean(gp.mean, x);
         Σraw = cov(gp.kernel, x, x);
-        Σraw, chol = make_posdef!(Σraw)
+        Σraw, chol = make_posdef!(Σraw; nugget=nugget)
         Σ = PDMat(Σraw, chol)
     else
         # Posterior mean and covariance
         μ, Σraw = predict_f(gp, x; full_cov=true)
-        Σraw, chol = make_posdef!(Σraw)
+        Σraw, chol = make_posdef!(Σraw; nugget=nugget)
         Σ = PDMat(Σraw, chol)
     end
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
