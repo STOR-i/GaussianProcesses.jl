@@ -229,7 +229,7 @@ function logp_CVfold(gp::GPE, folds::Folds)
     CV = 0.0
     for (μVT,ΣVT,V) in zip(μ,Σ,folds)
         chol = similar(ΣVT)
-        ΣVT, chol = make_posdef!(ΣVT, chol)
+        ΣVT, chol = make_posdef!(ΣVT, chol; nugget=1e-10)
         ΣPD = PDMat(ΣVT, chol)
         CV += logpdf(MvNormal(μVT, ΣPD), y[V])
     end
