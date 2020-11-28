@@ -170,22 +170,18 @@ function update_cK!(cK::AbstractPDMat, x::AbstractMatrix, kernel::Kernel, logNoi
     nobs = size(x, 2)
     Σbuffer = mat(cK)
     cov!(Σbuffer, kernel, x, x, data)
-    noise = exp(2*logNoise)+eps()
-    for i in 1:nobs
-        Σbuffer[i,i] += noise
-    end
-    Σbuffer, chol = make_posdef!(Σbuffer, cholfactors(cK))
+    noise = exp(2*logNoise)
+    Σbuffer, chol = make_posdef!(Σbuffer, cholfactors(cK); nugget=noise)
     return wrap_cK(cK, Σbuffer, chol)
 end
 function update_cK!(cK::AbstractPDMat, x::AbstractMatrix, kernel::Kernel, logNoise::AbstractVector, data::KernelData, covstrat::CovarianceStrategy)
     nobs = size(x, 2)
     Σbuffer = mat(cK)
     cov!(Σbuffer, kernel, x, x, data)
-    noise = exp.(2 .* logNoise) .+ eps()
     for i in 1:nobs
-        Σbuffer[i,i] += noise[i]
+        Σbuffer[i,i] += exp(2*logNoise[i])
     end
-    Σbuffer, chol = make_posdef!(Σbuffer, cholfactors(cK))
+    Σbuffer, chol = make_posdef!(Σbuffer, cholfactors(cK); nugget=0.0)
     return wrap_cK(cK, Σbuffer, chol)
 end
 

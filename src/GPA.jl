@@ -108,23 +108,9 @@ function initialise_ll!(gp::GPA)
     gp
 end
 
-"""
-    update_cK!(gp::GPA)
-
-Update the covariance matrix and its Cholesky decomposition of Gaussian process `gp`.
-"""
 function update_cK!(gp::GPA)
-    old_cK = gp.cK
-    Σbuffer = old_cK.mat
-    cov!(Σbuffer, gp.kernel, gp.x, gp.x, gp.data)
-    for i in 1:gp.nobs
-        Σbuffer[i,i] += 1e-6 # no logNoise for GPA
-    end
-    chol_buffer = old_cK.chol.factors
-    copyto!(chol_buffer, Σbuffer)
-    chol = cholesky!(Symmetric(chol_buffer))
-    gp.cK = PDMat(Σbuffer, chol)
-    gp
+    logNoise = -20.0 # nugget for numerical stability
+    gp.cK = update_cK!(gp.cK, gp.x, gp.kernel, -20.0, gp.data, gp.covstrat)
 end
 
 # modification of initialise_ll! that reuses existing matrices to avoid
