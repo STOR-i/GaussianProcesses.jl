@@ -26,8 +26,7 @@ const invΦ = norminvcdf
 
 # all package code should be included here
 include("means/means.jl")
-include("kernels/kernels.jl")
-include("covariance/covariance.jl")
+include("covariance/kernels.jl")
 include("likelihoods/likelihoods.jl")
 include("common.jl")
 include("utils.jl")

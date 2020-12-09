@@ -3,7 +3,7 @@ using GaussianProcesses, Calculus
 using Test, LinearAlgebra, Statistics, Random
 using ForwardDiff
 using GaussianProcesses: EmptyData, update_target_and_dtarget!, 
-      cov_ij, dKij_dθp, dKij_dθ!,
+      cov_ij, dKij_dθp, dKij_dθ!, cov!,
       get_params, set_params!, num_params, StationaryARD, WeightedEuclidean
 import Calculus: gradient
 
@@ -47,6 +47,20 @@ function testkernel(kern::Kernel)
         if typeof(kdata) != EmptyData
             @test key != "EmptyData"
         end
+    end
+    @testset "Covariance matrix" begin
+        buf1 = Matrix{Float64}(undef, n, n)
+        buf2 = Matrix{Float64}(undef, n, n)
+        cov!(buf1, kern, X, X)
+        invoke(cov!, Tuple{Matrix{Float64}, typeof(kern), AbstractMatrix, AbstractMatrix}, buf2, kern, X, X)
+        @test all(buf1 .≈ buf2)
+    end
+    @testset "Cross-covariance matrix" begin
+        buf1 = Matrix{Float64}(undef, n, n2)
+        buf2 = Matrix{Float64}(undef, n, n2)
+        cov!(buf1, kern, X, X2)
+        invoke(cov!, Tuple{Matrix{Float64}, typeof(kern), AbstractMatrix, AbstractMatrix}, buf2, kern, X, X2)
+        @test all(buf1 .≈ buf2)
     end
 
     data = GaussianProcesses.KernelData(kern, X, X)
