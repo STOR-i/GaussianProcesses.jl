@@ -5,7 +5,7 @@ os:
   - osx
 julia:
   - 1.0
-  - 1.4
+  - 1.5
   - nightly
 notifications:
   email: false
@@ -28,7 +28,7 @@ matrix:
 jobs:
   include:
     - stage: "Documentation"
-      julia: 1.4
+      julia: 1.5
       os: linux
       script:
         - julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
