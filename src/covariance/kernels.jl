@@ -28,6 +28,10 @@ kernel_data_key(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix) = "EmptyData"
     end
 end
 
+@inline cov_ij(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, i::Int, j::Int, dim::Int) = cov(k, @view(X1[:,i]), @view(X2[:,j]))
+# the default is to drop the KernelData
+@inline cov_ij(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i::Int, j::Int, dim::Int) = cov_ij(k, X1, X2, i, j, dim)
+
 
 include("stationary.jl")
 include("distance.jl")

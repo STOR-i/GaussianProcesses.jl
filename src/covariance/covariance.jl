@@ -19,7 +19,7 @@ function _cov_row!(cK, k, X::AbstractMatrix, data, j, dim)
         cK[j,i] = cK[i,j]
     end
 end
-function cov_loop!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData=EmptyData())
+function cov_loop!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData)
     dim, nobs = size(X)
     (nobs,nobs) == size(cK) || throw(ArgumentError("cK has size $(size(cK)) and X has size $(size(X))"))
     kcopies = [deepcopy(k) for _ in 1:Threads.nthreads()] # in case k is not threadsafe (e.g. ADkernel)
@@ -34,7 +34,7 @@ function _cov_row!(cK, k, X1::AbstractMatrix, X2::AbstractMatrix, data, i, dim, 
         cK[i,j] = cov_ij(k, X1, X2, data, i, j, dim)
     end
 end
-function cov_loop!(cK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData=EmptyData())
+function cov_loop!(cK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData)
     if X1 === X2
         return cov_loop!(cK, k, X1, data)
     end
@@ -58,7 +58,7 @@ an observation, and kernel data `data` constructed from input observations.
 """
 cov(k::Kernel, X::AbstractMatrix, data::KernelData=EmptyData()) = cov(k, X, X, data)
 
-function cov_loop_generic!(cK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData=EmptyData())
+function cov_loop_generic!(cK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData)
     dim, nobs1 = size(X1)
     dim, nobs2 = size(X2)
     # Generic implementation using broadcasting. A more efficient multithreaded
@@ -70,8 +70,8 @@ end
 
 Like [`cov(k, X1, X2)`](@ref), but stores the result in `cK` rather than a new matrix.
 """
-cov!(cK, k, X1, X2, data) = cov_loop!(cK, k, X1, X2, data)
-cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData=EmptyData()) = cov!(cK, k, X, X, data)
+cov!(cK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix=X1, data::KernelData=EmptyData()) = cov_loop!(cK, k, X1, X2, data)
+# cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData=EmptyData()) = cov!(cK, k, X, X, data)
 
 ############################
 ##### Kernel Gradients #####
@@ -84,7 +84,7 @@ function _grad_slice_row!(dK, k, X::AbstractMatrix, data, j, p, dim)
         dK[j,i] = dK[i,j]
     end
 end
-function grad_slice_loop!(dK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData, p::Int)
+function grad_slice_loop!(dK::AbstractMatrix, k::Kernel, X::AbstractMatrix, p::Int, data::KernelData)
     dim, nobs = size(X)
     (nobs,nobs) == size(dK) || throw(ArgumentError("dK has size $(size(dK)) and X has size $(size(X))"))
     kcopies = [deepcopy(k) for _ in 1:Threads.nthreads()]
@@ -94,14 +94,14 @@ function grad_slice_loop!(dK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data
     end
     return dK
 end
-function _grad_slice_row!(dK, k, X1::AbstractMatrix, X2::AbstractMatrix, data, i, p, dim, nobs2)
+function _grad_slice_row!(dK, k, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i, p, dim, nobs2)
     @inbounds @simd for j in 1:nobs2
         dK[i,j] = dKij_dθp(k,X1,X2,data,i,j,p,dim)
     end
 end
-function grad_slice_loop!(dK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, p::Int)
+function grad_slice_loop!(dK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, p::Int, data::KernelData)
     if X1 === X2
-        return grad_slice!(dK, k, X1, data, p)
+        return grad_slice_loop!(dK, k, X1, p, data)
     end
     dim1, nobs1 = size(X1)
     dim2, nobs2 = size(X2)
@@ -115,35 +115,35 @@ function grad_slice_loop!(dK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2:
     end
     return dK
 end
-
-# Calculates the stack [dk / dθᵢ] of kernel matrix gradients
-function grad_stack!(stack::AbstractArray, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData)
-    @inbounds for p in 1:num_params(k)
-        grad_slice!(view(stack, :, :, p), k, X1, X2, data, p)
-    end
-    stack
-end
-
-grad_stack!(stack::AbstractArray, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix) =
-    grad_stack!(stack, k, X1, X2, KernelData(k, X1, X2))
-
-grad_stack(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix) = grad_stack(k, X1, X2, KernelData(k, X1, X2))
-
-function grad_stack(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData)
-    nobs1 = size(X1, 2)
-    nobs2 = size(X2, 2)
-    stack = Array{eltype(X)}(undef, nobs1, nobs2, num_params(k))
-    grad_stack!(stack, k, X1, X2, data)
-end
-
-function grad_slice_loop_generic!(dK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, p::Int)
+function grad_slice_loop_generic!(dK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, p::Int, data::KernelData)
     dim, nobs1 = size(X1)
     dim, nobs2 = size(X2)
     # Generic implementation using broadcasting. A more efficient multithreaded
     # implementation is provided above.
     dK .= dKij_dθp.(Ref(k), Ref(X1), Ref(X2), Ref(data), 1:nobs1, (1:nobs2)', p, dim)
 end
-grad_slice!(dK, k, X1, X2, data, p) = grad_slice_loop!(dK, k, X1, X2, data, p)
+grad_slice!(dK, k, X1, X2, p, data::KernelData=EmptyData()) = grad_slice_loop!(dK, k, X1, X2, p, data)
+
+# Calculates the stack [dk / dθᵢ] of kernel matrix gradients
+function grad_stack!(stack::AbstractArray, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData=EmptyData())
+    @inbounds for p in 1:num_params(k)
+        grad_slice!(view(stack, :, :, p), k, X1, X2, p, data)
+    end
+    stack
+end
+
+# grad_stack!(stack::AbstractArray, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix) =
+    # grad_stack!(stack, k, X1, X2, KernelData(k, X1, X2))
+
+# grad_stack(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix) = grad_stack(k, X1, X2, KernelData(k, X1, X2))
+
+function grad_stack(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData=EmptyData())
+    nobs1 = size(X1, 2)
+    nobs2 = size(X2, 2)
+    stack = Array{eltype(X)}(undef, nobs1, nobs2, num_params(k))
+    grad_stack!(stack, k, X1, X2, data)
+end
+
 
 @inline function dKij_dθp(k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, i::Int, j::Int, p::Int, dim::Int) 
     return dKij_dθp(k, X1, X2, i, j, p, dim)
