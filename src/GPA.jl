@@ -129,8 +129,8 @@ end
 
 function get_L_bar!(L_bar::AbstractMatrix, dl_df::AbstractVector, v::AbstractVector, cK::PDMat)
     fill!(L_bar, 0.0)
-    BLAS.ger!(1.0, dl_df, v, L_bar)
-    tril!(L_bar)
+    BLAS.ger!(1.0, dl_df, v, L_bar) # L_bar = dl_df*v'
+    tril!(L_bar) # lower triangular
     # ToDo:
     # the following two steps allocates memory
     # and are fickle, reaching into the internal
@@ -166,8 +166,12 @@ function dll_kern!(dll::AbstractVector, gp::GPBase, precomp::FullCovMCMCPrecompu
     get_L_bar!(L_bar, precomp.dl_df, gp.v, gp.cK)
     nobs = gp.nobs
     @inbounds for i in 1:nobs
+        # dmll_kern! assumes that ααinvcKI is symmetrical and operates
+        # on the upper triangular component of it,
+        # but L_bar is lower triangular, so we need to make this adjustment.
         L_bar[i,i] *= 2
     end
+    LinearAlgebra.copytri!(L_bar, 'L')
     # in GPA, L_bar plays the role of ααinvcKI
     return dmll_kern!(dll, gp.kernel, gp.x, gp.data, L_bar, covstrat)
 end
