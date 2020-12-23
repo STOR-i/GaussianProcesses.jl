@@ -53,7 +53,7 @@ num_params(gauss::GaussLik) = 1
 
 #Computes the predictive mean and variance
 function predict_obs(gauss::GaussLik, fmean::AbstractVector, fvar::AbstractVector)
-    return fmean, fvar + gauss.σ^2
+    return fmean, fvar .+ gauss.σ^2
 end
 
 function var_exp(ll::GaussLik, y::AbstractArray, m::AbstractArray, V::AbstractMatrix)
@@ -78,9 +78,9 @@ function var_exp(ll::GaussLik, y::Number, m::Number, V::Number)
 end
 
 function dv_var_exp(ll::GaussLik, y::Number, m::Number, V::Number)
-    return gradient(x -> var_exp(ll, y, m, x), V)[1]
+    return -0.5 / ll.σ
 end
 
 function dm_var_exp(ll::GaussLik, y::Number, m::Number, V::Number)
-    return gradient(x -> var_exp(ll, y, x, V), m)[1]
+    return (y-m) / ll.σ
 end

@@ -86,11 +86,11 @@ function predict_f(gp::GPBase, x::AbstractMatrix, Q::Approx)
 end
 
 # Sample from the variational GP
-function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix, Q::Approx)
+function Random.rand!(gp::GPBase, x::AbstractMatrix, A::DenseMatrix, Q::Approx; nugget=1e-10)
     nobs = size(x, 2)
     n_sample = size(A, 2)
     μ, Σraw = predict_f(gp, x, Q)
-    Σraw, chol = make_posdef!(Σraw)
+    Σraw, chol = make_posdef!(Σraw; nugget=nugget)
     Σ = PDMat(Σraw, chol)
     return broadcast!(+, A, μ, unwhiten!(Σ,randn(nobs, n_sample)))
 end

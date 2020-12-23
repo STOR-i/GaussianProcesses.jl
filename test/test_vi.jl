@@ -50,40 +50,40 @@ Random.seed!(203617)
         savefig("vi_gp.png")
     end
 
-    # @testset "Gaussian" begin
-    #     n=10;                          #number of training points
-    #     x = 2π * rand(n);              #predictors
-    #     y = sin.(x) + 0.05*randn(n);   #regressors
-    #     mZero = MeanZero()                   #Zero mean function
-    #     kern = SE(0.0,0.0)                   #Squared exponential kernel (note that hyperparameters are on the log scale)
-    #     l = GaussLik(0.1)             # Poisson likelihood
+    @testset "Gaussian" begin
+        n=10;                          #number of training points
+        x = 2π * rand(n);              #predictors
+        y = sin.(x) + 0.05*randn(n);   #regressors
+        mZero = MeanZero()                   #Zero mean function
+        kern = SE(0.0,0.0)                   #Squared exponential kernel (note that hyperparameters are on the log scale)
+        l = GaussLik(0.1)             # Poisson likelihood
 
-    #     logObsNoise = -1.0                        # log standard deviation of observation noise (this is optional)
-    #     gp = GP(x, y, mZero, kern, l)       #Fit the GP
+        logObsNoise = -1.0                        # log standard deviation of observation noise (this is optional)
+        gp = GP(x, y, mZero, kern, l)       #Fit the GP
 
-    #     Q = vi(gp)
+        Q = vi(gp)
 
-    #     xtest = range(minimum(gp.x),stop=maximum(gp.x),length=50)
+        xtest = range(minimum(gp.x),stop=maximum(gp.x),length=50)
 
-    #     nsamps = 500
-    #     ymean = [];
-    #     visamples = Array{Float64}(undef, nsamps, size(xtest, 1))
+        nsamps = 500
+        ymean = [];
+        visamples = Array{Float64}(undef, nsamps, size(xtest, 1))
 
-    #     for i in 1:nsamps
-    #         visamples[i, :] = rand(gp, xtest, Q)
-    #         push!(ymean, predict_y(gp, xtest)[1])
-    #     end
+        for i in 1:nsamps
+            visamples[i, :] = rand(gp, xtest, Q)
+            push!(ymean, predict_y(gp, xtest)[1])
+        end
 
-    #     q10 = [quantile(visamples[i,:], 0.1) for i in 1:length(xtest)]
-    #     q50 = [quantile(visamples[:,i], 0.5) for i in 1:length(xtest)]
-    #     q90 = [quantile(visamples[:,i], 0.9) for i in 1:length(xtest)]
-    #     plot(xtest, exp.(q50), ribbon=(exp.(q10), exp.(q90)), leg=true, fmt=:png, label="quantiles")
-    #     plot!(xtest, mean(ymean), label="posterior mean", w=2)
-    #     xx = range(-3,stop=3,length=1000);
-    #     f_xx = 2*cos.(2*xx);
-    #     plot!(xx, exp.(f_xx), label="truth")
-    #     scatter!(X,Y, label="data")
-    #     savefig("vi_gp.png")
-    # end
+        q10 = [quantile(visamples[i,:], 0.1) for i in 1:length(xtest)]
+        q50 = [quantile(visamples[:,i], 0.5) for i in 1:length(xtest)]
+        q90 = [quantile(visamples[:,i], 0.9) for i in 1:length(xtest)]
+        plot(xtest, exp.(q50), ribbon=(exp.(q10), exp.(q90)), leg=true, fmt=:png, label="quantiles")
+        plot!(xtest, mean(ymean), label="posterior mean", w=2)
+        xx = range(-3,stop=3,length=1000);
+        f_xx = 2*cos.(2*xx);
+        plot!(xx, exp.(f_xx), label="truth")
+        scatter!(X,Y, label="data")
+        savefig("vi_gp.png")
+    end
  end
  end

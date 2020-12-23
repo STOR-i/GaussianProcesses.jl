@@ -22,7 +22,6 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
-Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 Distances = "0.7, 0.8, 0.9, 0.10"
@@ -39,13 +38,13 @@ ScikitLearnBase = "0.4, 0.5"
 SpecialFunctions = "0.7, 0.8, 0.9, 0.10, 1.0"
 StaticArrays = "0.6, 0.9, 0.12, 1.0"
 StatsFuns = "0.7, 0.8, 0.9"
-Zygote = "0.3, 0.4, 0.5"
 julia = "1"
 
 [extras]
 Calculus = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Calculus", "Distributions", "Test"]
+test = ["Calculus", "Distributions", "Test", "Plots"]

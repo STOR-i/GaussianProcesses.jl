@@ -50,5 +50,5 @@ function var_exp(ll::PoisLik, y::Number, m::Number, V::Number)
 end
 
 function dv_var_exp(ll::PoisLik, y::Number, m::Number, V::Number)
-    return gradient(x -> var_exp(ll, y, m, x), V)[1]
+    - exp(m + V/2) / 2
 end

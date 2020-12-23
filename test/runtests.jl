@@ -11,5 +11,5 @@ module TestGaussianProcesses
 @time include("test_crossvalidation.jl")
 @time include("test_sparse.jl")
 @time include("heteroscedastic.jl")
-#@time include("test_vi.jl")
+@time include("test_vi.jl")
 end
