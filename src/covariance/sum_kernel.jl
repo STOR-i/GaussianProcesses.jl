@@ -50,20 +50,20 @@ end
     dKij_dθ!(dK,  sumkern.kleft,  X1, X2, data.data1, i, j, dim, npleft)
 end
 
-function grad_slice!(dK::AbstractMatrix, sumkern::SumKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::EmptyData, p::Int)
+function grad_slice!(dK::AbstractMatrix, sumkern::SumKernel, X1::AbstractMatrix, X2::AbstractMatrix, p::Int, data::EmptyData)
     np = num_params(sumkern.kleft)
     if p<=np
-        return grad_slice!(dK, sumkern.kleft, X1, X2, data, p)
+        return grad_slice!(dK, sumkern.kleft, X1, X2, p, data)
     else
-        return grad_slice!(dK, sumkern.kright, X1, X2, data, p-np)
+        return grad_slice!(dK, sumkern.kright, X1, X2, p-np, data)
     end
 end
-function grad_slice!(dK::AbstractMatrix, sumkern::SumKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::PairData, p::Int)
+function grad_slice!(dK::AbstractMatrix, sumkern::SumKernel, X1::AbstractMatrix, X2::AbstractMatrix, p::Int, data::PairData)
     np = num_params(sumkern.kleft)
     if p<=np
-        return grad_slice!(dK, sumkern.kleft, X1, X2, data.data1, p)
+        return grad_slice!(dK, sumkern.kleft, X1, X2, p, data.data1)
     else
-        return grad_slice!(dK, sumkern.kright, X1, X2, data.data2, p-np)
+        return grad_slice!(dK, sumkern.kright, X1, X2, p-np, data.data2)
     end
 end
 

@@ -286,8 +286,8 @@ function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix,
     Λ = cK.Λ
     for iparam in 1:nparams
         # TODO: the grad_slice! calls here are redundant with the ones in the dmll_kern! call above
-        grad_slice!(∂Kuu, kernel, inducing, inducing, kerneldata.Kuu, iparam)
-        grad_slice!(∂Kuf, kernel, inducing, X       , kerneldata.Kux1, iparam)
+        grad_slice!(∂Kuu, kernel, inducing, inducing, iparam, kerneldata.Kuu)
+        grad_slice!(∂Kuf, kernel, inducing, X       , iparam, kerneldata.Kux1)
         V, T = 0.0, 0.0
         # ∂Λdense = zeros(nobs, nobs)
         for (pd,ind) in zip(Λ.blockPD,Λ.blockindices)
@@ -295,7 +295,7 @@ function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix,
             ∂Ki = similar(mat(pd))
             Kui, ∂Kui = Kuf[:,ind], ∂Kuf[:,ind]
             Xi = X[:,ind]
-            grad_slice!(∂Ki, kernel, Xi, Xi, EmptyData(), iparam)
+            grad_slice!(∂Ki, kernel, Xi, Xi, iparam, EmptyData())
             ∂Λi = (∂Ki
                   + Kuu⁻¹Kui' * ∂Kuu * Kuu⁻¹Kui
                   - 2 * ∂Kui' * Kuu⁻¹Kui)

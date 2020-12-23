@@ -77,7 +77,7 @@ function dlogpdθ_LOO_kern!(∂logp∂θ::AbstractVector{<:Real}, invΣ::PDMat, 
     # ∂σ∂θ = Matrix{Float64}(undef, nobs, dim)
     Zj = Matrix{Float64}(undef, nobs, nobs)
     for j in 1:dim
-        grad_slice!(Zj, kernel, x, x, data, j)
+        grad_slice!(Zj, kernel, x, x, j, data)
         Zj = invΣ.mat * Zj
         # ldiv!(Σ, Zj)
 
@@ -268,7 +268,7 @@ function dlogpdθ_CVfold_kern!(∂logp∂θ::AbstractVector{<:Real}, invΣ::PDMa
     buffer1 = Matrix{Float64}(undef, nobs, nobs)
     buffer2 = Matrix{Float64}(undef, nobs, nobs)
     for j in 1:dim
-        grad_slice!(buffer2, kernel, x, x, data, j)
+        grad_slice!(buffer2, kernel, x, x, j, data)
         mul!(buffer1, mat(invΣ), buffer2)
         Zj = buffer1
         Zjα = Zj*alpha

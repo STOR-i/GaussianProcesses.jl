@@ -48,20 +48,6 @@ function testkernel(kern::Kernel)
             @test key != "EmptyData"
         end
     end
-    @testset "Covariance matrix" begin
-        buf1 = Matrix{Float64}(undef, n, n)
-        buf2 = Matrix{Float64}(undef, n, n)
-        cov!(buf1, kern, X, X)
-        invoke(cov!, Tuple{Matrix{Float64}, typeof(kern), AbstractMatrix, AbstractMatrix}, buf2, kern, X, X)
-        @test all(buf1 .≈ buf2)
-    end
-    @testset "Cross-covariance matrix" begin
-        buf1 = Matrix{Float64}(undef, n, n2)
-        buf2 = Matrix{Float64}(undef, n, n2)
-        cov!(buf1, kern, X, X2)
-        invoke(cov!, Tuple{Matrix{Float64}, typeof(kern), AbstractMatrix, AbstractMatrix}, buf2, kern, X, X2)
-        @test all(buf1 .≈ buf2)
-    end
 
     data = GaussianProcesses.KernelData(kern, X, X)
     data12 = GaussianProcesses.KernelData(kern, X, X2)

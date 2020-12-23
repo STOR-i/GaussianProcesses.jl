@@ -78,8 +78,8 @@ end
 function cov!(s::AbstractMatrix, masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, data::MaskedData)
     return cov!(s, masked.kernel, data.X1view, data.X2view, data.wrappeddata)
 end
-function grad_slice!(dK::AbstractMatrix, masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, data::MaskedData, iparam::Int)
-    return grad_slice!(dK, masked.kernel, data.X1view, data.X2view, data.wrappeddata, iparam)
+function grad_slice!(dK::AbstractMatrix, masked::Masked, X1::AbstractMatrix, X2::AbstractMatrix, iparam::Int, data::MaskedData)
+    return grad_slice!(dK, masked.kernel, data.X1view, data.X2view, iparam, data.wrappeddata)
 end
 
 function cov(masked::Masked, x1::AbstractVector, x2::AbstractVector)

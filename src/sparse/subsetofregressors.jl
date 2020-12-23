@@ -227,8 +227,8 @@ function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix, cK:
     dK_buffer = Vector{Float64}(undef, nparams)
     dmll[:] .= 0.0
     for iparam in 1:nparams
-        grad_slice!(∂Kuu, kernel, inducing, inducing, kerneldata.Kuu, iparam)
-        grad_slice!(∂Kuf, kernel, inducing, X       , kerneldata.Kux1, iparam)
+        grad_slice!(∂Kuu, kernel, inducing, inducing, iparam, kerneldata.Kuu)
+        grad_slice!(∂Kuf, kernel, inducing, X       , iparam, kerneldata.Kux1)
         V =  2 * dot(alpha, ∂Kuf' * (Kuu⁻¹KufΣ⁻¹y))    # = 2 y' Σ⁻¹ ∂Kuf Kuu⁻¹ Kuf Σ⁻¹y
         V -= dot(Kuu⁻¹KufΣ⁻¹y, ∂Kuu * (Kuu⁻¹KufΣ⁻¹y)) # = y' Σ⁻¹ Kfu ∂(Kuu⁻¹) Kuf Σ⁻¹ y
 

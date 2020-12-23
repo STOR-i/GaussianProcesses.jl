@@ -71,7 +71,7 @@ end
 Like [`cov(k, X1, X2)`](@ref), but stores the result in `cK` rather than a new matrix.
 """
 cov!(cK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix=X1, data::KernelData=EmptyData()) = cov_loop!(cK, k, X1, X2, data)
-# cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData=EmptyData()) = cov!(cK, k, X, X, data)
+cov!(cK::AbstractMatrix, k::Kernel, X::AbstractMatrix, data::KernelData=EmptyData()) = cov!(cK, k, X, X, data)
 
 ############################
 ##### Kernel Gradients #####
@@ -122,7 +122,7 @@ function grad_slice_loop_generic!(dK::AbstractMatrix, k::Kernel, X1::AbstractMat
     # implementation is provided above.
     dK .= dKij_dθp.(Ref(k), Ref(X1), Ref(X2), Ref(data), 1:nobs1, (1:nobs2)', p, dim)
 end
-grad_slice!(dK, k, X1, X2, p, data::KernelData=EmptyData()) = grad_slice_loop!(dK, k, X1, X2, p, data)
+grad_slice!(dK::AbstractMatrix, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, p::Int, data::KernelData=EmptyData()) = grad_slice_loop!(dK, k, X1, X2, p, data)
 
 # Calculates the stack [dk / dθᵢ] of kernel matrix gradients
 function grad_stack!(stack::AbstractArray, k::Kernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData=EmptyData())

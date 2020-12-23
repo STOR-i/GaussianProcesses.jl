@@ -211,8 +211,8 @@ function dmll_kern!(dmll::AbstractVector, kernel::Kernel, X::AbstractMatrix,
     inducing = covstrat.inducing
     for iparam in 1:nparams
         # TODO: the grad_slice! calls here are redundant with the ones in the dmll_kern! call above
-        grad_slice!(∂Kuu, kernel, inducing, inducing, kerneldata.Kuu, iparam)
-        grad_slice!(∂Kuf, kernel, inducing, X       , kerneldata.Kux1, iparam)
+        grad_slice!(∂Kuu, kernel, inducing, inducing, iparam, kerneldata.Kuu)
+        grad_slice!(∂Kuf, kernel, inducing, X       , iparam, kerneldata.Kux1)
 
         ∂Λ = Diagonal([
                (dKij_dθp(kernel, X, X, EmptyData(), i, i, iparam, dim) # ∂Kii

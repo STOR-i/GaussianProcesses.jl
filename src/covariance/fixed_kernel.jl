@@ -58,8 +58,8 @@ function free(k::FixedKernel, par::Symbol)
     return FixedKernel(k.kernel, free)
 end
 
-function grad_slice!(dK::AbstractMatrix, k::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, data::KernelData, p::Int)
-    return grad_slice!(dK, k.kernel, X1, X2, data, k.free[p])
+function grad_slice!(dK::AbstractMatrix, k::FixedKernel, X1::AbstractMatrix, X2::AbstractMatrix, p::Int, data::KernelData)
+    return grad_slice!(dK, k.kernel, X1, X2, k.free[p], data)
 end
 @inline function dKij_dθp(fk::FixedKernel,X1::AbstractMatrix, X2::AbstractMatrix,data::KernelData,i::Int,j::Int,p::Int,dim::Int)
     return dKij_dθp(fk.kernel, X1, X2, data, i, j, fk.free[p], dim)
