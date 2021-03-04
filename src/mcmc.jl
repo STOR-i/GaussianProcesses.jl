@@ -125,12 +125,12 @@ function ess(gp::GPE; nIter::Int=1000, burn::Int=1, thin::Int=1, noise::Bool=tru
     prior = get_joint_priors(gp; params_kwargs...)
     means = mean(prior)
 
-    function calc_target!(θ::AbstractVector)
+    function calc_mll!(θ::AbstractVector)
         count += 1
         try
             set_params!(gp, θ; params_kwargs...)
-            update_target!(gp; params_kwargs...)
-            return gp.target
+            update_mll!(gp; params_kwargs...)
+            return gp.mll
         catch err
             if(!all(isfinite.(θ))
                || isa(err, ArgumentError)
@@ -145,13 +145,13 @@ function ess(gp::GPE; nIter::Int=1000, burn::Int=1, thin::Int=1, noise::Bool=tru
     function sample!(f::AbstractVector)
         v     = rand(prior) - means
         u     = rand()
-        logy  = calc_target!(f) + log(u);
+        logy  = calc_mll!(f) + log(u);
         θ     = rand()*2*π;
         θ_min = θ - 2*π;
         θ_max = θ;
         f_prime = (f - means) * cos(θ) + v * sin(θ);
         props = 1
-        while calc_target!(f_prime + means) <= logy
+        while calc_mll!(f_prime + means) <= logy
             props += 1
             if θ < 0
                 θ_min = θ;
