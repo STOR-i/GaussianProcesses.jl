@@ -19,8 +19,8 @@ To cite GaussianProcesses.jl, please reference the [arXiv paper](https://arxiv.o
 @article{gaussianprocesses.jl,
   title={GaussianProcesses. jl: A Nonparametric Bayes package for the Julia Language},
   author={Fairbrother, Jamie and Nemeth, Christopher and Rischard, Maxime and Brea, Johanni and Pinder, Thomas},
-  journal={arXiv preprint arXiv:1812.09064},
-  year={2018}
+  journal={Journal of Statistical Software (to appear)},
+  year={2021}
 }
 ```
 
