@@ -1,6 +1,6 @@
 # Main GaussianProcess type
 
-mutable struct GPA{X<:AbstractMatrix,Y<:AbstractVector{<:Real},M<:Mean,K<:Kernel,L<:Likelihood,
+mutable struct GPA{X<:AbstractMatrix,Y<:AbstractVecOrMat{<:Real},M<:Mean,K<:Kernel,L<:Likelihood,
                     CS<:CovarianceStrategy, D<:KernelData} <: GPBase
     # Observation data
     "Input observations"
@@ -41,16 +41,19 @@ mutable struct GPA{X<:AbstractMatrix,Y<:AbstractVector{<:Real},M<:Mean,K<:Kernel
     dtarget::Vector{Float64}
 
     function GPA{X,Y,M,K,L,CS,D}(x::X, y::Y, mean::M, kernel::K, lik::L, covstrat::CS, data::D) where {X,Y,M,K,L,CS,D}
+        if !(Y <: AbstractVector)
+            throw(ArgumentError("Multi-dimensional outputs are not supported yet."))
+        end
         dim, nobs = size(x)
         length(y) == nobs || throw(ArgumentError("Input and output observations must have consistent dimensions."))
-        gp = new{X,Y,M,K,L,CS,D}(x, y, mean, kernel, lik, covstrat, dim, nobs, 
+        gp = new{X,Y,M,K,L,CS,D}(x, y, mean, kernel, lik, covstrat, dim, nobs,
                                  data, zeros(nobs))
         initialise_target!(gp)
     end
 end
 @deprecate GPMC GPA
 
-function GPA(x::AbstractMatrix, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood, covstrat::CovarianceStrategy)
+function GPA(x::AbstractMatrix, y::AbstractVecOrMat{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood, covstrat::CovarianceStrategy)
     data = KernelData(kernel, x, x, covstrat)
     return GPA{typeof(x),typeof(y),typeof(mean),typeof(kernel),typeof(lik),typeof(covstrat),typeof(data)}(
                 x, y, mean, kernel, lik, covstrat, data)
@@ -69,17 +72,17 @@ values are represented by centered (whitened) variables ``f(x) = m(x) + Lv`` whe
 
 # Arguments:
 - `x::AbstractVecOrMat{Float64}`: Input observations
-- `y::AbstractVector{<:Real}`: Output observations
+- `y::AbstractVecOrMat{<:Real}`: Output observations
 - `mean::Mean`: Mean function
 - `kernel::Kernel`: Covariance function
 - `lik::Likelihood`: Likelihood function
 """
-function GPA(x::AbstractMatrix, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood)
+function GPA(x::AbstractMatrix, y::AbstractVecOrMat{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood)
     covstrat = FullCovariance()
     return GPA(x, y, mean, kernel, lik, covstrat)
 end
 
-GPA(x::AbstractVector, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood) =
+GPA(x::AbstractVector, y::AbstractVecOrMat{<:Real}, mean::Mean, kernel::Kernel, lik::Likelihood) =
     GPA(x', y, mean, kernel, lik)
 
 """
@@ -90,7 +93,7 @@ function `lik` to a set of training points `x` and `y`.
 
 See also: [`GPA`](@ref)
 """
-GP(x::AbstractVecOrMat{Float64}, y::AbstractVector{<:Real}, mean::Mean, kernel::Kernel,
+GP(x::AbstractVecOrMat{Float64}, y::AbstractVecOrMat{<:Real}, mean::Mean, kernel::Kernel,
    lik::Likelihood) = GPA(x, y, mean, kernel, lik)
 
 """
@@ -154,8 +157,8 @@ function FullCovMCMCPrecompute(nobs::Int)
     return FullCovMCMCPrecompute(buffer1, buffer2, buffer3)
 end
 init_precompute(gp::GPA) = FullCovMCMCPrecompute(gp.nobs)
-    
-function precompute!(precomp::FullCovMCMCPrecompute, gp::GPBase) 
+
+function precompute!(precomp::FullCovMCMCPrecompute, gp::GPBase)
     f = unwhiten(gp.cK, gp.v)  + gp.μ
     dl_df = dlog_dens_df(gp.lik, f, gp.y)
     precomp.dl_df[:] = dl_df

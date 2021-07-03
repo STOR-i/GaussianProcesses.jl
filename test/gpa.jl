@@ -23,6 +23,11 @@ Random.seed!(1)
     mZero = MeanZero()
     kern = SE(0.0, 0.0)
 
+    # Test error on matrix-valued Y
+    Y_errcase = 2π * rand(d, n)
+    @test_throws ArgumentError GP(X, Y_errcase, mZero, kern, liks[1])
+
+
     @testset "Likelihood $(typeof(lik))" for (lik, y) in zip(liks, ys)
         println("\tTesting ", nameof(typeof(lik)), "...")
 
