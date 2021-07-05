@@ -18,7 +18,7 @@
             seriestype := :path
             ribbon := err
             fillcolor --> :lightblue
-            color --> :black
+            seriescolor --> :black
             x,y
         end
         if obsv
