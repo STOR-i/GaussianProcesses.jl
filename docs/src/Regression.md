@@ -2,12 +2,12 @@
 
 Gaussian processes are a powerful tool for nonlinear regression models. 
 
-Assume that we have **predictor** variables $\mathbf{X} = \{\mathbf{x_i}\}_{i=1}^N \in \mathbb{R}^d$ and **response** variables $\mathbf{y}=\{y_i \in \mathbb{R}\}_{i=1}^N$.
+Assume that we have **predictor** variables $\mathbf{X} = \{\mathbf{x_i} \in \mathbb{R}^d\}_{i=1}^N$ and **response** variables $\mathbf{y}=\{y_i \in \mathbb{R}\}_{i=1}^N$.
 
 The response variables $\mathbf{y}$ are assumed to dependent on the predictors $\mathbf{X}$,
 
 ```math
-y_i \sim \mathcal{N}(f(\mathbf{x}_i),\sigma^2), \ i=1,\ldots,n,  
+y_i \sim \mathcal{N}(f(\mathbf{x}_i),\sigma^2), \ i=1,\ldots, N,  
 ```
 
 where $f$ is a mapping function. Treating $f$ as a random function, we assume that the distribution over $f$ is a **Gaussian process**,
