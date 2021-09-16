@@ -8,7 +8,7 @@ Moreover, the joint distribution of any finite collection of points is a multiva
 This process can be fully characterised by its mean and covariance functions, where the mean of any point in the process is described by the *mean function* and the covariance between any two observations is specified by the *kernel*.
 Given a set of observed real-valued points over a space, the Gaussian Process is used to make inference on the values at the remaining points in the space.
 
-For an extensive review of Gaussian Processes there is an excellent book [Gaussian Processes for Machine Learning](http://www.gaussianprocess.org/gpml/chapters/RW.pdf) by Rasmussen and Williams, (2006)
+For an extensive review of Gaussian Processes there is an excellent book [Gaussian Processes for Machine Learning](http://www.gaussianprocess.org/gpml/chapters/RW.pdf) by Rasmussen and Williams, (2006).
 
 ## Installation
 
@@ -48,7 +48,7 @@ julia> Pkg.add("GaussianProcesses")
     * Basic mean functions, such as constant, linear, periodic, etc.;
     * The parameters of the mean functions can be fitted by maximum likelihood for exact GPs;
 5. Easy access to Gaussian process methods
-    * Underlying methods like the covariances and their derivatives,
+    * Underlying methods like the covariances and their derivatives.
 
 ## Features currently not implemented
 
