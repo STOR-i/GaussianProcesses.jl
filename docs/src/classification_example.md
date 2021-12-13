@@ -37,9 +37,10 @@ X = convert(Matrix,train[:,4:end]);          # predictors
 
 We assume a zero mean GP with a Matern 3/2 kernel. We use the automatic relevance determination (ARD) kernel to allow each dimension of the predictor variables to have a different length scale. As this is binary classifcation, we use the Bernoulli likelihood,
 
-```math
+$$
 y_i \sim \mbox{Bernoulli}(\Phi(f_i))
-```
+$$
+
 where $\Phi: \mathbb{R} \rightarrow [0,1]$ is the cumulative distribution function of a standard Gaussian and acts as a squash function that maps the GP function to the interval [0,1], giving the probability that $y_i=1$.
 
 **Note** that `BernLik` requires the observations to be of type `Bool` and unlike some likelihood functions (e.g. student-t) does not contain any parameters to be set at initialisation.
