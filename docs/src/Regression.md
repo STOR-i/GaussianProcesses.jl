@@ -152,7 +152,7 @@ plot(gp; legend=false, fmt=:png)   #Plot the GP after the hyperparameters have b
 
 
 
-By default all hyperparameters or optimized. But the function `optimize!` allows also to force hyperparameters to remain constant or optimize them in a box.
+By default all hyperparameters are optimized. But the function `optimize!` allows also to force hyperparameters to remain constant or optimize them in a box.
 
 
 ```julia
@@ -211,7 +211,7 @@ There is additional support for inference to be done in a fully Bayesian fashion
 
 **Note** currently, inference via an ESS is only supported when the likelihood is Gaussian. 
 
-For advice on how to fit Gaussian processes with non-Gaussian data, see our documentation on [Poisson regression](http://stor-i.github.io/GaussianProcesses.jl/latest/poisson_regression.html) or [classification](http://stor-i.github.io/GaussianProcesses.jl/latest/classification_example.html).
+For advice on how to fit Gaussian processes with non-Gaussian data, see our documentation on [Poisson regression](https://stor-i.github.io/GaussianProcesses.jl/latest/poisson_regression/) or [classification](https://stor-i.github.io/GaussianProcesses.jl/latest/classification_example/).
 
 
 ```julia
