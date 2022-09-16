@@ -13,14 +13,16 @@ This package is still under development. If you have any suggestions to improve 
 
 ## Citing GaussianProcesses.jl
 
-To cite GaussianProcesses.jl, please reference the [arXiv paper](https://arxiv.org/abs/1812.09064). Sample Bibtex is given below:
+To cite GaussianProcesses.jl, please reference the [paper](http://statistik-jstat.uibk.ac.at/article/view/v102i01). Sample Bibtex is given below:
 
 ```bibtex
-@article{gaussianprocesses.jl,
-  title={GaussianProcesses. jl: A Nonparametric Bayes package for the Julia Language},
+@article{fairbrother2022gaussianprocesses,
+  title={GaussianProcesses. jl: A Nonparametric Bayes Package for the Julia Language},
   author={Fairbrother, Jamie and Nemeth, Christopher and Rischard, Maxime and Brea, Johanni and Pinder, Thomas},
-  journal={Journal of Statistical Software (to appear)},
-  year={2021}
+  journal={Journal of Statistical Software},
+  volume={102},
+  pages={1--36},
+  year={2022}
 }
 ```
 
