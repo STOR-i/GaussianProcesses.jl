@@ -19,6 +19,7 @@
             ribbon := err
             fillcolor --> :lightblue
             seriescolor --> :black
+            label --> "Mean with $β credible bands"
             x,y
         end
         if obsv
@@ -26,6 +27,7 @@
                 seriestype := :scatter
                 markershape := :circle
                 markercolor := :black
+                label --> "Data"
                 gp.x', gp.y
             end
         end
