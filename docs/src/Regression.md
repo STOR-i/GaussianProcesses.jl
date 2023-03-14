@@ -333,7 +333,7 @@ gp = GP(x,y,mZero,kern,-2.0)          # Fit the GP
 
 
 
-Using the [Optim](https://github.com/JuliaOpt/Optim.jl) package we have the option to choose from a range of optimize functions including conjugate gradients. It is also possible to fix the hyperparameters in either the mean function, kernel function or observation noise, by settting them to false in `optimize!` (e.g. `optimize!(...,domean=false)`).
+Using the [Optim](https://github.com/JuliaOpt/Optim.jl) package we have the option to choose from a range of optimize functions including conjugate gradients. It is also possible to fix the hyperparameters in either the mean function, kernel function or observation noise, by setting them to false in `optimize!` (e.g. `optimize!(...,domean=false)`).
 
 
 ```julia
