@@ -109,8 +109,9 @@ function set_params!(obj::CompositeMeanOrKernel, hyp::AbstractVector)
     length(hyp) == num_params(obj) ||
         throw(ArgumentError("$(typeof(obj)) object requires $(num_params(obj)) hyperparameters"))
     i = 1
-    @inbounds for c in components(obj)
-        j = i + num_params(c)
+    for c in components(obj)
+        np = num_params(c)
+        j = i + np
         set_params!(c, view(hyp, i:(j - 1)))
         i = j
     end
@@ -141,7 +142,7 @@ function set_priors!(obj::CompositeMeanOrKernel, priors::Array)
     length(priors) == num_params(obj) ||
         throw(ArgumentError("$(typeof(obj)) object requires $(num_params(obj)) priors"))
     i = 1
-    @inbounds for c in components(obj)
+    for c in components(obj)
         j = i + num_params(c)
         set_priors!(c, view(priors, i:(j - 1)))
         i = j
