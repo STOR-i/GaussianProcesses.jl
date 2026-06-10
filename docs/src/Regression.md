@@ -91,7 +91,7 @@ $$\begin{aligned}
 
 
 
-Plotting GPs is straightforward and utilises the recipes approach to plotting from the [Plots.jl](https://github.com/JuliaPlots/Plots.jl) package. More information about plotting GPs and the available functionality can be found in this [Plotting with GaussianProcesses.jl](http://stor-i.github.io/GaussianProcesses.jl/latest/plotting_gps.html).
+Plotting GPs is straightforward and utilises the recipes approach to plotting from the [Plots.jl](https://github.com/JuliaPlots/Plots.jl) package. More information about plotting GPs and the available functionality can be found in this [Plotting with GaussianProcesses.jl](http://stor-i.github.io/GaussianProcesses.jl/latest/plotting_gps/).
 
 The default plot function `plot(gp)` outputs the predicted mean and variance of the function (i.e. uses `predict_f` in the background), with the uncertainty in the function represented by a confidence ribbon (set to 95% by default). All optional plotting arguments are given after `;`.
 

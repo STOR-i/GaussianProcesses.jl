@@ -11,7 +11,7 @@ $$\begin{aligned}
 
 where $\mathbf{y}=(y_1,y_2,\ldots,y_n) \in \mathcal{Y}$ and $\mathbf{x} \in \mathcal{X}$ are the observations and covariates, respectively, and $f_i:=f(\mathbf{x}_i)$ is the latent function which we model with a Gaussian process prior. We assume that the responses $\mathbf{y}$ are independent and identically distributed and as a result the likelihood $p(\mathbf{y} \ | \ \mathbf{f}, \theta)$, can be factorized over the observations.
 
-In the case where the observations are Gaussian distributed, the marginal likelihood and predictive distribution can be derived analytically. See the [Regression documentation](http://stor-i.github.io/GaussianProcesses.jl/latest/Regression.html) for an illustration.
+In the case where the observations are Gaussian distributed, the marginal likelihood and predictive distribution can be derived analytically. See the [Regression documentation](http://stor-i.github.io/GaussianProcesses.jl/latest/Regression/) for an illustration.
 
 In this example we show how the GP **Monte Carlo** function can be used for **supervised learning classification**. We use the Crab dataset from the R package MASS. In this dataset we are interested in predicting whether a crab is of colour form blue or orange. Our aim is to perform a Bayesian analysis and calculate the posterior distribution of the latent GP function $\mathbf{f}$ and model parameters $\theta$ from the training data $\{\mathbf{X}, \mathbf{y}\}$.
 
