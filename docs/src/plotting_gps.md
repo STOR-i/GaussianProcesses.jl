@@ -53,7 +53,7 @@ By default, the plot command plots the with a ribbon representing 95% confidence
  * obsv (default=true) : plot observations with mean function
 
 
-Note that not all plotting backends are able to plot the confidence band. Specifically, only those which support the ribbon attribute can plot the confidence band. See [here](https://juliaplots.github.io/supported/) for tables detailing which backends support which series types and attributes.
+Note that not all plotting backends are able to plot the confidence band. Specifically, only those which support the ribbon attribute can plot the confidence band. See [here](https://docs.juliaplots.org/dev/generated/supported/) for tables detailing which backends support which series types and attributes.
 
 Plots.jl allows the user to modify and combine plots in complicated ways. The following plots a fitted Gaussian process with sampled processes.
 
