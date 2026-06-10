@@ -140,7 +140,6 @@ fit!(gp::GPE, x::AbstractVector, y::AbstractVector) = fit!(gp, x', y)
 #———————————————————————————————————————————————————————————
 #Fast memory allocation function
 
-LinearAlgebra.ldiv!(cK::PDMat, x) = ldiv!(cK.chol, x)
 """
     get_ααinvcKI!(ααinvcKI::Matrix{Float64}, cK::AbstractPDMat, α::Vector)
 
@@ -159,7 +158,7 @@ function get_ααinvcKI!(ααinvcKI::AbstractMatrix, cK::AbstractPDMat, α::Vect
         ααinvcKI[i,i] = -1.0
     end
     # `ldiv!(A, B)`: Compute A \ B in-place and overwriting B to store the result.
-    ldiv!(cK, ααinvcKI)
+    PDMats.ldiv!(cK, ααinvcKI)
     BLAS.ger!(1.0, α, α, ααinvcKI)
 end
 
