@@ -21,7 +21,7 @@ function append!(gp::GPE{X,Y,M,K,CS,D,P}, x::AbstractMatrix, y::AbstractVector) 
     update_target!(gp, kern = false, noise = false)
 end
 
-LinearAlgebra.ldiv!(cK::ElasticPDMat, x) = ldiv!(cK.chol, x)
+LinearAlgebra.ldiv!(cK::ElasticPDMat, x::AbstractVecOrMat) = ldiv!(cK.chol, x)
 wrap_cK(cK::ElasticPDMat, Σbuffer, chol::Cholesky) = cK
 mat(cK::ElasticPDMat) = view(cK.mat)
 cholfactors(cK::ElasticPDMat) = view(cK.chol).factors
