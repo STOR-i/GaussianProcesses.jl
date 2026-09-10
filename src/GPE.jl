@@ -140,7 +140,7 @@ fit!(gp::GPE, x::AbstractVector, y::AbstractVector) = fit!(gp, x', y)
 #———————————————————————————————————————————————————————————
 #Fast memory allocation function
 
-LinearAlgebra.ldiv!(cK::PDMat, x) = ldiv!(cK.chol, x)
+LinearAlgebra.ldiv!(cK::PDMat, x::AbstractVecOrMat) = ldiv!(cK.chol, x)
 """
     get_ααinvcKI!(ααinvcKI::Matrix{Float64}, cK::AbstractPDMat, α::Vector)
 
