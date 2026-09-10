@@ -35,6 +35,20 @@ module TestSparse
     inearest = [argmin(abs.(xi.-Xu[1,:])) for xi in x]
     blockindices = [findall(isequal(i), inearest) for i in 1:size(Xu,2)]
 
+    # Dense reference covariances, see Quiñonero-Candela & Rasmussen 2005
+    Kuu = cov(k, Xu, Xu)
+    Kuf = cov(k, Xu, x')
+    Kff = cov(k, x', x')
+    Qff = Kuf' * (Kuu \ Kuf)
+    Σ_SoR = Qff + σy^2 * I
+    Σ_FITC = Qff + Diagonal(diag(Kff - Qff)) + σy^2 * I
+    Σ_FSA = let Λ = zeros(n, n)
+        for b in blockindices
+            Λ[b, b] = (Kff - Qff)[b, b]
+        end
+        Qff + Λ + σy^2 * I
+    end
+
     function test_pred(gp_sparse, cKPD::PDMat, covstrat::SubsetOfRegsStrategy)
         cK = gp_sparse.cK
         kernel = gp_sparse.kernel
@@ -49,7 +63,7 @@ module TestSparse
         # see Quiñonero-Candela & Rasmussen 2005, eq. 15
         Qfx = getQab(cK, kernel, xtrain, xtest)
         # Qff = getQaa(cK, kernel, xtrain)
-        Qxx = getQaa(cK, kernel, xtest)
+        Qxx = Matrix(getQaa(cK, kernel, xtest)) # dense copy: predictMVN! updates in place
 
         μ_alt, Σ_alt = predictMVN!(Qxx, cKPD, Qfx, mx, alpha)
         @test μ_alt ≈ μpred atol=1e-6
@@ -110,12 +124,12 @@ module TestSparse
         @test Σ_alt ≈ Σpred rtol=1e-3 # should this be better?
     end
 
-    function test_sparse(gp_sparse, expect_mll)
+    function test_sparse(gp_sparse, Σ_ref)
         @test gp_sparse.mll ≈ gp_full.mll atol=10 # marginal loglik shouldn't be radically different
-        @test gp_sparse.mll ≈ expect_mll atol=1e-3 # from previous run, check this doesn't drift
 
         cK = gp_sparse.cK
         cKmat = Matrix(cK)
+        @test cKmat ≈ Σ_ref rtol=1e-6
         cKPD = PDMat(cKmat)
 
         gp_fromsparse = let
@@ -134,29 +148,30 @@ module TestSparse
         buf = init_precompute(gp_sparse)
         update_mll_and_dmll!(gp_sparse, buf; noise=true, domean=true, kern=true)
         grad_analytical = copy(gp_sparse.dmll)
-        grad_numerical = Calculus.gradient(init_params) do params
+        grad_numerical = Calculus.gradient(copy(init_params)) do params # copy: Calculus perturbs its argument in place
             set_params!(gp_sparse, params; noise=true, domean=true, kern=true)
             GaussianProcesses.update_mll!(gp_sparse)
             t = gp_sparse.mll
             set_params!(gp_sparse, init_params; noise=true, domean=true, kern=true)
             t
         end
+        update_mll!(gp_sparse) # recompute the cached covariance at the restored parameters
         @test grad_numerical ≈ grad_analytical  atol=1e-3
         test_pred(gp_sparse, cKPD, gp_sparse.covstrat)
     end
 
     @testset "Sparse Approximations" begin
         @testset "Subset of Regressors" begin
-            test_sparse(SoR(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise.value), -3704.0847727395367)
+            test_sparse(SoR(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise.value), Σ_SoR)
         end
         @testset "Deterministic Training Conditionals" begin
-            test_sparse(DTC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise.value), -3704.084703493389)
+            test_sparse(DTC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise.value), Σ_SoR)
         end
         @testset "Fully Independent Training Conditionals" begin
-            test_sparse(FITC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise.value), -3709.601737889645)
+            test_sparse(FITC(x', Xu, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise.value), Σ_FITC)
         end
         @testset "Full Scale Approximation" begin
-            test_sparse(FSA(x', Xu, blockindices, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise.value), -3706.2892293004734)
+            test_sparse(FSA(x', Xu, blockindices, Y, gp_full.mean, gp_full.kernel, gp_full.logNoise.value), Σ_FSA)
         end
     end
 end
