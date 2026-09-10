@@ -47,6 +47,7 @@ Random.seed!(1)
                     set_params!(m, params)
                     mean(m, Xi)
                 end
+                set_params!(m, params)  # Calculus.gradient leaves `m` at the last perturbed point
                 @test theor_grad ≈ num_grad rtol=1e-5 atol=1e-5
             end
         end
