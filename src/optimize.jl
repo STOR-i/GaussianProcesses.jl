@@ -25,7 +25,12 @@ function optimize!(gp::GPBase, args...; method = LBFGS(), domean::Bool = true, k
     func = get_optim_target(gp; params_kwargs...)
     init = get_params(gp; params_kwargs...)  # Initial hyperparameter values
     if meanbounds == kernbounds == noisebounds == likbounds == nothing
-        results = optimize(func, init, args...; method=method, kwargs...)     # Run optimizer
+        if isempty(args) && !isempty(kwargs)
+            # Optim 2 no longer accepts option keywords on `optimize`; wrap them
+            results = optimize(func, init, method, Optim.Options(; kwargs...))
+        else
+            results = optimize(func, init, method, args...; kwargs...)     # Run optimizer
+        end
     else
         lb, ub = bounds(gp, noisebounds, meanbounds, kernbounds, likbounds;
                         domean = domean, kern = kern, noise = noise, lik = lik)
