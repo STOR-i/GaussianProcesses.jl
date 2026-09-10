@@ -9,8 +9,8 @@ end
 
 function to_autodiff(k::Kernel, duals::Vector{D}) where {D<:Dual}
     kerneltype = typeof(k)
-    @assert !kerneltype.abstract
-    @assert !kerneltype.hasfreetypevars
+    @assert !isabstracttype(kerneltype)
+    @assert !Base.has_free_typevars(kerneltype)
 
     typeparams = kerneltype.parameters
 
