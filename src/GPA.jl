@@ -131,13 +131,10 @@ function get_L_bar!(L_bar::AbstractMatrix, dl_df::AbstractVector, v::AbstractVec
     fill!(L_bar, 0.0)
     BLAS.ger!(1.0, dl_df, v, L_bar)
     tril!(L_bar)
-    # ToDo:
-    # the following two steps allocates memory
-    # and are fickle, reaching into the internal
-    # implementation of the cholesky decomposition
-    L = cK.chol.L.data
-    tril!(L)
-    #
+    # ToDo: this allocates a dense copy of the lower Cholesky factor.
+    # (Since Julia 1.13, `chol.L` is a lazy adjoint for 'U' factorizations,
+    # and its views are not BLAS-strided, so `.L.data` cannot be used directly.)
+    L = Matrix(cK.chol.L)
     chol_unblocked_rev!(L, L_bar)
     return L_bar
 end
